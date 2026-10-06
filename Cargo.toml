@@ -1,6 +1,6 @@
 [workspace]
-members = ["api", "editor", "snake"]
-default-members = ["snake"]
+members = ["api", "editor", "pong", "snake"]
+default-members = ["pong", "snake"]
 resolver = "3"
 
 [workspace.dependencies]
