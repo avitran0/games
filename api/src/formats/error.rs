@@ -78,6 +78,7 @@ pub enum AnimatedSpriteEncodeError {
     Io(#[from] std::io::Error),
     #[error(transparent)]
     InvalidSize(#[from] InvalidSizeError),
+    #[cfg(feature = "dev")]
     #[error("Frame {frame} is invalid: {error}")]
     InvalidFrame {
         frame: usize,

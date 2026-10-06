@@ -127,6 +127,7 @@ impl AnimatedSpriteDocument {
         })
     }
 
+    #[cfg(feature = "dev")]
     pub fn validate(&self) -> Result<(), AnimatedSpriteEncodeError> {
         validate_sprite_size(self.size)?;
         validate_animation_frame_count(self.frames.len())?;
