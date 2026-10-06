@@ -1,5 +1,6 @@
 [workspace]
-members = ["api", "snake", "egui-editor"]
+members = ["api", "editor", "snake"]
+default-members = ["snake"]
 resolver = "3"
 
 [workspace.dependencies]
