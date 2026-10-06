@@ -14,10 +14,7 @@ blake3 = "1.8"
 glam = "0.34"
 glow = "0.18"
 serde = "1.0"
-sdl3 = "0.20"
+sdl3 = { version = "0.20", features = ["build-from-source"] }
 thiserror = "2.0"
 toml = "1.1"
 uuid = { version = "1.27", features = ["v4"] }
-
-[target.'cfg(windows)'.dependencies]
-sdl3 = { version = "0.20", features = ["build-from-source"] }
