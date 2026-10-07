@@ -10,7 +10,6 @@ jobs:
   build:
     runs-on: ubuntu-24.04-arm
     env:
-      RUSTFLAGS: -C target-feature=+crt-static -C link-arg=-static
       CARGO_PROFILE_RELEASE_LTO: "false"
       CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "8"
 
@@ -28,7 +27,7 @@ jobs:
             libasound2-dev libudev-dev libusb-1.0-0-dev libdbus-1-dev
 
       - name: Build
-        run: cargo build --release --target aarch64-unknown-linux-gnu
+        run: python3 .github/scripts/build-binaries.py
 
       - name: Create Ports archive
         run: |
