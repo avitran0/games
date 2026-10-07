@@ -1,8 +1,0 @@
-[target.aarch64-unknown-linux-gnu]
-rustflags = [
-    "-C", "target-cpu=native",
-    "-L", "native=/opt/lib",
-    "-C", "link-arg=-Wl,-rpath-link,/usr/lib",
-    "-C", "link-arg=-Wl,--allow-shlib-undefined",
-    "-C", "link-arg=-Wl,--dynamic-linker=/lib/ld-linux-aarch64.so.1",
-]

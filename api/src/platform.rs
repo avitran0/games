@@ -25,10 +25,6 @@ pub struct Platform {
 
 impl Platform {
     pub fn load(title: &str) -> Result<Self, PlatformError> {
-        #[cfg(target_os = "linux")]
-        unsafe {
-            std::env::remove_var("WAYLAND_DISPLAY");
-        }
         let sdl = sdl3::init()?;
         let event_pump = sdl.event_pump()?;
         let _gamepad = sdl.gamepad()?;
