@@ -3,5 +3,4 @@ pre-build = [
     "dpkg --add-architecture $CROSS_DEB_ARCH",
     "apt-get update",
     "apt-get install -y build-essential cmake ninja-build git pkg-config",
-    "apt-get install -y libasound2-dev:$CROSS_DEB_ARCH libpulse-dev:$CROSS_DEB_ARCH libaudio-dev:$CROSS_DEB_ARCH libfribidi-dev:$CROSS_DEB_ARCH libjack-dev:$CROSS_DEB_ARCH libsndio-dev:$CROSS_DEB_ARCH libx11-dev:$CROSS_DEB_ARCH libxext-dev:$CROSS_DEB_ARCH libxrandr-dev:$CROSS_DEB_ARCH libxcursor-dev:$CROSS_DEB_ARCH libxfixes-dev:$CROSS_DEB_ARCH libxi-dev:$CROSS_DEB_ARCH libxss-dev:$CROSS_DEB_ARCH libxtst-dev:$CROSS_DEB_ARCH libxkbcommon-dev:$CROSS_DEB_ARCH libdrm-dev:$CROSS_DEB_ARCH libgbm-dev:$CROSS_DEB_ARCH libgl1-mesa-dev:$CROSS_DEB_ARCH libgles2-mesa-dev:$CROSS_DEB_ARCH libegl1-mesa-dev:$CROSS_DEB_ARCH libdbus-1-dev:$CROSS_DEB_ARCH libibus-1.0-dev:$CROSS_DEB_ARCH libudev-dev:$CROSS_DEB_ARCH libthai-dev:$CROSS_DEB_ARCH libusb-1.0-0-dev:$CROSS_DEB_ARCH libpipewire-0.3-dev:$CROSS_DEB_ARCH libwayland-dev:$CROSS_DEB_ARCH libdecor-0-dev:$CROSS_DEB_ARCH liburing-dev:$CROSS_DEB_ARCH"
 ]
