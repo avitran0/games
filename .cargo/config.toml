@@ -1,2 +1,9 @@
 [target.aarch64-unknown-linux-gnu]
-rustflags = ["-C", "target-cpu=native", "-L", "native=/opt/lib"]
+rustflags = [
+    "-C",
+    "target-cpu=native",
+    "-L",
+    "native=/opt/lib",
+    "-C",
+    "link-arg=-Wl,-rpath-link,/usr/lib",
+]
