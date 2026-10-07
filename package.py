@@ -59,6 +59,8 @@ def main() -> None:
         raise SystemExit(
             f"{ROCKNIX_MARKER} is missing; this packaging script only runs on ROCKNIX"
         )
+    if shutil.which("patchelf") is None:
+        raise SystemExit("Install Entware's patchelf first: opkg install patchelf")
     binaries = workspace_binaries()
     run("cargo", "build", "--release", "-j1")
 
@@ -80,6 +82,16 @@ def main() -> None:
         binary = target_dir / "release" / binary_name
         if not binary.is_file():
             raise FileNotFoundError(f"Built binary not found: {binary}")
+
+        run(
+            "patchelf",
+            "--set-interpreter",
+            "/lib/ld-linux-aarch64.so.1",
+            "--force-rpath",
+            "--set-rpath",
+            "/lib:/usr/lib",
+            str(binary),
+        )
 
         game_dir = PORTS_DIR / game_name
         game_dir.mkdir(parents=True, exist_ok=True)
