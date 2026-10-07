@@ -6,7 +6,6 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
-import zipfile
 
 PORT_LAUNCH_SCRIPT = """#!/bin/sh
 set -eu
@@ -20,9 +19,7 @@ if len(sys.argv) != 3:
     raise SystemExit("usage: stage-binaries.py BUILD_DIR OUTPUT_DIR")
 
 build_dir = Path(sys.argv[1])
-output_dir = Path(sys.argv[2])
-ports_dir = output_dir / "ports"
-archive_path = output_dir / "games-ports-aarch64.zip"
+ports_dir = Path(sys.argv[2])
 
 metadata = json.loads(
     subprocess.check_output(
@@ -41,8 +38,6 @@ if not binaries:
 
 if ports_dir.exists():
     shutil.rmtree(ports_dir)
-if archive_path.exists():
-    archive_path.unlink()
 ports_dir.mkdir(parents=True)
 
 for binary_name in binaries:
@@ -60,9 +55,4 @@ for binary_name in binaries:
     launcher.chmod(0o755)
     print(f"Prepared {game_name} port")
 
-with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-    for path in sorted(ports_dir.rglob("*")):
-        if path.is_file():
-            archive.write(path, path.relative_to(ports_dir))
-
-print(f"Created {archive_path}")
+print(f"Prepared Ports directory: {ports_dir}")
