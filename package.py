@@ -59,7 +59,7 @@ def main() -> None:
             f"{ROCKNIX_MARKER} is missing; this packaging script only runs on ROCKNIX"
         )
     binaries = workspace_binaries()
-    run("cargo", "build", "--release")
+    run("cargo", "build", "--release", "-j1")
 
     metadata = json.loads(
         run(
