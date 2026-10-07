@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the games natively on ROCKNIX and install them as Ports."""
+"""Build games on ROCKNIX and stage them as Ports for manual copying."""
 
 import json
 from pathlib import Path
@@ -9,8 +9,7 @@ import subprocess
 
 ROOT_DIR = Path(__file__).resolve().parent
 ROCKNIX_MARKER = Path("/usr/bin/rocknix-info")
-ROMS_DIR = Path("/storage/roms")
-PORTS_DIR = ROMS_DIR / "ports"
+PORTS_DIR = ROOT_DIR / "out" / "rocknix-ports"
 PORT_LAUNCH_SCRIPT = """#!/bin/sh
 set -eu
 
@@ -59,9 +58,6 @@ def main() -> None:
         raise SystemExit(
             f"{ROCKNIX_MARKER} is missing; this packaging script only runs on ROCKNIX"
         )
-    if not ROMS_DIR.is_dir():
-        raise SystemExit(f"{ROMS_DIR} does not exist; refusing to install ports")
-
     binaries = workspace_binaries()
     run("cargo", "build", "--release")
 
