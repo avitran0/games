@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build games on ROCKNIX and stage them as Ports for manual copying."""
+"""Build games on ROCKNIX and install them directly as Ports."""
 
 import json
 from pathlib import Path
@@ -9,7 +9,7 @@ import subprocess
 
 ROOT_DIR = Path(__file__).resolve().parent
 ROCKNIX_MARKER = Path("/usr/bin/rocknix-info")
-PORTS_DIR = ROOT_DIR / "out" / "rocknix-ports"
+PORTS_DIR = Path("/storage/roms/ports")
 PORT_LAUNCH_SCRIPT = """#!/bin/sh
 set -eu
 
