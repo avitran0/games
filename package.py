@@ -15,6 +15,7 @@ set -eu
 
 PORTS_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 export LD_LIBRARY_PATH="/lib:/usr/lib"
+export SDL_VIDEODRIVER=kmsdrm
 GAME_DIR=@GAME_DIR@
 cd "$PORTS_DIR/$GAME_DIR"
 exec ./game "$@" > game.log 2>&1

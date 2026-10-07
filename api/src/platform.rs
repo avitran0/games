@@ -51,7 +51,7 @@ impl Platform {
         gl_attr.set_context_major_version(3);
         gl_attr.set_context_minor_version(0);
 
-        let mut window = video
+        let window = video
             .window(title, WIDTH * 2, HEIGHT * 2)
             .high_pixel_density()
             .opengl()
