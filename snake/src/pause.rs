@@ -1,6 +1,6 @@
 use api::{Anchor, Button, HEIGHT, WIDTH, glam::uvec2};
 
-use crate::state::State;
+use crate::{main_menu::MainMenu, state::State};
 
 pub struct PauseScreen;
 
@@ -8,6 +8,8 @@ impl api::Screen<State> for PauseScreen {
     fn update(&mut self, ctx: &mut api::ScreenContext<'_, State>) -> api::ScreenAction<State> {
         if ctx.input.just_pressed(Button::Start) {
             api::ScreenAction::Pop
+        } else if ctx.input.just_pressed(Button::Select) {
+            api::ScreenAction::ClearAndPush(Box::new(MainMenu::default()))
         } else {
             api::ScreenAction::None
         }
@@ -15,7 +17,7 @@ impl api::Screen<State> for PauseScreen {
 
     fn draw(&mut self, _state: &State, frame: &mut api::Frame) {
         frame.text(
-            "Paused",
+            "Paused\nStart to continue\nSelect to quit",
             uvec2(WIDTH / 2, HEIGHT / 2).as_ivec2(),
             Anchor::Center,
         );

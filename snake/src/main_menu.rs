@@ -42,6 +42,10 @@ impl Screen<State> for MainMenu {
             };
         }
 
+        if ctx.input.just_pressed(Button::Select) {
+            return api::ScreenAction::Quit;
+        }
+
         api::ScreenAction::None
     }
 
@@ -72,6 +76,12 @@ impl Screen<State> for MainMenu {
             uvec2(WIDTH / 2, HEIGHT / 2 + 10).as_ivec2(),
             Anchor::Center,
             down_color,
+        );
+
+        frame.text(
+            "Press Select to quit",
+            uvec2(WIDTH, HEIGHT).as_ivec2(),
+            Anchor::BottomRight,
         );
     }
 }
