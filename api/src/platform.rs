@@ -25,7 +25,6 @@ pub struct Platform {
 
 impl Platform {
     pub fn load(title: &str) -> Result<Self, PlatformError> {
-        let fullscreen = std::env::args().any(|arg| arg == "--fullscreen");
         #[cfg(target_os = "linux")]
         unsafe {
             std::env::remove_var("WAYLAND_DISPLAY");
@@ -62,10 +61,6 @@ impl Platform {
         let sdl_gl = window.gl_create_context()?;
         window.gl_make_current(&sdl_gl)?;
         video.gl_set_swap_interval(SwapInterval::VSync)?;
-
-        if fullscreen {
-            window.set_fullscreen(true)?;
-        }
 
         let mut gl = unsafe {
             glow::Context::from_loader_function(|func| {

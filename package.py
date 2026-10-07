@@ -14,9 +14,10 @@ PORT_LAUNCH_SCRIPT = """#!/bin/sh
 set -eu
 
 PORTS_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+export LD_LIBRARY_PATH="/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 GAME_DIR=@GAME_DIR@
 cd "$PORTS_DIR/$GAME_DIR"
-exec ./game --fullscreen "$@" > game.log 2>&1
+exec ./game "$@" > game.log 2>&1
 """
 
 
