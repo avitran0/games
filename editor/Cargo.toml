@@ -5,5 +5,9 @@ edition = "2024"
 
 [dependencies]
 api = { path = "../api", features = ["dev"] }
-eframe = "0.36"
+eframe = { version = "0.36", default-features = false, features = [
+    "default_fonts",
+    "x11",
+    "glow",
+] }
 rfd = "0.17"

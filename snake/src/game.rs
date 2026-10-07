@@ -52,8 +52,42 @@ impl Direction {
     }
 }
 
+struct Sprites {
+    head: api::Sprite,
+    body: api::Sprite,
+    body_angled: api::Sprite,
+    tail: api::Sprite,
+    food: api::Sprite,
+    background: api::Tilemap,
+}
+
+impl Sprites {
+    fn load(ctx: &mut api::ScreenContext<State>) -> Result<Self, api::ScreenAction<State>> {
+        let head = ctx.assets.load_sprite(include_bytes!("assets/head.pxs"))?;
+        let body = ctx.assets.load_sprite(include_bytes!("assets/body.pxs"))?;
+        let body_angled = ctx
+            .assets
+            .load_sprite(include_bytes!("assets/body_angled.pxs"))?;
+        let tail = ctx.assets.load_sprite(include_bytes!("assets/tail.pxs"))?;
+        let food = ctx.assets.load_sprite(include_bytes!("assets/food.pxs"))?;
+        let _ = ctx
+            .assets
+            .load_tileset(include_bytes!("assets/tiles.pxt"))?;
+        let background = ctx.assets.load_tilemap(include_bytes!("assets/map.pxm"))?;
+
+        Ok(Self {
+            head,
+            body,
+            body_angled,
+            tail,
+            food,
+            background,
+        })
+    }
+}
+
 pub struct GameScreen {
-    sprite: api::AnimatedSprite,
+    sprites: Sprites,
     rng: api::Rng,
     snake: Vec<IVec2>,
     food: IVec2,
@@ -63,13 +97,11 @@ pub struct GameScreen {
 
 impl GameScreen {
     pub fn new(ctx: &mut api::ScreenContext<State>) -> Result<Self, api::ScreenAction<State>> {
-        let sprite = ctx
-            .assets
-            .load_animated_sprite(include_bytes!("assets/snake.pxa"))?;
+        let sprites = Sprites::load(ctx)?;
         let start = ivec2(GRID_WIDTH / 2, GRID_HEIGHT / 2);
 
         Ok(Self {
-            sprite,
+            sprites,
             rng: api::Rng::new(),
             snake: vec![start],
             food: ivec2(5, 5),
@@ -149,32 +181,29 @@ impl api::Screen<State> for GameScreen {
     }
 
     fn draw(&mut self, _state: &State, frame: &mut api::Frame) {
+        frame.tilemap(&self.sprites.background, ivec2(0, 0));
+
         for (index, &segment) in self.snake.iter().enumerate() {
-            let (animation, rotation) = if index == 0 {
-                ("Head", self.direction.rotation())
+            let (sprite, rotation) = if index == 0 {
+                (&self.sprites.head, self.direction.rotation())
             } else if index + 1 == self.snake.len() {
                 let direction = Direction::between(segment, self.snake[index - 1]);
-                ("Tail", direction.rotation())
+                (&self.sprites.tail, direction.rotation())
             } else {
                 let from = Direction::between(self.snake[index], self.snake[index - 1]);
                 let to = Direction::between(self.snake[index + 1], self.snake[index]);
                 if from == to {
-                    if from.vector().x != 0 {
-                        ("BodyStraight", 90.0)
-                    } else {
-                        ("BodyStraight", 0.0)
-                    }
+                    let rotation = if from.vector().x != 0 { 90.0 } else { 0.0 };
+                    (&self.sprites.body, rotation)
                 } else {
-                    ("BodyAngled", corner_rotation(from, to))
+                    (&self.sprites.body_angled, corner_rotation(from, to))
                 }
             };
 
-            self.sprite.set_animation(animation);
-            frame.animated_sprite_rotate(&self.sprite, segment * 8, rotation, Anchor::Center);
+            frame.sprite_rotate(sprite, segment * 8, rotation, Anchor::Center);
         }
 
-        self.sprite.set_animation("Food");
-        frame.animated_sprite(&self.sprite, self.food * 8);
+        frame.sprite(&self.sprites.food, self.food * 8);
     }
 }
 
