@@ -2,13 +2,15 @@
 
 ## Common rules
 
-Each file starts with a four-byte ID. A little-endian `u16` version follows it. The current version is `1`.
+The first 4 bytes are the file ID. The next 2 bytes give the file version. The current version is `1`.
 
-All other integers use little-endian byte order. Files have no compression or alignment padding. Files must end after the last field.
+All other integers use little-endian byte order. Store the least-significant byte first.
 
-The file extension tells the user which asset type the file contains. The decoder checks the file ID and version. It does not check the extension.
+Files do not use compression or padding. Each file must end after its last field.
 
-All image data uses row-major order. The first pixel is at the top-left corner.
+The file extension identifies the asset type. The decoder checks the file ID and version. It does not check the extension.
+
+Image data uses row-major order. Start at the top-left pixel. Read each row from left to right, then read the next row.
 
 ## Open a file in ImHex
 
@@ -27,20 +29,20 @@ The patterns use ImHex standard libraries. Do not set an include path.
 | Tileset | `.pxt` | `TSET` | [tileset.hexpat](imhex/tileset.hexpat) |
 | Tilemap | `.pxm` | `TMAP` | [tilemap.hexpat](imhex/tilemap.hexpat) |
 
-The patterns show the file fields. They check the ID, version, dimensions, and file length. The patterns also check fields that they can validate without another asset file.
+The patterns show the file fields. They check the ID, version, dimensions, and file length. They also check fields that do not need another asset file.
 
 ## Pixels and dimensions
 
-Sprite and tile width and height must be multiples of 8. Each dimension must be from 8 to 64 pixels.
+Sprite and tile widths and heights must be multiples of 8. Each dimension must be 8 to 64 pixels.
 
-Each sprite and tile pixel is one byte:
+Each sprite and tile pixel uses one byte:
 
 - `0` means transparent.
-- `1` to `255` select Aurora palette colors.
+- Values `1` through `255` select colors in the Aurora palette.
 
-The file does not store the palette. Aurora is hardcoded in `api/src/formats/color.rs`; `assets/palette.pal` mirrors it for external palette tools.
+The file does not contain the palette. `api/src/formats/color.rs` defines the Aurora colors and their order. The palette groups similar colors into shade ramps. Each ramp goes from dark to light. `assets/palette.pal` uses the same order for palette tools.
 
-A font height must be from 1 to 64 pixels. Each glyph has a square bitmap. The bitmap has one byte per pixel. Zero is clear. The runtime treats any nonzero value as set.
+Font height must be 1 to 64 pixels. Each glyph uses a square bitmap. Each bitmap pixel uses one byte. Zero means clear. A nonzero value means set.
 
 ## Static sprite: `SPRT`
 
@@ -52,9 +54,9 @@ A font height must be from 1 to 64 pixels. Each glyph has a square bitmap. The b
 | 8 | `u16` | Height in pixels |
 | 10 | `u8[width * height]` | Pixel data |
 
-The file length is `10 + width * height` bytes. The file stores one image.
+The file length is `10 + width * height` bytes. The file contains one image.
 
-`SpriteDocument` stores the decoded image. `Assets::load_sprite` loads the file into a runtime sprite.
+`SpriteDocument` stores the decoded image. `Assets::load_sprite` loads the file as a runtime sprite.
 
 ## Animated sprite: `ANIM`
 
@@ -69,19 +71,19 @@ The file length is `10 + width * height` bytes. The file stores one image.
 | 14 | Frame data | One image for each frame |
 | After frame data | Tag data | One entry for each tag |
 
-Each frame has `width * height` bytes. All frames have the same size.
+Each frame uses `width * height` bytes. All frames have the same size.
 
 Each tag has these fields:
 
 | Type | Field |
 | --- | --- |
 | `u16` | Name length in UTF-8 bytes |
-| `u8[name_length]` | Name bytes. No zero byte follows the name. |
+| `u8[name_length]` | Name bytes in UTF-8. No zero byte follows the name. |
 | `u16` | First frame index |
 | `u16` | Last frame index |
 | `u8` | Direction |
 
-Frame indexes start at zero. The range includes both indexes.
+Frame indexes start at zero. The range includes the first and last frame.
 
 | Value | Direction |
 | ---: | --- |
@@ -90,9 +92,9 @@ Frame indexes start at zero. The range includes both indexes.
 | 2 | Ping-pong |
 | 3 | Reverse ping-pong |
 
-The file does not store frame durations. The runtime controls playback speed.
+The file does not contain frame durations. The runtime sets the playback speed.
 
-`AnimatedSpriteDocument` stores frames and tags. `Assets::load_animated_sprite` loads the file into a runtime animation.
+`AnimatedSpriteDocument` stores the frames and tags. `Assets::load_animated_sprite` loads the file as a runtime animation.
 
 ## Bitmap font: `FONT`
 
@@ -104,7 +106,7 @@ The file does not store frame durations. The runtime controls playback speed.
 | 8 | `u16` | Glyph count |
 | 10 | Glyph data | One entry for each glyph |
 
-Each glyph has `6 + height * height` bytes. The offsets below start at the glyph.
+Each glyph uses `6 + height * height` bytes. The offsets below start at the glyph.
 
 | Offset | Type | Field |
 | ---: | --- | --- |
@@ -112,9 +114,11 @@ Each glyph has `6 + height * height` bytes. The offsets below start at the glyph
 | 4 | `u16` | Advance in pixels |
 | 6 | `u8[height * height]` | Square bitmap |
 
-A codepoint must be a Unicode scalar value. A file must not repeat a codepoint. The API finds the visible width from the rightmost set pixel. The advance is separate. A blank glyph can have a nonzero advance.
+Each codepoint must be a Unicode scalar value. A file must not contain the same codepoint twice.
 
-`FontDocument` stores the decoded glyphs. `Assets::load_font` loads the file into a runtime font.
+The API sets the visible width from the rightmost set pixel. The advance is a separate value. A blank glyph can have a nonzero advance.
+
+`FontDocument` stores the decoded glyphs. `Assets::load_font` loads the file as a runtime font.
 
 ## Tileset: `TSET`
 
@@ -128,15 +132,15 @@ A codepoint must be a Unicode scalar value. A file must not repeat a codepoint. 
 | 26 | `u16` | Tile count |
 | 28 | Tile data | One image for each tile |
 
-Each tile has `tile_width * tile_height` bytes. All tiles have the same size. A tileset must contain at least one tile.
+Each tile uses `tile_width * tile_height` bytes. All tiles have the same size. A tileset must contain at least one tile.
 
-Tile IDs start at `1`. The first tile in the file has ID `1`. ID `0` means an empty tilemap cell. The file does not store an empty tile.
+Tile IDs start at `1`. The first tile in the file has ID `1`. ID `0` means that a tilemap cell is empty. The file does not contain an empty tile.
 
-`TilesetDocument` stores the UUID and tiles. `Assets::load_tileset` loads the file and registers its UUID.
+`TilesetDocument` stores the UUID and tiles. `Assets::load_tileset` loads the file and registers the UUID.
 
 ## Tilemap: `TMAP`
 
-A tilemap refers to a separate tileset by UUID. It does not contain a tileset.
+A tilemap uses the UUID of a separate tileset. The tilemap file does not contain the tileset.
 
 | Offset | Type | Field |
 | ---: | --- | --- |
@@ -147,7 +151,7 @@ A tilemap refers to a separate tileset by UUID. It does not contain a tileset.
 | 10 | `u8[16]` | UUID of the tileset |
 | 26 | Cell data | One entry for each cell |
 
-Each cell has three bytes. The cells use row-major order. No padding follows a cell.
+Each cell uses 3 bytes. The cells use row-major order. No padding follows a cell.
 
 | Cell offset | Type | Field |
 | ---: | --- | --- |
@@ -163,10 +167,10 @@ Each cell has three bytes. The cells use row-major order. No padding follows a c
 
 The renderer applies the diagonal transpose first. It then applies the horizontal and vertical flips.
 
-The file length is `26 + width * height * 3` bytes. The map decoder checks the size and flip flags. It does not read the tileset. Use the matching UUID and valid tile IDs.
+The file length is `26 + width * height * 3` bytes. The map decoder checks the size and flip flags. It does not read the tileset.
 
-Load the tileset before the map. `Assets::load_tilemap` reports an error if the tileset UUID is not loaded.
+Use the matching UUID and valid tile IDs. Load the tileset before the map. `Assets::load_tilemap` reports an error if it cannot find the tileset UUID.
 
 ## Source files
 
-Aseprite files are source files. The game does not load them as pixel asset files. Export or convert them to the current `.px*` formats before use.
+Aseprite files are source files. The game does not load them as pixel assets. Export or convert them to the current `.px*` formats before you use them.
