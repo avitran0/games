@@ -3,7 +3,6 @@
 #pragma array_limit 0x1000000
 
 import std.sys;
-import std.mem;
 
 struct PalettePixel {
     u8 index;
@@ -18,9 +17,8 @@ struct Sprite {
     u16 height;
     std::assert(width >= 8 && width <= 96 && width % 8 == 0, "Use a valid sprite width.");
     std::assert(height >= 8 && height <= 96 && height % 8 == 0, "Use a valid sprite height.");
-    // Pixels use row-major order. Zero is clear.
+    // store pixels in row-major order. zero means clear.
     PalettePixel pixels[width * height];
 };
 
 Sprite sprite @ 0;
-std::assert(sizeof(sprite) == std::mem::size(), "The file has extra data.");

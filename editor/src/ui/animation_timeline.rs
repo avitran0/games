@@ -1,6 +1,6 @@
 use crate::palette;
-use api::formats::{AnimatedSpriteDocument, AnimationDirection, SpriteTag};
 use eframe::egui::{self, Color32, Pos2, Rect, Sense, Stroke, Ui, Vec2};
+use formats::{AnimatedSpriteDocument, AnimationDirection, SpriteTag};
 
 #[derive(Default)]
 pub struct State {

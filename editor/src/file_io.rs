@@ -1,5 +1,5 @@
 use crate::document::{AssetDocument, AssetKind};
-use api::formats::{
+use formats::{
     AnimatedSpriteDocument, FontDocument, SpriteDocument, TilemapDocument, TilesetDocument,
 };
 use rfd::FileDialog;
@@ -123,4 +123,30 @@ pub fn file_name(path: Option<&Path>) -> &str {
 fn with_extension(mut path: PathBuf, extension: &str) -> PathBuf {
     path.set_extension(extension);
     path
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    use super::{load, save};
+    use crate::document::AssetKind;
+
+    #[test]
+    fn loads_and_saves_a_sprite() {
+        let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../snake/src/assets/head_16.pxs");
+        let loaded = load(&fixture).unwrap().unwrap();
+        assert_eq!(loaded.document.kind(), AssetKind::Sprite);
+
+        let stamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!("pixel-editor-{stamp}.pxs"));
+        save(&path, &loaded.document).unwrap();
+        let reopened = load(&path).unwrap().unwrap();
+        std::fs::remove_file(path).unwrap();
+        assert_eq!(reopened.document.kind(), AssetKind::Sprite);
+    }
 }

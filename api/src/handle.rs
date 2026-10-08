@@ -1,4 +1,4 @@
-/// Identifies a static sprite. This handle has no animation controls.
+/// a static sprite handle has no animation controls.
 #[derive(Clone, Copy)]
 pub struct Sprite {
     pub(crate) id: SpriteId,
@@ -10,7 +10,7 @@ impl Sprite {
     }
 }
 
-/// Identifies a tilemap loaded into `Assets`.
+/// a tilemap handle refers to a map loaded by `assets`.
 #[derive(Clone, Copy)]
 pub struct Tilemap {
     pub(crate) id: TilemapId,
@@ -22,7 +22,7 @@ impl Tilemap {
     }
 }
 
-/// Identifies an animated sprite. Each handle has separate playback state.
+/// each animated sprite handle has separate playback state.
 #[derive(Clone)]
 pub struct AnimatedSprite {
     pub(crate) id: SpriteId,

@@ -1,8 +1,7 @@
 use crate::{document::AssetKind, file_io};
 use std::path::PathBuf;
 
-/// Per-file state shared by editor screens. Asset documents remain owned by
-/// their concrete editor screen, so editing never has to unpack an asset enum.
+/// each editor screen owns its document. this keeps pixel edits from unpacking an asset enum.
 pub struct FileState {
     pub path: PathBuf,
     pub linked_tileset_path: Option<PathBuf>,

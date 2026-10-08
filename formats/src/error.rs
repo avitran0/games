@@ -20,7 +20,7 @@ impl InvalidSizeError {
 pub enum InvalidFrameError {
     #[error("Invalid buffer length: expected {expected}, got {actual}")]
     BufferLength { expected: usize, actual: usize },
-    #[cfg(feature = "dev")]
+    #[cfg(feature = "edit")]
     #[error("Invalid pixel index: {0}")]
     PixelIndex(u8),
 }
@@ -39,7 +39,7 @@ pub enum SpriteDecodeError {
     InvalidFrame(#[from] InvalidFrameError),
 }
 
-#[cfg(feature = "dev")]
+#[cfg(feature = "edit")]
 #[derive(Debug, Error)]
 pub enum SpriteEncodeError {
     #[error(transparent)]
@@ -70,21 +70,11 @@ pub enum AnimatedSpriteDecodeError {
     #[error("Invalid tag name: {0}")]
     InvalidTagName(#[from] FromUtf8Error),
     #[error("Invalid animated sprite document: {0}")]
-    InvalidDocument(#[source] AnimatedSpriteEncodeError),
+    InvalidDocument(#[source] InvalidAnimationError),
 }
 
 #[derive(Debug, Error)]
-pub enum AnimatedSpriteEncodeError {
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
-    #[error(transparent)]
-    InvalidSize(#[from] InvalidSizeError),
-    #[cfg(feature = "dev")]
-    #[error("Frame {frame} is invalid: {error}")]
-    InvalidFrame {
-        frame: usize,
-        error: InvalidFrameError,
-    },
+pub enum InvalidAnimationError {
     #[error("Invalid frame count: expected 1..=65535, got {0}")]
     InvalidFrameCount(usize),
     #[error("Sprite has too many tags: max 65535, got {0}")]
@@ -99,7 +89,23 @@ pub enum AnimatedSpriteEncodeError {
     TagInvalidRange(RangeInclusive<u16>),
 }
 
-#[cfg(feature = "dev")]
+#[cfg(feature = "edit")]
+#[derive(Debug, Error)]
+pub enum AnimatedSpriteEncodeError {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error(transparent)]
+    InvalidSize(#[from] InvalidSizeError),
+    #[error("Frame {frame} is invalid: {error}")]
+    InvalidFrame {
+        frame: usize,
+        error: InvalidFrameError,
+    },
+    #[error(transparent)]
+    InvalidAnimation(#[from] InvalidAnimationError),
+}
+
+#[cfg(feature = "edit")]
 #[derive(Debug, Error)]
 pub enum TilesetEncodeError {
     #[error(transparent)]
@@ -132,11 +138,9 @@ pub enum TilesetDecodeError {
         tile: usize,
         error: InvalidFrameError,
     },
-    #[error("Invalid tileset data length: expected {expected}, got {actual}")]
-    InvalidDataLength { expected: usize, actual: usize },
 }
 
-#[cfg(feature = "dev")]
+#[cfg(feature = "edit")]
 #[derive(Debug, Error)]
 pub enum TilemapEncodeError {
     #[error(transparent)]
@@ -159,13 +163,11 @@ pub enum TilemapDecodeError {
     InvalidVersion(u16),
     #[error("Invalid tilemap dimensions: {width}x{height}")]
     InvalidSize { width: u32, height: u32 },
-    #[error("Invalid tilemap data length: expected {expected}, got {actual}")]
-    InvalidDataLength { expected: usize, actual: usize },
     #[error("Invalid tile flip flags: {0:#04x}")]
     InvalidFlags(u8),
 }
 
-#[cfg(feature = "dev")]
+#[cfg(feature = "edit")]
 #[derive(Debug, Error)]
 pub enum FontEncodeError {
     #[error(transparent)]
@@ -204,6 +206,4 @@ pub enum FontDecodeError {
     DuplicateCodepoint(char),
     #[error("Invalid width for glyph {codepoint:?}: width must be greater than zero")]
     InvalidGlyphWidth { codepoint: char, width: u16 },
-    #[error("Invalid font data length: expected {expected}, got {actual}")]
-    InvalidDataLength { expected: usize, actual: usize },
 }

@@ -1,8 +1,8 @@
 use super::{AssetSpec, dimensions};
 use crate::file_io;
-use api::formats::TilesetDocument;
 use api::glam::uvec2;
 use eframe::egui::{self, Ui};
+use formats::TilesetDocument;
 use std::path::PathBuf;
 
 pub struct Screen {

@@ -3,9 +3,9 @@ use crate::{
     editors::{FileState, apply_pixel_edit},
     ui::{self, canvas::PixelMode},
 };
-use api::formats::{FontDocument, GlyphDocument};
 use api::glam::uvec2;
 use eframe::egui::{self, Ui};
+use formats::{FontDocument, GlyphDocument};
 
 pub struct Screen {
     pub file: FileState,
@@ -340,5 +340,35 @@ fn glyph_label(codepoint: char) -> String {
         format!("'{codepoint}' (U+{:04X})", codepoint as u32)
     } else {
         format!("U+{:04X}", codepoint as u32)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use formats::GlyphDocument;
+
+    use super::{parse_character, resize_glyph_width};
+
+    #[test]
+    fn parses_single_characters_and_unicode_values() {
+        assert_eq!(parse_character("A"), Some('A'));
+        assert_eq!(parse_character("U+1F600"), Some('😀'));
+        assert_eq!(parse_character("u+0041"), Some('A'));
+        assert_eq!(parse_character("U+D800"), None);
+        assert_eq!(parse_character("AB"), None);
+    }
+
+    #[test]
+    fn resizes_glyph_rows_without_shifting_pixels() {
+        let mut glyph = GlyphDocument {
+            codepoint: 'A',
+            width: 2,
+            advance: 2,
+            bitmap: vec![1, 2, 3, 4],
+        };
+        resize_glyph_width(&mut glyph, 2, 3);
+        assert_eq!(glyph.bitmap, [1, 2, 0, 3, 4, 0]);
+        resize_glyph_width(&mut glyph, 2, 1);
+        assert_eq!(glyph.bitmap, [1, 3]);
     }
 }

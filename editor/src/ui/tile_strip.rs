@@ -1,6 +1,6 @@
 use crate::ui::tile_preview;
-use api::formats::TilesetDocument;
 use eframe::egui::{self, Pos2, Rect, Sense, Stroke, Ui, Vec2};
+use formats::TilesetDocument;
 
 const CARD_SIZE: Vec2 = Vec2::new(60.0, 64.0);
 const PREVIEW_SIZE: f32 = 46.0;

@@ -1,4 +1,4 @@
-use api::formats::{
+use formats::{
     AnimatedSpriteDocument, FontDocument, SpriteDocument, TilemapDocument, TilesetDocument,
 };
 

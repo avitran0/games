@@ -8,9 +8,9 @@ mod tilemap;
 mod tileset;
 
 use crate::document::AssetKind;
-use api::formats::TilesetDocument;
 use api::glam::UVec2;
 use eframe::egui::{self, Ui};
+use formats::TilesetDocument;
 use std::path::PathBuf;
 
 #[derive(Clone)]

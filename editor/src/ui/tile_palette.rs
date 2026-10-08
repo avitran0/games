@@ -1,6 +1,6 @@
 use crate::ui::tile_preview;
-use api::formats::TilesetDocument;
 use eframe::egui::{self, Rect, Stroke, Ui, Vec2};
+use formats::TilesetDocument;
 
 const COLUMNS: usize = 3;
 const BUTTON_SIZE: f32 = 44.0;

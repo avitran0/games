@@ -3,7 +3,6 @@
 #pragma array_limit 0x1000000
 
 import std.sys;
-import std.mem;
 
 struct PalettePixel {
     u8 index;
@@ -11,7 +10,7 @@ struct PalettePixel {
 };
 
 struct Image<auto Width, auto Height> {
-    // Pixels use row-major order. Zero is clear.
+    // store pixels in row-major order. zero means clear.
     PalettePixel pixels[Width * Height];
 };
 
@@ -25,7 +24,7 @@ enum Direction : u8 {
 struct AnimationTag<auto FrameCount> {
     u16 name_length;
     std::assert(name_length > 0, "Give the tag a name.");
-    // The name uses UTF-8 bytes. It has no zero byte at the end.
+    // store the name as utf-8 bytes with no ending zero byte.
     char name[name_length];
     u16 first_frame;
     u16 last_frame;
@@ -42,7 +41,7 @@ struct AnimatedSprite {
     u16 height;
     std::assert(width >= 8 && width <= 96 && width % 8 == 0, "Use a valid frame width.");
     std::assert(height >= 8 && height <= 96 && height % 8 == 0, "Use a valid frame height.");
-    // The API stores both counts as u16 values.
+    // both counts use u16 values.
     u16 frame_count;
     u16 tag_count;
     Image<width, height> frames[frame_count];
@@ -50,4 +49,3 @@ struct AnimatedSprite {
 };
 
 AnimatedSprite sprite @ 0;
-std::assert(sizeof(sprite) == std::mem::size(), "The file has extra data.");

@@ -3,7 +3,6 @@
 #pragma array_limit 0x1000000
 
 import std.sys;
-import std.mem;
 
 struct PalettePixel {
     u8 index;
@@ -11,7 +10,7 @@ struct PalettePixel {
 };
 
 struct TileImage<auto Width, auto Height> {
-    // Pixels use row-major order. Zero is clear.
+    // store pixels in row-major order. zero means clear.
     PalettePixel pixels[Width * Height];
 };
 
@@ -19,7 +18,7 @@ struct Tileset {
     char magic[4];
     u16 version;
     std::assert(magic == "TSET" && version == 1, "Use TSET version 1.");
-    // Store the 16 UUID bytes from the matching tilemap here.
+    // enter the matching tilemap uuid here.
     u8 uuid[16];
     u16 tile_width;
     u16 tile_height;
@@ -27,9 +26,8 @@ struct Tileset {
     std::assert(tile_width >= 8 && tile_width <= 96 && tile_width % 8 == 0, "Use a valid tile width.");
     std::assert(tile_height >= 8 && tile_height <= 96 && tile_height % 8 == 0, "Use a valid tile height.");
     std::assert(tile_count >= 1, "Add at least one tile.");
-    // Tile IDs start at one. Array index zero has ID one.
+    // tile ids start at one. array index zero has id one.
     TileImage<tile_width, tile_height> tiles[tile_count];
 };
 
 Tileset tileset @ 0;
-std::assert(sizeof(tileset) == std::mem::size(), "The file has extra data.");

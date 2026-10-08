@@ -419,24 +419,35 @@ fn rect_between(first: (usize, usize), second: (usize, usize)) -> PixelRect {
 }
 
 fn moved_pixels(pixels: &[u8], size: UVec2, from: PixelRect, to: PixelRect) -> Vec<u8> {
-    let width = size.x as usize;
     let mut output = pixels.to_vec();
+    move_pixels(&mut output, size.x as usize, from, to);
+    output
+}
+
+pub(crate) fn move_pixels(pixels: &mut [u8], width: usize, from: PixelRect, to: PixelRect) -> bool {
     let mut selected = Vec::with_capacity(from.width * from.height);
     for y in 0..from.height {
         let start = (from.y + y) * width + from.x;
         selected.extend_from_slice(&pixels[start..start + from.width]);
     }
+
+    let mut changed = false;
     for y in 0..from.height {
         let start = (from.y + y) * width + from.x;
-        output[start..start + from.width].fill(0);
+        changed |= pixels[start..start + from.width]
+            .iter()
+            .any(|pixel| *pixel != 0);
+        pixels[start..start + from.width].fill(0);
     }
-    for y in 0..to.height {
-        for x in 0..to.width {
+    for y in 0..from.height {
+        for x in 0..from.width {
             let value = selected[y * from.width + x];
             if value != 0 {
-                output[(to.y + y) * width + to.x + x] = value;
+                let pixel = &mut pixels[(to.y + y) * width + to.x + x];
+                changed |= *pixel != value;
+                *pixel = value;
             }
         }
     }
-    output
+    changed
 }

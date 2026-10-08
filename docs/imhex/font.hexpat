@@ -3,7 +3,6 @@
 #pragma array_limit 0x1000000
 
 import std.sys;
-import std.mem;
 
 struct Glyph<auto Height> {
     u32 codepoint;
@@ -11,7 +10,7 @@ struct Glyph<auto Height> {
     u16 advance;
     u16 width;
     std::assert(width > 0, "Use a nonzero glyph width.");
-    // Pixels use row-major order. Zero is clear.
+    // store pixels in row-major order. zero means clear.
     u8 bitmap[width * Height];
 };
 
@@ -27,4 +26,3 @@ struct Font {
 };
 
 Font font @ 0;
-std::assert(sizeof(font) == std::mem::size(), "The file has extra data.");

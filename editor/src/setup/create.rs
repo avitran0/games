@@ -1,6 +1,6 @@
 use super::AssetSpec;
 use crate::{document::AssetDocument, file_io};
-use api::formats::{
+use formats::{
     AnimatedSpriteDocument, FontDocument, SpriteDocument, TilemapDocument, TilesetDocument,
 };
 pub fn create(spec: AssetSpec) -> Result<Option<file_io::LoadedAsset>, String> {

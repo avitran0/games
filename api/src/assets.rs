@@ -1,15 +1,12 @@
 use std::{collections::HashMap, hash::Hash, rc::Rc};
 
+use formats::{AnimatedSpriteDocument, SpriteDocument, TilemapDocument, TilesetDocument};
 use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
     AnimatedSprite, Font, ScreenAction, Sprite,
-    formats::{
-        sprite::{AnimatedSpriteDocument, SpriteDocument},
-        tilemap::{TilemapData, TilemapDocument},
-        tileset::{Tileset, TilesetDocument},
-    },
+    formats::{tilemap::TilemapData, tileset::Tileset},
     handle::{SpriteId, Tilemap as TilemapHandle, TilemapId},
     render::{font::GlFont, sprite::GlSprite},
     screen::error::ErrorScreen,
@@ -72,7 +69,7 @@ impl Assets {
         })
     }
 
-    /// Loads a static `.pxs` file. Use `load_animated_sprite` for an animation.
+    /// use this method for `.pxs` files. use `load_animated_sprite` for `.pxa` files.
     pub fn load_sprite<State>(&mut self, data: &[u8]) -> Result<Sprite, ScreenAction<State>> {
         let document = SpriteDocument::decode(data)
             .map_err(|error| show_asset_error(AssetLoadError::Decode(error.to_string())))?;
@@ -81,7 +78,7 @@ impl Assets {
             .map_err(show_asset_error)
     }
 
-    /// Loads an animated `.pxa` file with separate playback state.
+    /// each returned handle has separate playback state.
     pub fn load_animated_sprite<State>(
         &mut self,
         data: &[u8],
@@ -110,7 +107,7 @@ impl Assets {
         Ok(id)
     }
 
-    /// Loads a `.pxm` file and returns its asset handle.
+    /// the matching tileset must be loaded first.
     pub fn load_tilemap<State>(
         &mut self,
         data: &[u8],
@@ -135,7 +132,7 @@ impl Assets {
         Ok(TilemapHandle::new(id))
     }
 
-    /// Loads a `.pxt` file and makes its tiles available to linked tilemaps.
+    /// load a tileset before loading maps that refer to it.
     pub fn load_tileset<State>(&mut self, data: &[u8]) -> Result<Tileset, ScreenAction<State>> {
         let document = TilesetDocument::decode(data)
             .map_err(|error| show_asset_error(AssetLoadError::Decode(error.to_string())))?;
@@ -148,7 +145,6 @@ impl Assets {
         Ok(tileset)
     }
 
-    /// Loads a `.pxf` file.
     pub fn load_font<State>(&mut self, data: &[u8]) -> Result<Font, ScreenAction<State>> {
         Self::load_font_into(&self.gl, &mut self.fonts, data).map_err(show_asset_error)
     }

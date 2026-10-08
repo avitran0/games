@@ -1,14 +1,9 @@
 use std::{collections::HashMap, rc::Rc};
 
+use formats::{AnimatedSpriteDocument, AnimationDirection, SpriteDocument, TilesetDocument};
 use glam::UVec2;
 
-use crate::{
-    formats::{
-        sprite::{AnimatedSpriteDocument, AnimationDirection, SpriteDocument},
-        tileset::TilesetDocument,
-    },
-    render::gpu_image::GpuImage,
-};
+use crate::render::gpu_image::GpuImage;
 
 pub(crate) struct GlSprite {
     image: GpuImage,
@@ -111,7 +106,7 @@ impl GlSprite {
 
 impl Animation {
     fn frame(&self, tick: u16) -> u16 {
-        // Use u32. A valid u16 frame range can exceed the ping-pong period.
+        // use u32 because a valid u16 frame range can exceed the ping-pong period.
         let from = u32::from(self.from);
         let to = u32::from(self.to);
         let tick = u32::from(tick);

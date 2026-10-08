@@ -1,6 +1,7 @@
 mod pixel;
 mod tilemap;
 
+pub(crate) use pixel::move_pixels;
 pub use pixel::{
     PixelAction, PixelEdit, PixelMode, PixelRect, PixelSelection, selection_controls, show_pixels,
     show_pixels_with_selection,
@@ -33,7 +34,7 @@ impl GridBackground {
 
 #[derive(Clone, Copy, Debug)]
 pub struct CanvasView {
-    /// Zoom multiplier applied to the fit-to-view scale.
+    /// multiply the fit-to-view scale by this value.
     zoom: f32,
     pan: Vec2,
     background: GridBackground,

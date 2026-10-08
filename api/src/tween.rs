@@ -30,6 +30,9 @@ impl<T: Tweenable> Tween<T> {
     }
 
     pub fn current(&self) -> T {
+        if self.ticks == 0 {
+            return self.end;
+        }
         self.interpolation.interpolate(
             self.start,
             self.end,
@@ -69,7 +72,7 @@ impl<T: Tweenable> Tween<T> {
 }
 
 pub enum Interpolation {
-    // TODO: Add the easing functions from https://easings.net.
+    // todo: add easing functions from https://easings.net.
     Linear,
     EaseInSine,
     EaseOutSine,
@@ -119,7 +122,7 @@ impl Interpolation {
 
 #[cfg(test)]
 mod test {
-    use super::Interpolation;
+    use super::{Interpolation, Tween};
 
     macro_rules! test_interp {
         ($name:ident, $interp:expr, $values:expr) => {
@@ -196,4 +199,35 @@ mod test {
         Interpolation::EaseInOutCubic,
         [0.0, 0.01, 0.06, 0.21, 0.5, 0.79, 0.94, 0.99, 1.0]
     );
+
+    #[test]
+    fn tween_ticks_and_finishes_at_end() {
+        let mut tween = Tween::new(0.0, 8.0, 4, Interpolation::Linear);
+        tween.tick();
+        tween.tick();
+        assert_eq!(tween.current(), 4.0);
+        tween.tick();
+        tween.tick();
+        tween.tick();
+        assert!(tween.is_finished());
+        assert_eq!(tween.current(), 8.0);
+    }
+
+    #[test]
+    fn retarget_keeps_current_value() {
+        let mut tween = Tween::new(0.0, 8.0, 4, Interpolation::Linear);
+        tween.tick();
+        tween.tick();
+        tween.retarget(12.0);
+        assert_eq!(tween.current(), 4.0);
+        tween.tick();
+        assert_eq!(tween.current(), 6.0);
+    }
+
+    #[test]
+    fn zero_duration_tween_returns_end() {
+        let tween = Tween::new(2.0, 5.0, 0, Interpolation::Linear);
+        assert!(tween.is_finished());
+        assert_eq!(tween.current(), 5.0);
+    }
 }

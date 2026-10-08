@@ -3,15 +3,12 @@ name = "api"
 version = "0.1.0"
 edition = "2024"
 
-[features]
-default = []
-dev = []
-
 [dependencies]
 utils.git = "https://codeberg.org/avitrano/utils"
 # for asset hashing
 blake3 = "1.8"
 glam = "0.34"
+formats.workspace = true
 glow = "0.18"
 serde = "1.0"
 sdl3 = { version = "0.20", features = ["build-from-source-static"] }

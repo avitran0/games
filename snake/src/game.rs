@@ -18,6 +18,16 @@ enum Direction {
 }
 
 impl Direction {
+    fn can_turn_to(self, next: Self) -> bool {
+        !matches!(
+            (self, next),
+            (Self::Up, Self::Down)
+                | (Self::Down, Self::Up)
+                | (Self::Left, Self::Right)
+                | (Self::Right, Self::Left)
+        )
+    }
+
     fn vector(self) -> IVec2 {
         match self {
             Self::Up => -IVec2::Y,
@@ -127,11 +137,7 @@ impl GameScreen {
     }
 
     fn spawn_food(&mut self) {
-        let free: Vec<IVec2> = (0..GRID_HEIGHT)
-            .flat_map(|y| (0..GRID_WIDTH).map(move |x| ivec2(x, y)))
-            .filter(|position| !self.snake.contains(position))
-            .collect();
-
+        let free = free_positions(&self.snake);
         if !free.is_empty() {
             let index = self.rng.get_usize_range(0..free.len());
             self.food = free[index];
@@ -150,16 +156,16 @@ impl GameScreen {
 
 impl api::Screen<State> for GameScreen {
     fn update(&mut self, ctx: &mut api::ScreenContext<'_, State>) -> api::ScreenAction<State> {
-        if ctx.input.just_pressed(Button::Up) && self.direction != Direction::Down {
+        if ctx.input.just_pressed(Button::Up) && self.direction.can_turn_to(Direction::Up) {
             self.queued_direction = Direction::Up;
         }
-        if ctx.input.just_pressed(Button::Down) && self.direction != Direction::Up {
+        if ctx.input.just_pressed(Button::Down) && self.direction.can_turn_to(Direction::Down) {
             self.queued_direction = Direction::Down;
         }
-        if ctx.input.just_pressed(Button::Left) && self.direction != Direction::Right {
+        if ctx.input.just_pressed(Button::Left) && self.direction.can_turn_to(Direction::Left) {
             self.queued_direction = Direction::Left;
         }
-        if ctx.input.just_pressed(Button::Right) && self.direction != Direction::Left {
+        if ctx.input.just_pressed(Button::Right) && self.direction.can_turn_to(Direction::Right) {
             self.queued_direction = Direction::Right;
         }
 
@@ -167,15 +173,10 @@ impl api::Screen<State> for GameScreen {
         if ctx.tick.is_multiple_of(move_interval) {
             self.direction = self.queued_direction;
             let head = self.snake[0];
-            let next = (head + self.direction.vector()).rem_euclid(ivec2(GRID_WIDTH, GRID_HEIGHT));
+            let next = next_position(head, self.direction);
             let growing = next == self.food;
 
-            let collision_len = if growing {
-                self.snake.len()
-            } else {
-                self.snake.len().saturating_sub(1)
-            };
-            if self.snake[..collision_len].contains(&next) {
+            if hits_snake(&self.snake, next, growing) {
                 self.reset();
                 return api::ScreenAction::Replace(Box::new(GameOverScreen));
             } else {
@@ -228,18 +229,92 @@ impl api::Screen<State> for GameScreen {
     }
 }
 
+fn next_position(position: IVec2, direction: Direction) -> IVec2 {
+    (position + direction.vector()).rem_euclid(ivec2(GRID_WIDTH, GRID_HEIGHT))
+}
+
+fn hits_snake(snake: &[IVec2], position: IVec2, growing: bool) -> bool {
+    let body_len = if growing {
+        snake.len()
+    } else {
+        snake.len().saturating_sub(1)
+    };
+    snake[..body_len].contains(&position)
+}
+
+fn free_positions(snake: &[IVec2]) -> Vec<IVec2> {
+    (0..GRID_HEIGHT)
+        .flat_map(|y| (0..GRID_WIDTH).map(move |x| ivec2(x, y)))
+        .filter(|position| !snake.contains(position))
+        .collect()
+}
+
 fn corner_rotation(from: Direction, to: Direction) -> (f32, Flip) {
     match (from, to) {
-        // right turn, no flip
         (Direction::Up, Direction::Left) => (0.0, Flip::None),
         (Direction::Right, Direction::Up) => (90.0, Flip::None),
         (Direction::Down, Direction::Right) => (180.0, Flip::None),
         (Direction::Left, Direction::Down) => (270.0, Flip::None),
-        // left turn, including flip, otherwise the sprites don't connect properly
+        // flip the sprite so its ends connect.
         (Direction::Up, Direction::Right) => (0.0, Flip::Horizontal),
         (Direction::Right, Direction::Down) => (90.0, Flip::Horizontal),
         (Direction::Down, Direction::Left) => (180.0, Flip::Horizontal),
         (Direction::Left, Direction::Up) => (270.0, Flip::Horizontal),
         _ => (0.0, Flip::None),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use api::{Flip, glam::ivec2};
+
+    use super::{
+        Direction, GRID_HEIGHT, GRID_WIDTH, corner_rotation, free_positions, hits_snake,
+        next_position,
+    };
+
+    #[test]
+    fn direction_rejects_only_reverse_turns() {
+        assert!(!Direction::Up.can_turn_to(Direction::Down));
+        assert!(Direction::Up.can_turn_to(Direction::Left));
+        assert!(Direction::Up.can_turn_to(Direction::Up));
+    }
+
+    #[test]
+    fn movement_wraps_at_grid_edges() {
+        assert_eq!(
+            next_position(ivec2(GRID_WIDTH - 1, 0), Direction::Right),
+            ivec2(0, 0)
+        );
+        assert_eq!(
+            next_position(ivec2(0, 0), Direction::Up),
+            ivec2(0, GRID_HEIGHT - 1)
+        );
+    }
+
+    #[test]
+    fn collision_allows_vacating_tail_unless_snake_grows() {
+        let snake = [ivec2(2, 2), ivec2(1, 2), ivec2(0, 2)];
+        assert!(!hits_snake(&snake, ivec2(0, 2), false));
+        assert!(hits_snake(&snake, ivec2(0, 2), true));
+        assert!(hits_snake(&snake, ivec2(1, 2), false));
+    }
+
+    #[test]
+    fn food_positions_exclude_snake_cells() {
+        let snake = [ivec2(0, 0), ivec2(1, 0)];
+        let free = free_positions(&snake);
+        assert_eq!(free.len(), (GRID_WIDTH * GRID_HEIGHT - 2) as usize);
+        assert!(!free.contains(&ivec2(0, 0)));
+    }
+
+    #[test]
+    fn corner_turns_use_the_expected_flip() {
+        let (rotation, flip) = corner_rotation(Direction::Up, Direction::Right);
+        assert_eq!(rotation, 0.0);
+        assert!(matches!(flip, Flip::Horizontal));
+        let (rotation, flip) = corner_rotation(Direction::Up, Direction::Left);
+        assert_eq!(rotation, 0.0);
+        assert!(matches!(flip, Flip::None));
     }
 }

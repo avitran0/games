@@ -1,10 +1,8 @@
 use super::{CanvasView, GridBackground, active_pointer, canvas_geometry};
 use crate::palette;
-use api::{
-    formats::{Tile, TilemapDocument, TilesetDocument},
-    glam::UVec2,
-};
+use api::glam::UVec2;
 use eframe::egui::{self, Color32, Pos2, Rect, Stroke, Ui, Vec2};
+use formats::{Tile, TilemapDocument, TilesetDocument};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CellEdit {

@@ -4,8 +4,8 @@ use crate::{
     file_io,
     ui::{self, canvas::PixelMode},
 };
-use api::formats::{SpriteDocument, TilemapDocument, TilesetDocument};
 use eframe::egui::Ui;
+use formats::{SpriteDocument, TilemapDocument, TilesetDocument};
 
 pub struct Screen {
     pub file: FileState,

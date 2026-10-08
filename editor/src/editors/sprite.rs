@@ -3,8 +3,8 @@ use crate::{
     editors::{FileState, apply_pixel_action},
     ui::{self, canvas::PixelMode},
 };
-use api::formats::SpriteDocument;
 use eframe::egui::Ui;
+use formats::SpriteDocument;
 
 pub struct Screen {
     pub file: FileState,

@@ -1,30 +1,25 @@
-#[cfg(feature = "dev")]
+#[cfg(feature = "edit")]
 use std::io::Write;
-use std::{
-    collections::HashSet,
-    io::{Cursor, Read},
-};
+use std::{collections::HashSet, io::Read};
 
 use glam::{UVec2, u16vec2};
 use utils::io::{Endian, EndianReader, ReadBytes};
-#[cfg(feature = "dev")]
+#[cfg(feature = "edit")]
 use utils::io::{EndianWriter, WriteBytes};
 
-#[cfg(feature = "dev")]
-use crate::formats::error::SpriteEncodeError;
-use crate::formats::error::{
-    AnimatedSpriteDecodeError, AnimatedSpriteEncodeError, InvalidFrameError, InvalidSizeError,
+use crate::error::{
+    AnimatedSpriteDecodeError, InvalidAnimationError, InvalidFrameError, InvalidSizeError,
     SpriteDecodeError,
 };
+#[cfg(feature = "edit")]
+use crate::error::{AnimatedSpriteEncodeError, SpriteEncodeError};
 
-/// basic, non-animated sprite type
 #[derive(Clone, PartialEq, Eq)]
 pub struct SpriteDocument {
     pub size: UVec2,
     pub pixels: SpriteFrame,
 }
 
-/// animated sprite type
 #[derive(Clone, PartialEq, Eq)]
 pub struct AnimatedSpriteDocument {
     pub size: UVec2,
@@ -34,7 +29,7 @@ pub struct AnimatedSpriteDocument {
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct SpriteFrame {
-    /// row-major order, index 0 is transparent
+    /// pixels use row-major order. index 0 is transparent.
     pixels: Vec<u8>,
 }
 
@@ -58,7 +53,7 @@ impl SpriteDocument {
     const MAGIC: [u8; 4] = *b"SPRT";
     const VERSION: u16 = 1;
 
-    #[cfg(feature = "dev")]
+    #[cfg(feature = "edit")]
     pub fn new(size: UVec2) -> Result<Self, InvalidSizeError> {
         validate_sprite_size(size)?;
         Ok(Self {
@@ -67,7 +62,7 @@ impl SpriteDocument {
         })
     }
 
-    #[cfg(feature = "dev")]
+    #[cfg(feature = "edit")]
     pub fn encode(&self) -> Result<Vec<u8>, SpriteEncodeError> {
         validate_sprite_size(self.size)?;
         validate_frame(self.size, &self.pixels)?;
@@ -85,8 +80,7 @@ impl SpriteDocument {
     }
 
     pub fn decode(bytes: &[u8]) -> Result<Self, SpriteDecodeError> {
-        let cursor = Cursor::new(bytes);
-        let mut reader = EndianReader::new(cursor, Endian::Little);
+        let mut reader = EndianReader::new(bytes, Endian::Little);
 
         let magic = ReadBytes::read_array::<4>(&mut reader)?;
         if magic != Self::MAGIC {
@@ -103,7 +97,6 @@ impl SpriteDocument {
 
         let pixels = SpriteFrame::decode(&mut reader, size)?;
         validate_frame(size, &pixels)?;
-
         Ok(Self { size, pixels })
     }
 }
@@ -112,7 +105,7 @@ impl AnimatedSpriteDocument {
     const MAGIC: [u8; 4] = *b"ANIM";
     const VERSION: u16 = 1;
 
-    #[cfg(feature = "dev")]
+    #[cfg(feature = "edit")]
     pub fn new(size: UVec2) -> Result<Self, InvalidSizeError> {
         validate_sprite_size(size)?;
         Ok(Self {
@@ -127,7 +120,7 @@ impl AnimatedSpriteDocument {
         })
     }
 
-    #[cfg(feature = "dev")]
+    #[cfg(feature = "edit")]
     pub fn validate(&self) -> Result<(), AnimatedSpriteEncodeError> {
         validate_sprite_size(self.size)?;
         validate_animation_frame_count(self.frames.len())?;
@@ -137,37 +130,34 @@ impl AnimatedSpriteDocument {
                 .map_err(|error| AnimatedSpriteEncodeError::InvalidFrame { frame: i, error })?;
         }
 
-        self.validate_tags()
+        self.validate_tags()?;
+        Ok(())
     }
 
-    fn validate_tags(&self) -> Result<(), AnimatedSpriteEncodeError> {
+    fn validate_tags(&self) -> Result<(), InvalidAnimationError> {
         if self.tags.len() > u16::MAX as usize {
-            return Err(AnimatedSpriteEncodeError::TooManyTags(self.tags.len()));
+            return Err(InvalidAnimationError::TooManyTags(self.tags.len()));
         }
 
         let mut names = HashSet::new();
         for tag in &self.tags {
             if tag.name.trim().is_empty() {
-                return Err(AnimatedSpriteEncodeError::TagNameEmpty);
+                return Err(InvalidAnimationError::TagNameEmpty);
             }
             if tag.name.len() > u16::MAX as usize {
-                return Err(AnimatedSpriteEncodeError::TagNameTooLong(tag.name.len()));
+                return Err(InvalidAnimationError::TagNameTooLong(tag.name.len()));
             }
             if !names.insert(&tag.name) {
-                return Err(AnimatedSpriteEncodeError::TagNameDuplicated(
-                    tag.name.clone(),
-                ));
+                return Err(InvalidAnimationError::TagNameDuplicated(tag.name.clone()));
             }
             if tag.start > tag.end || tag.end as usize >= self.frames.len() {
-                return Err(AnimatedSpriteEncodeError::TagInvalidRange(
-                    tag.start..=tag.end,
-                ));
+                return Err(InvalidAnimationError::TagInvalidRange(tag.start..=tag.end));
             }
         }
         Ok(())
     }
 
-    #[cfg(feature = "dev")]
+    #[cfg(feature = "edit")]
     pub fn encode(&self) -> Result<Vec<u8>, AnimatedSpriteEncodeError> {
         self.validate()?;
 
@@ -202,8 +192,7 @@ impl AnimatedSpriteDocument {
     }
 
     pub fn decode(bytes: &[u8]) -> Result<Self, AnimatedSpriteDecodeError> {
-        let cursor = Cursor::new(bytes);
-        let mut reader = EndianReader::new(cursor, Endian::Little);
+        let mut reader = EndianReader::new(bytes, Endian::Little);
 
         let magic = ReadBytes::read_array(&mut reader)?;
         if magic != Self::MAGIC {
@@ -268,11 +257,11 @@ impl AnimatedSpriteDocument {
     }
 }
 
-fn validate_animation_frame_count(count: usize) -> Result<(), AnimatedSpriteEncodeError> {
+fn validate_animation_frame_count(count: usize) -> Result<(), InvalidAnimationError> {
     if (1..=u16::MAX as usize).contains(&count) {
         Ok(())
     } else {
-        Err(AnimatedSpriteEncodeError::InvalidFrameCount(count))
+        Err(InvalidAnimationError::InvalidFrameCount(count))
     }
 }
 
@@ -281,20 +270,19 @@ impl SpriteFrame {
         &self.pixels
     }
 
-    /// Returns mutable indexed pixels for editor tooling enabled with `dev`.
-    /// The document should be validated before encoding after mutation.
-    #[cfg(feature = "dev")]
+    /// validate the document before you encode it after changing pixels.
+    #[cfg(feature = "edit")]
     pub fn pixels_mut(&mut self) -> &mut [u8] {
         &mut self.pixels
     }
 
-    pub(crate) fn blank(size: UVec2) -> Self {
+    pub fn blank(size: UVec2) -> Self {
         Self {
             pixels: vec![0; (size.x * size.y) as usize],
         }
     }
 
-    #[cfg(feature = "dev")]
+    #[cfg(feature = "edit")]
     pub(crate) fn encode<W: Write>(&self, writer: &mut EndianWriter<W>) -> std::io::Result<()> {
         writer.write_bytes(&self.pixels)
     }
@@ -326,11 +314,10 @@ pub(super) fn validate_frame(size: UVec2, frame: &SpriteFrame) -> Result<(), Inv
             actual: frame.pixels.len(),
         });
     }
-    // Pixel indices are u8: zero is transparent and 1..=255 index palette colors.
     Ok(())
 }
 
-#[cfg(all(test, feature = "dev"))]
+#[cfg(all(test, feature = "edit"))]
 mod tests {
     use glam::uvec2;
 

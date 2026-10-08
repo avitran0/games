@@ -10,7 +10,6 @@ unsafe extern "C" {
     fn process_prng(buf: *mut u8, len: usize) -> bool;
 }
 
-// Uses the xoshiro256++ pseudo-random number generator.
 pub struct Rng {
     state: [u64; 4],
 }
@@ -135,4 +134,24 @@ impl Rng {
     impl_int!(get_i32, i32);
     impl_int!(get_i64, i64);
     impl_int!(get_isize, isize);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Rng;
+
+    #[test]
+    fn range_values_stay_inside_bounds() {
+        let mut rng = Rng::new();
+        for _ in 0..500 {
+            assert!((7..12).contains(&rng.get_u8_range(7..12)));
+            assert!((-8..-2).contains(&rng.get_i32_range(-8..-2)));
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "The random range must not be empty.")]
+    fn empty_ranges_panic() {
+        Rng::new().get_u8_range(4..4);
+    }
 }

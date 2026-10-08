@@ -30,4 +30,4 @@ pub const BTN_LEFT: &str = "\u{E010}";
 pub const BTN_UP: &str = "\u{E011}";
 pub const BTN_RIGHT: &str = "\u{E012}";
 pub const BTN_DOWN: &str = "\u{E013}";
-// TODO: Add glyphs for the Start and Select buttons.
+// todo: add glyphs for the start and select buttons.

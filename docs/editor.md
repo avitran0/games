@@ -5,7 +5,7 @@
 Run this command from the repository root:
 
 ```sh
-cargo run -p egui-editor
+cargo run -p editor
 ```
 
 ## Asset types
@@ -82,6 +82,6 @@ Save writes the map and any changed tileset.
 
 ## API
 
-The editor uses document types from `api::formats`.
+The editor uses document types from the `formats` crate. The `api` crate uses the same types to decode assets at runtime.
 
-The `dev` feature provides pixel editing and encoding functions for the editor.
+The `formats` crate's `edit` feature provides document creation, pixel editing, validation, and encoding for the editor. Games do not need that feature.

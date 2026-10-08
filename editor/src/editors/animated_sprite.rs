@@ -3,8 +3,8 @@ use crate::{
     editors::{FileState, apply_pixel_action},
     ui::{self, animation_timeline, canvas::PixelMode},
 };
-use api::formats::{AnimatedSpriteDocument, AnimationDirection};
 use eframe::egui::{self, Ui};
+use formats::{AnimatedSpriteDocument, AnimationDirection};
 
 pub struct Screen {
     pub file: FileState,

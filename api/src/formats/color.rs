@@ -17,8 +17,8 @@ macro_rules! define_palette {
     };
 }
 
-// palette from https://lospec.com/palette-list/aurora
-// color names from https://chir.ag/projects/ntc/
+// palette source: https://lospec.com/palette-list/aurora
+// color name source: https://chir.ag/projects/ntc/
 define_palette! {
     Black => [0x00, 0x00, 0x00],
     CodGray => [0x11, 0x11, 0x11],
@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn palette_file_matches_color_indices() {
-        let rows = include_str!("../../../assets/palette.pal").lines().skip(4);
+        let rows = include_str!("../../assets/palette.pal").lines().skip(4);
         let mut rows = rows;
         for color in Color::ALL {
             let row = rows.next().expect("palette file color");

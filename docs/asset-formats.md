@@ -1,12 +1,14 @@
 # Pixel asset formats
 
+The `formats` crate owns the asset documents and decoders. Enable its `edit` feature to create, modify, validate, and encode documents; the game API uses it without that feature.
+
 ## Common rules
 
 The first 4 bytes are the file ID. The next 2 bytes give the file version. The current version is `1`.
 
 All other integers use little-endian byte order. Store the least-significant byte first.
 
-Files do not use compression or padding. Each file must end after its last field.
+Files use no compression or padding.
 
 The file extension identifies the asset type. The decoder checks the file ID and version. It does not check the extension.
 
@@ -29,7 +31,7 @@ The patterns use ImHex standard libraries. Do not set an include path.
 | Tileset | `.pxt` | `TSET` | [tileset.hexpat](imhex/tileset.hexpat) |
 | Tilemap | `.pxm` | `TMAP` | [tilemap.hexpat](imhex/tilemap.hexpat) |
 
-The patterns show the file fields. They check the ID, version, dimensions, and file length. They also check fields that do not need another asset file.
+The patterns show the file fields. They check the ID, version, dimensions, and fields that do not need another asset file.
 
 ## Pixels and dimensions
 
@@ -54,7 +56,7 @@ Font height must be 1 to 64 pixels. Each glyph has its own width. Glyph width mu
 | 8 | `u16` | Height in pixels |
 | 10 | `u8[width * height]` | Pixel data |
 
-The file length is `10 + width * height` bytes. The file contains one image.
+The pixel data uses `width * height` bytes. The file contains one image.
 
 `SpriteDocument` stores the decoded image. `Assets::load_sprite` loads the file as a runtime sprite.
 
@@ -168,7 +170,7 @@ Each cell uses 3 bytes. The cells use row-major order. No padding follows a cell
 
 The renderer applies the diagonal transpose first. It then applies the horizontal and vertical flips.
 
-The file length is `26 + width * height * 3` bytes. The map decoder checks the size and flip flags. It does not read the tileset.
+The map decoder checks the size and flip flags. It does not read the tileset.
 
 Use the matching UUID and valid tile IDs. Load the tileset before the map. `Assets::load_tilemap` reports an error if it cannot find the tileset UUID.
 

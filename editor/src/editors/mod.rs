@@ -7,7 +7,7 @@ mod tileset;
 
 use crate::document::AssetDocument;
 use crate::file_io::LoadedAsset;
-use crate::ui::canvas::{PixelAction, PixelEdit, PixelRect};
+use crate::ui::canvas::{PixelAction, PixelEdit, PixelRect, move_pixels};
 use api::glam::UVec2;
 use eframe::egui::Ui;
 
@@ -59,36 +59,17 @@ fn move_selection(pixels: &mut [u8], size: UVec2, from: PixelRect, to: PixelRect
         return false;
     }
 
-    let mut selected = Vec::with_capacity(from.width * from.height);
-    for y in 0..from.height {
-        let start = (from.y + y) * width + from.x;
-        selected.extend_from_slice(&pixels[start..start + from.width]);
-    }
-
-    let mut changed = false;
-    for y in 0..from.height {
-        let start = (from.y + y) * width + from.x;
-        changed |= pixels[start..start + from.width]
-            .iter()
-            .any(|pixel| *pixel != 0);
-        pixels[start..start + from.width].fill(0);
-    }
-    for y in 0..from.height {
-        for x in 0..from.width {
-            let value = selected[y * from.width + x];
-            if value != 0 {
-                let pixel = &mut pixels[(to.y + y) * width + to.x + x];
-                changed |= *pixel != value;
-                *pixel = value;
-            }
-        }
-    }
-    changed
+    move_pixels(pixels, width, from, to)
 }
 
 pub(super) fn apply_pixel_edit(pixels: &mut [u8], size: UVec2, edit: Option<PixelEdit>) -> bool {
     let Some(edit) = edit else { return false };
-    let index = edit.y * size.x as usize + edit.x;
+    let width = size.x as usize;
+    let height = size.y as usize;
+    if edit.x >= width || edit.y >= height {
+        return false;
+    }
+    let index = edit.y * width + edit.x;
     let Some(pixel) = pixels.get_mut(index) else {
         return false;
     };
@@ -329,5 +310,78 @@ impl EditorScreen {
 
     pub fn canvas(&mut self, ui: &mut Ui) -> bool {
         self.0.canvas(ui)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use api::glam::uvec2;
+
+    use super::{apply_pixel_action, apply_pixel_edit, move_selection};
+    use crate::ui::canvas::{PixelAction, PixelEdit, PixelRect};
+
+    #[test]
+    fn pixel_edits_report_only_changes() {
+        let mut pixels = [0, 2, 0, 0];
+        let size = uvec2(2, 2);
+        let edit = PixelEdit {
+            x: 0,
+            y: 0,
+            value: 3,
+        };
+        assert!(apply_pixel_edit(&mut pixels, size, Some(edit)));
+        assert!(!apply_pixel_edit(&mut pixels, size, Some(edit)));
+        assert!(!apply_pixel_edit(
+            &mut pixels,
+            size,
+            Some(PixelEdit {
+                x: 3,
+                y: 0,
+                value: 1
+            })
+        ));
+        assert_eq!(pixels[0], 3);
+    }
+
+    #[test]
+    fn selection_move_clears_source_and_moves_pixels() {
+        let mut pixels = [1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let from = PixelRect {
+            x: 0,
+            y: 0,
+            width: 2,
+            height: 1,
+        };
+        let outside = PixelRect {
+            x: 3,
+            y: 0,
+            width: 2,
+            height: 1,
+        };
+        assert!(!move_selection(&mut pixels, uvec2(4, 3), from, outside));
+        assert_eq!(&pixels[..2], &[1, 2]);
+        let to = PixelRect {
+            x: 2,
+            y: 1,
+            width: 2,
+            height: 1,
+        };
+        assert!(move_selection(&mut pixels, uvec2(4, 3), from, to));
+        assert_eq!(pixels, [0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0]);
+        assert!(!move_selection(&mut pixels, uvec2(4, 3), to, to));
+    }
+
+    #[test]
+    fn color_pick_does_not_change_pixels() {
+        let mut pixels = [0];
+        let mut selected = 1;
+        assert!(!apply_pixel_action(
+            &mut pixels,
+            uvec2(1, 1),
+            Some(PixelAction::PickColor(7)),
+            &mut selected
+        ));
+        assert_eq!(selected, 7);
+        assert_eq!(pixels, [0]);
     }
 }
