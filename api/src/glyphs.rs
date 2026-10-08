@@ -24,10 +24,11 @@ pub const BTN_A: &str = "\u{E000}";
 pub const BTN_B: &str = "\u{E001}";
 pub const BTN_X: &str = "\u{E002}";
 pub const BTN_Y: &str = "\u{E003}";
-pub const BTN_L: &str = "\u{E008}";
-pub const BTN_R: &str = "\u{E009}";
+pub const BTN_L: &str = "\u{E004}";
+pub const BTN_R: &str = "\u{E005}";
+pub const BTN_START: &str = "\u{E014}";
+pub const BTN_SELECT: &str = "\u{E015}";
 pub const BTN_LEFT: &str = "\u{E010}";
 pub const BTN_UP: &str = "\u{E011}";
 pub const BTN_RIGHT: &str = "\u{E012}";
 pub const BTN_DOWN: &str = "\u{E013}";
-// todo: add glyphs for the start and select buttons.
