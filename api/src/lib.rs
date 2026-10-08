@@ -12,8 +12,9 @@ mod tween;
 
 use std::time::{Duration, Instant};
 
-pub use assets::Assets;
+pub use assets::{Assets, TilemapSetError};
 use context::Context;
+pub use formats::Tileset;
 pub use formats::color::Color;
 pub use glam;
 pub use glyphs::*;

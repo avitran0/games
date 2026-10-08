@@ -1,12 +1,13 @@
 use std::{collections::HashMap, hash::Hash, rc::Rc};
 
 use formats::{AnimatedSpriteDocument, SpriteDocument, TilemapDocument, TilesetDocument};
+use glam::{U16Vec2, UVec2};
 use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
-    AnimatedSprite, Font, ScreenAction, Sprite,
-    formats::{tilemap::TilemapData, tileset::Tileset},
+    AnimatedSprite, Font, ScreenAction, Sprite, Tileset,
+    formats::tilemap::TilemapData,
     handle::{SpriteId, Tilemap as TilemapHandle, TilemapId},
     render::{font::GlFont, sprite::GlSprite},
     screen::error::ErrorScreen,
@@ -31,6 +32,10 @@ impl<Id: Hash + Eq + Copy, Asset> AssetRegistry<Id, Asset> {
 
     fn get(&self, id: &Id) -> Option<&Asset> {
         self.registry.get(id)
+    }
+
+    fn get_mut(&mut self, id: &Id) -> Option<&mut Asset> {
+        self.registry.get_mut(id)
     }
 
     fn insert_cached(&mut self, id: Id, asset: Asset, hash: blake3::Hash) {
@@ -132,12 +137,46 @@ impl Assets {
         Ok(TilemapHandle::new(id))
     }
 
+    /// position uses zero-based cell coordinates. tile id 0 clears the cell and flip flags.
+    pub fn set_tile(
+        &mut self,
+        tilemap: &TilemapHandle,
+        position: UVec2,
+        tile_id: u32,
+    ) -> Result<(), TilemapSetError> {
+        let map = self
+            .tilemaps
+            .get(&tilemap.id)
+            .ok_or(TilemapSetError::TilemapNotLoaded)?;
+        let size = map.size();
+        validate_tile_position(position, size)?;
+        if tile_id != 0 {
+            let tileset_id = map.tileset_id();
+            let sprite_id = self
+                .tileset_sprites
+                .get(&tileset_id)
+                .ok_or(TilemapSetError::TilesetNotLoaded(tileset_id))?;
+            let tile_count = self
+                .sprites
+                .get(sprite_id)
+                .ok_or(TilemapSetError::TilesetNotLoaded(tileset_id))?
+                .frame_count() as u32;
+            validate_tile_id(tile_id, tile_count)?;
+        }
+
+        self.tilemaps
+            .get_mut(&tilemap.id)
+            .ok_or(TilemapSetError::TilemapNotLoaded)?
+            .set_tile(position, tile_id);
+        Ok(())
+    }
+
     /// load a tileset before loading maps that refer to it.
     pub fn load_tileset<State>(&mut self, data: &[u8]) -> Result<Tileset, ScreenAction<State>> {
         let document = TilesetDocument::decode(data)
             .map_err(|error| show_asset_error(AssetLoadError::Decode(error.to_string())))?;
         let uuid = document.id;
-        let tileset = Tileset::from_document(document.clone());
+        let tileset = Tileset::from_document(&document);
         let sprite = self
             .register_sprite(data, |gl| GlSprite::new_tileset(gl, document))
             .map_err(show_asset_error)?;
@@ -190,6 +229,47 @@ fn show_asset_error<State>(error: AssetLoadError) -> ScreenAction<State> {
     ScreenAction::Push(Box::new(ErrorScreen::new(error)))
 }
 
+fn validate_tile_position(position: UVec2, size: U16Vec2) -> Result<(), TilemapSetError> {
+    if position.x < u32::from(size.x) && position.y < u32::from(size.y) {
+        Ok(())
+    } else {
+        Err(TilemapSetError::PositionOutOfBounds {
+            x: position.x,
+            y: position.y,
+            width: u32::from(size.x),
+            height: u32::from(size.y),
+        })
+    }
+}
+
+fn validate_tile_id(tile_id: u32, tile_count: u32) -> Result<(), TilemapSetError> {
+    if tile_id == 0 || tile_id < tile_count {
+        Ok(())
+    } else {
+        Err(TilemapSetError::TileIdOutOfBounds {
+            tile_id,
+            tile_count,
+        })
+    }
+}
+
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum TilemapSetError {
+    #[error("tilemap is not loaded")]
+    TilemapNotLoaded,
+    #[error("cell ({x}, {y}) is outside tilemap size {width}x{height}")]
+    PositionOutOfBounds {
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+    },
+    #[error("tileset {0} is not loaded")]
+    TilesetNotLoaded(Uuid),
+    #[error("tile id {tile_id} is out of range; tileset has {tile_count} tile slots")]
+    TileIdOutOfBounds { tile_id: u32, tile_count: u32 },
+}
+
 #[derive(Debug, Error)]
 pub(crate) enum AssetLoadError {
     #[error("Cannot decode document: {0}")]
@@ -200,4 +280,26 @@ pub(crate) enum AssetLoadError {
     TooMany(&'static str),
     #[error("No tileset is loaded with UUID {0}.")]
     MissingTileset(Uuid),
+}
+
+#[cfg(test)]
+mod tests {
+    use glam::{u16vec2, uvec2};
+
+    use super::{TilemapSetError, validate_tile_id, validate_tile_position};
+
+    #[test]
+    fn validates_tile_positions_and_ids() {
+        assert!(validate_tile_position(uvec2(2, 1), u16vec2(3, 2)).is_ok());
+        assert!(matches!(
+            validate_tile_position(uvec2(3, 0), u16vec2(3, 2)),
+            Err(TilemapSetError::PositionOutOfBounds { .. })
+        ));
+        assert!(validate_tile_id(0, 0).is_ok());
+        assert!(validate_tile_id(1, 2).is_ok());
+        assert!(matches!(
+            validate_tile_id(2, 2),
+            Err(TilemapSetError::TileIdOutOfBounds { .. })
+        ));
+    }
 }
