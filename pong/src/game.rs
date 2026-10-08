@@ -22,9 +22,9 @@ impl api::Screen<State> for GameScreen {
     fn update(&mut self, ctx: &mut api::ScreenContext<'_, State>) -> api::ScreenAction<State> {
         self.ui.begin_frame(ctx.input);
 
-        self.ui.button("Button");
-        self.ui.checkbox("Chk", &mut self.btn);
-        self.ui.progress_bar(0.5, "Progress");
+        self.ui.add(ui::Button::new("Button"));
+        self.ui.add(ui::Checkbox::new("Chk", &mut self.btn));
+        self.ui.add(ui::ProgressBar::new(0.5).label("Progress"));
 
         api::ScreenAction::None
     }

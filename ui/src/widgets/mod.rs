@@ -6,6 +6,7 @@ pub mod radio;
 pub mod selectable;
 pub mod separator;
 pub mod slider;
+pub mod tab_bar;
 
 pub use button::Button;
 pub use checkbox::Checkbox;
@@ -14,7 +15,8 @@ pub use progress_bar::ProgressBar;
 pub use radio::Radio;
 pub use selectable::Selectable;
 pub use separator::Separator;
-pub use slider::Slider;
+pub use slider::{Slider, SliderValue};
+pub use tab_bar::TabBar;
 
 use crate::{Response, Ui};
 

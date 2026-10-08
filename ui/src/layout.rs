@@ -10,3 +10,12 @@ pub(crate) struct Layout {
 
 #[derive(Clone, Copy)]
 pub(crate) struct LayoutSnapshot(pub Layout);
+
+pub(crate) struct Columns {
+    pub parent: Layout,
+    pub count: usize,
+    pub index: usize,
+    pub gap: u32,
+    pub start_y: i32,
+    pub max_bottom: i32,
+}

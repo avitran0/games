@@ -3,7 +3,7 @@ use glam::{IVec2, ivec2};
 
 use crate::{
     Rect, Response, Style,
-    layout::{Layout, LayoutSnapshot},
+    layout::{Columns, Layout, LayoutSnapshot},
     paint::{PaintList, inset_rect},
     widgets::{Label, Separator, Widget},
 };
@@ -14,6 +14,7 @@ pub struct Ui {
     layout: Layout,
     root_bounds: Rect,
     panels: Vec<LayoutSnapshot>,
+    columns: Vec<Columns>,
     paint: PaintList,
     widget_count: usize,
     previous_widget_count: usize,
@@ -39,6 +40,7 @@ impl Ui {
             },
             root_bounds: bounds,
             panels: Vec::new(),
+            columns: Vec::new(),
             paint: PaintList::default(),
             widget_count: 0,
             previous_widget_count: 0,
@@ -53,6 +55,7 @@ impl Ui {
         self.widget_count = 0;
         self.paint.clear();
         self.panels.clear();
+        self.columns.clear();
         self.layout = Layout {
             bounds: self.root_bounds,
             cursor: self.root_bounds.position,
@@ -81,11 +84,38 @@ impl Ui {
         widget.show(self)
     }
 
+    pub fn add_contents<R>(&mut self, contents: impl FnOnce(&mut Self) -> R) -> R {
+        contents(self)
+    }
+
+    pub fn panel<R>(
+        &mut self,
+        rect: Rect,
+        title: impl AsRef<str>,
+        contents: impl FnOnce(&mut Self) -> R,
+    ) -> R {
+        self.begin_panel(rect, title);
+        let output = contents(self);
+        self.end_panel();
+        output
+    }
+
+    pub fn columns(&mut self, count: usize, gap: u32, mut contents: impl FnMut(&mut Self, usize)) {
+        self.begin_columns(count, gap);
+        for index in 0..count.max(1).min(u32::MAX as usize) {
+            if index > 0 {
+                self.next_column();
+            }
+            contents(self, index);
+        }
+        self.end_columns();
+    }
+
     pub fn background(&mut self, rect: Rect, color: Color) {
         self.paint.rect(rect, color, 0);
     }
 
-    pub fn begin_panel(&mut self, rect: Rect, title: impl AsRef<str>) {
+    fn begin_panel(&mut self, rect: Rect, title: impl AsRef<str>) {
         self.panels.push(LayoutSnapshot(self.layout));
         self.paint.bordered_rect(
             rect,
@@ -105,7 +135,7 @@ impl Ui {
         }
     }
 
-    pub fn end_panel(&mut self) {
+    fn end_panel(&mut self) {
         if let Some(LayoutSnapshot(layout)) = self.panels.pop() {
             self.layout = layout;
         }
@@ -113,6 +143,42 @@ impl Ui {
 
     pub fn add_space(&mut self, pixels: u32) {
         self.layout.cursor.y += pixels as i32;
+    }
+
+    fn begin_columns(&mut self, count: usize, gap: u32) {
+        let count = count.clamp(1, u32::MAX as usize);
+        let parent = self.layout;
+        self.columns.push(Columns {
+            parent,
+            count,
+            index: 0,
+            gap,
+            start_y: parent.cursor.y,
+            max_bottom: parent.cursor.y,
+        });
+        self.set_column_layout();
+    }
+
+    fn next_column(&mut self) -> bool {
+        let Some(columns) = self.columns.last_mut() else {
+            return false;
+        };
+        columns.max_bottom = columns.max_bottom.max(self.layout.cursor.y);
+        if columns.index + 1 >= columns.count {
+            return false;
+        }
+        columns.index += 1;
+        self.set_column_layout();
+        true
+    }
+
+    fn end_columns(&mut self) {
+        let Some(columns) = self.columns.pop() else {
+            return;
+        };
+        let bottom = columns.max_bottom.max(self.layout.cursor.y);
+        self.layout = columns.parent;
+        self.layout.cursor.y = bottom;
     }
 
     pub fn paint(&self, frame: &mut Frame) {
@@ -133,6 +199,29 @@ impl Ui {
             clicked: response.focused && self.activated,
             ..response
         }
+    }
+
+    fn set_column_layout(&mut self) {
+        let Some(columns) = self.columns.last() else {
+            return;
+        };
+        let parent = columns.parent;
+        let gap_total = columns
+            .gap
+            .saturating_mul(u32::try_from(columns.count.saturating_sub(1)).unwrap_or(u32::MAX));
+        let available = parent.bounds.size.x.saturating_sub(gap_total);
+        let width = available / columns.count as u32;
+        let remainder = available % columns.count as u32;
+        let index = columns.index as u32;
+        let x = parent.bounds.position.x
+            + index.saturating_mul(width.saturating_add(columns.gap)) as i32;
+        let width = width + u32::from(index == columns.count as u32 - 1) * remainder;
+        let bottom = parent.bounds.position.y + parent.bounds.size.y as i32;
+        let height = bottom.saturating_sub(columns.start_y).max(0) as u32;
+        self.layout = Layout {
+            bounds: Rect::new(x, columns.start_y, width, height),
+            cursor: glam::ivec2(x, columns.start_y),
+        };
     }
 
     pub(crate) fn row_rect(&self) -> Rect {
