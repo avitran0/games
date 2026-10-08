@@ -1,8 +1,8 @@
-use glam::{IVec2, UVec2, Vec2, vec2};
+use glam::{vec2, IVec2, UVec2, Vec2};
 
 use crate::{
-    AnimatedSprite, Color, Font, Sprite, Tilemap,
     render::draw_cmd::{DrawCmd, ShapeCmd, SpriteCmd, TextCmd, TilemapCmd},
+    AnimatedSprite, Color, Font, Sprite, Tilemap,
 };
 
 #[derive(Default)]

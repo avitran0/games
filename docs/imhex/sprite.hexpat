@@ -7,7 +7,7 @@ import std.mem;
 
 struct PalettePixel {
     u8 index;
-    std::assert(index <= 64, "Use a color index from 0 to 64.");
+    std::assert(index <= 255, "Use a color index from 0 to 255.");
 };
 
 struct Sprite {

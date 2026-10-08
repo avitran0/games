@@ -5,7 +5,7 @@ use std::{
     io::{Cursor, Read},
 };
 
-use glam::{UVec2, u16vec2};
+use glam::{u16vec2, UVec2};
 use utils::io::{Endian, EndianReader, ReadBytes};
 #[cfg(feature = "dev")]
 use utils::io::{EndianWriter, WriteBytes};
@@ -326,11 +326,7 @@ pub(super) fn validate_frame(size: UVec2, frame: &SpriteFrame) -> Result<(), Inv
             actual: frame.pixels.len(),
         });
     }
-    for pixel in &frame.pixels {
-        if *pixel > 64 {
-            return Err(InvalidFrameError::PixelIndex(*pixel));
-        }
-    }
+    // Pixel indices are u8: zero is transparent and 1..=255 index palette colors.
     Ok(())
 }
 
@@ -343,8 +339,8 @@ mod tests {
     #[test]
     fn editor_can_mutate_sprite_frame_pixels() {
         let mut sprite = SpriteDocument::new(uvec2(8, 8)).unwrap();
-        sprite.pixels.pixels_mut()[0] = 64;
-        assert_eq!(sprite.pixels.pixels()[0], 64);
+        sprite.pixels.pixels_mut()[0] = 255;
+        assert_eq!(sprite.pixels.pixels()[0], 255);
         assert!(sprite.encode().is_ok());
     }
 }

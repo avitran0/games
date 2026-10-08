@@ -39,7 +39,7 @@ impl Renderer {
         let framebuffer = Framebuffer::new(gl.clone())?;
         let shaders = Shaders::load(gl.clone())?;
         let quad = Quad::new(gl.clone())?;
-        let palette = GlPalette::new(gl.clone(), Palette::default())?;
+        let palette = GlPalette::new(gl.clone(), Palette)?;
 
         Ok(Self {
             gl,
@@ -193,9 +193,9 @@ impl Renderer {
         shader.set_vec2("size", cmd.size);
         shader.set_vec2("rotation_anchor", vec2(0.0, 0.0));
         shader.set_f32("rotation", cmd.rotation);
-        shader.set_i32("color_index", cmd.color as i32);
+        shader.set_i32("color_index", i32::from(cmd.color.index()));
         shader.set_f32("radius", cmd.radius.min(cmd.size.x.min(cmd.size.y) * 0.5));
-        shader.set_i32("border_color_index", cmd.border_color as i32);
+        shader.set_i32("border_color_index", i32::from(cmd.border_color.index()));
         shader.set_f32("border_width", cmd.border_width);
 
         unsafe {
@@ -214,7 +214,7 @@ impl Renderer {
         let shader = &self.shaders.font;
         shader.bind();
         shader.set_vec2("resolution", vec2(WIDTH as f32, HEIGHT as f32));
-        shader.set_i32("color_index", cmd.color as i32);
+        shader.set_i32("color_index", i32::from(cmd.color.index()));
 
         unsafe {
             self.gl.active_texture(glow::TEXTURE0);

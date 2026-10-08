@@ -105,7 +105,11 @@ fn canvas_geometry(
         view.pan += delta;
         ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
     } else if response.hovered() {
-        ui.ctx().set_cursor_icon(egui::CursorIcon::Grab);
+        ui.ctx().set_cursor_icon(if ui.input(|input| input.key_down(egui::Key::Space)) {
+            egui::CursorIcon::Grab
+        } else {
+            egui::CursorIcon::Crosshair
+        });
     }
 
     if response.hovered() {

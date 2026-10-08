@@ -36,9 +36,9 @@ Sprite and tile width and height must be multiples of 8. Each dimension must be 
 Each sprite and tile pixel is one byte:
 
 - `0` means transparent.
-- `1` to `64` select palette colors.
+- `1` to `255` select Aurora palette colors.
 
-The file does not store the palette. The runtime palette is in `assets/palette.pal`.
+The file does not store the palette. Aurora is hardcoded in `api/src/formats/color.rs`; `assets/palette.pal` mirrors it for external palette tools.
 
 A font height must be from 1 to 64 pixels. Each glyph has a square bitmap. The bitmap has one byte per pixel. Zero is clear. The runtime treats any nonzero value as set.
 

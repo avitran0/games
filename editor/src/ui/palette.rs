@@ -2,6 +2,7 @@ use crate::palette;
 use eframe::egui::{self, Color32, Sense, Stroke, Ui, Vec2};
 
 const COLUMNS: usize = 8;
+const ROWS: usize = crate::palette::COLOR_COUNT.div_ceil(COLUMNS);
 const SWATCH_SIZE: f32 = 16.0;
 const HORIZONTAL_SPACING: f32 = 1.0;
 const VERTICAL_SPACING: f32 = 3.0;
@@ -10,11 +11,16 @@ pub fn show(ui: &mut Ui, selected_color: u8) -> Option<u8> {
     let mut selection = None;
     ui.heading("Palette");
 
-    for row in 0..8 {
+    for row in 0..ROWS {
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing = Vec2::new(HORIZONTAL_SPACING, VERTICAL_SPACING);
             for column in 0..COLUMNS {
-                let color = (row * COLUMNS + column + 1) as u8;
+                let index = row * COLUMNS + column + 1;
+                if index > crate::palette::COLOR_COUNT {
+                    continue;
+                }
+                let color = index as u8;
+                let color_info = api::Color::ALL[index - 1];
                 let (rect, response) =
                     ui.allocate_exact_size(Vec2::splat(SWATCH_SIZE), Sense::click());
                 let painter = ui.painter();
@@ -33,7 +39,8 @@ pub fn show(ui: &mut Ui, selected_color: u8) -> Option<u8> {
                         egui::StrokeKind::Outside,
                     );
                 }
-                if selected_color == color {
+                let is_selected = selected_color == color;
+                if is_selected {
                     painter.rect_stroke(
                         rect.expand(1.0),
                         1.0,
@@ -50,10 +57,15 @@ pub fn show(ui: &mut Ui, selected_color: u8) -> Option<u8> {
                 if response.clicked() {
                     selection = Some(color);
                 }
-                response.on_hover_text(format!("Palette color {color}"));
+                let [red, green, blue] = color_info.rgb();
+                let selected_label = if is_selected { "Selected · " } else { "" };
+                response.on_hover_text(format!(
+                    "{selected_label}{color} · {} (#{red:02X}{green:02X}{blue:02X})",
+                    color_info.name()
+                ));
             }
         });
-        if row < 7 {
+        if row + 1 < ROWS {
             ui.add_space(VERTICAL_SPACING);
         }
     }

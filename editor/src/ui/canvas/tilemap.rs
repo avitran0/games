@@ -1,4 +1,4 @@
-use super::{CanvasView, GridBackground, active_pointer, canvas_geometry};
+use super::{active_pointer, canvas_geometry, CanvasView, GridBackground};
 use crate::palette;
 use api::{
     formats::{Tile, TilemapDocument, TilesetDocument},
@@ -65,7 +65,11 @@ pub fn show_tilemap(
                         .copied()
                         .find(|pixel| *pixel != 0)
                         .map(palette::color)
-                        .unwrap_or_else(|| palette::color(((cell.id - 1) % 64 + 1) as u8))
+                        .unwrap_or_else(|| {
+                            palette::color(
+                                ((cell.id - 1) % crate::palette::COLOR_COUNT as u32 + 1) as u8,
+                            )
+                        })
                 });
                 painter.rect_filled(cell_rect, 0.0, *fallback);
                 if can_preview_tiles {

@@ -5,8 +5,9 @@ use api::{
 
 use crate::{game_over::GameOverScreen, pause::PauseScreen, state::State};
 
-const GRID_WIDTH: i32 = (api::WIDTH / 8) as i32;
-const GRID_HEIGHT: i32 = (api::HEIGHT / 8) as i32;
+const TILE_SIZE: i32 = 16;
+const GRID_WIDTH: i32 = (api::WIDTH / TILE_SIZE as u32) as i32;
+const GRID_HEIGHT: i32 = (api::HEIGHT / TILE_SIZE as u32) as i32;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Direction {
@@ -63,17 +64,17 @@ struct Sprites {
 
 impl Sprites {
     fn load(ctx: &mut api::ScreenContext<State>) -> Result<Self, api::ScreenAction<State>> {
-        let head = ctx.assets.load_sprite(include_bytes!("assets/head.pxs"))?;
-        let body = ctx.assets.load_sprite(include_bytes!("assets/body.pxs"))?;
+        let head = ctx.assets.load_sprite(include_bytes!("assets/head_16.pxs"))?;
+        let body = ctx.assets.load_sprite(include_bytes!("assets/body_16.pxs"))?;
         let body_angled = ctx
             .assets
-            .load_sprite(include_bytes!("assets/body_angled.pxs"))?;
-        let tail = ctx.assets.load_sprite(include_bytes!("assets/tail.pxs"))?;
+            .load_sprite(include_bytes!("assets/body_angled_16.pxs"))?;
+        let tail = ctx.assets.load_sprite(include_bytes!("assets/tail_16.pxs"))?;
         let food = ctx.assets.load_sprite(include_bytes!("assets/food.pxs"))?;
         let _ = ctx
             .assets
-            .load_tileset(include_bytes!("assets/tiles.pxt"))?;
-        let background = ctx.assets.load_tilemap(include_bytes!("assets/map.pxm"))?;
+            .load_tileset(include_bytes!("assets/tileset_16.pxt"))?;
+        let background = ctx.assets.load_tilemap(include_bytes!("assets/map_16.pxm"))?;
 
         Ok(Self {
             head,
@@ -200,10 +201,10 @@ impl api::Screen<State> for GameScreen {
                 }
             };
 
-            frame.sprite_rotate(sprite, segment * 8, rotation, Anchor::Center);
+            frame.sprite_rotate(sprite, segment * TILE_SIZE, rotation, Anchor::Center);
         }
 
-        frame.sprite(&self.sprites.food, self.food * 8);
+        frame.sprite(&self.sprites.food, self.food * TILE_SIZE);
     }
 }
 

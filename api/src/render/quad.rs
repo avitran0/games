@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use glam::{Vec2, vec2};
+use glam::{vec2, Vec2};
 use glow::HasContext;
 
 pub(crate) struct Quad {

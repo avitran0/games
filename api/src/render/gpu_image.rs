@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use glam::{UVec2, uvec2};
+use glam::{uvec2, UVec2};
 use glow::HasContext;
 
 pub(crate) struct GpuImage {
