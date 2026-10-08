@@ -1,3 +1,1 @@
-pub struct State {
-
-}
+pub struct State {}

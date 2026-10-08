@@ -5,7 +5,7 @@ use std::{
     io::{Cursor, Read},
 };
 
-use glam::{u16vec2, UVec2};
+use glam::{UVec2, u16vec2};
 use utils::io::{Endian, EndianReader, ReadBytes};
 #[cfg(feature = "dev")]
 use utils::io::{EndianWriter, WriteBytes};

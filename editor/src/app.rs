@@ -2,19 +2,18 @@ use crate::{editors::EditorScreen, file_io, setup, ui::menu_bar};
 use eframe::egui;
 
 pub struct App {
-    view: View,
+    editors: Vec<EditorScreen>,
+    active_editor: usize,
+    showing_setup: bool,
     setup_screen: setup::SetupScreen,
-}
-
-enum View {
-    Setup,
-    Editor(EditorScreen),
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
-            view: View::Setup,
+            editors: Vec::new(),
+            active_editor: 0,
+            showing_setup: true,
             setup_screen: setup::SetupScreen::default(),
         }
     }
@@ -116,80 +115,134 @@ impl App {
                 == rfd::MessageDialogResult::Yes
     }
 
+    fn push_loaded(&mut self, loaded: file_io::LoadedAsset) {
+        self.editors.push(EditorScreen::new(loaded));
+        self.active_editor = self.editors.len() - 1;
+        self.showing_setup = false;
+    }
+
     fn setup_action(&mut self, action: setup::Action) {
         match action {
             setup::Action::None | setup::Action::StartCreate(_) => {}
             setup::Action::Open => match file_io::open() {
-                Ok(Some(loaded)) => self.view = View::Editor(EditorScreen::new(loaded)),
+                Ok(Some(loaded)) => self.push_loaded(loaded),
                 Ok(None) => {}
                 Err(error) => self.setup_screen.set_error(error),
             },
             setup::Action::Create(spec) => match setup::create_asset(spec) {
-                Ok(Some(loaded)) => self.view = View::Editor(EditorScreen::new(loaded)),
+                Ok(Some(loaded)) => self.push_loaded(loaded),
                 Ok(None) => {}
                 Err(error) => self.setup_screen.set_error(error),
             },
         }
     }
 
-    fn editor_action(
-        &mut self,
-        action: menu_bar::Action,
-        editor: &mut EditorScreen,
-        ctx: &egui::Context,
-    ) -> bool {
+    fn editor_action(&mut self, action: menu_bar::Action, ctx: &egui::Context) {
         match action {
             menu_bar::Action::New(kind) => {
-                if Self::can_discard(editor) {
-                    self.setup_screen.open_create_screen(kind);
-                    return false;
-                }
+                self.setup_screen.open_create_screen(kind);
+                self.showing_setup = true;
             }
-            menu_bar::Action::Open => {
-                if Self::can_discard(editor) {
-                    match file_io::open() {
-                        Ok(Some(loaded)) => {
-                            self.view = View::Editor(EditorScreen::new(loaded));
-                            return false;
-                        }
-                        Ok(None) => {}
-                        Err(error) => editor.set_status(error),
+            menu_bar::Action::Open => match file_io::open() {
+                Ok(Some(loaded)) => self.push_loaded(loaded),
+                Ok(None) => {}
+                Err(error) => {
+                    if let Some(editor) = self.editors.get_mut(self.active_editor) {
+                        editor.set_status(error);
                     }
                 }
-            }
-            menu_bar::Action::Save => editor.save(false),
-            menu_bar::Action::SaveAs => editor.save(true),
-            menu_bar::Action::Back => {
-                if Self::can_discard(editor) {
-                    self.setup_screen.go_home();
-                    return false;
+            },
+            menu_bar::Action::Save => {
+                if let Some(editor) = self.editors.get_mut(self.active_editor) {
+                    editor.save(false);
                 }
             }
+            menu_bar::Action::SaveAs => {
+                if let Some(editor) = self.editors.get_mut(self.active_editor) {
+                    editor.save(true);
+                }
+            }
+            menu_bar::Action::Back => {
+                self.setup_screen.go_home();
+                self.showing_setup = true;
+            }
             menu_bar::Action::Quit => {
-                if Self::can_discard(editor) {
+                if self.editors.iter().all(Self::can_discard) {
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 }
             }
         }
-        true
+    }
+
+    fn show_tabs(&mut self, ui: &mut egui::Ui) {
+        let mut close_tab = None;
+        egui::Panel::top("editor-tabs").show(ui, |ui| {
+            egui::ScrollArea::horizontal().show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    for (index, editor) in self.editors.iter().enumerate() {
+                        if ui
+                            .selectable_value(
+                                &mut self.active_editor,
+                                index,
+                                format!(
+                                    "{}{}",
+                                    editor.title(),
+                                    if editor.dirty() { " *" } else { "" }
+                                ),
+                            )
+                            .clicked()
+                        {
+                            self.showing_setup = false;
+                        }
+                        if ui.small_button("×").on_hover_text("Close tab").clicked() {
+                            close_tab = Some(index);
+                        }
+                        ui.add_space(4.0);
+                    }
+                    if ui
+                        .button("+")
+                        .on_hover_text("Open or create an asset")
+                        .clicked()
+                    {
+                        self.showing_setup = true;
+                        self.setup_screen.go_home();
+                    }
+                });
+            });
+        });
+
+        if let Some(index) = close_tab
+            && Self::can_discard(&self.editors[index])
+        {
+            self.editors.remove(index);
+            if self.editors.is_empty() {
+                self.active_editor = 0;
+                self.showing_setup = true;
+            } else {
+                if index < self.active_editor {
+                    self.active_editor -= 1;
+                } else if self.active_editor >= self.editors.len() {
+                    self.active_editor = self.editors.len() - 1;
+                }
+            }
+        }
     }
 }
 
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        let view = std::mem::replace(&mut self.view, View::Setup);
-        match view {
-            View::Setup => {
-                let action = self.setup_screen.show(ui);
-                self.setup_action(action);
-            }
-            View::Editor(mut editor) => {
-                let action = Self::show_editor(ui, &mut editor);
-                let keep_editor =
-                    action.is_none_or(|action| self.editor_action(action, &mut editor, ui.ctx()));
-                if keep_editor {
-                    self.view = View::Editor(editor);
-                }
+        if !self.editors.is_empty() {
+            self.show_tabs(ui);
+        }
+
+        if self.showing_setup || self.editors.is_empty() {
+            let action = self.setup_screen.show(ui);
+            self.setup_action(action);
+        } else {
+            let active = self.active_editor.min(self.editors.len() - 1);
+            let action = Self::show_editor(ui, &mut self.editors[active]);
+            if let Some(action) = action {
+                self.editor_action(action, ui.ctx());
             }
         }
     }

@@ -1,4 +1,4 @@
-use super::{active_pointer, canvas_geometry, CanvasView, GridBackground};
+use super::{CanvasView, GridBackground, active_pointer, canvas_geometry};
 use crate::palette;
 use api::{
     formats::{Tile, TilemapDocument, TilesetDocument},

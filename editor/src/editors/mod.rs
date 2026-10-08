@@ -25,9 +25,7 @@ pub(super) fn apply_pixel_action(
             false
         }
         Some(PixelAction::Paint(edit)) => apply_pixel_edit(pixels, size, Some(edit)),
-        Some(PixelAction::MoveSelection { from, to }) => {
-            move_selection(pixels, size, from, to)
-        }
+        Some(PixelAction::MoveSelection { from, to }) => move_selection(pixels, size, from, to),
         None => false,
     }
 }
@@ -70,7 +68,9 @@ fn move_selection(pixels: &mut [u8], size: UVec2, from: PixelRect, to: PixelRect
     let mut changed = false;
     for y in 0..from.height {
         let start = (from.y + y) * width + from.x;
-        changed |= pixels[start..start + from.width].iter().any(|pixel| *pixel != 0);
+        changed |= pixels[start..start + from.width]
+            .iter()
+            .any(|pixel| *pixel != 0);
         pixels[start..start + from.width].fill(0);
     }
     for y in 0..from.height {

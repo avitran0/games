@@ -80,7 +80,9 @@ impl Sprites {
         let tail = ctx
             .assets
             .load_sprite(include_bytes!("assets/tail_16.pxs"))?;
-        let food = ctx.assets.load_sprite(include_bytes!("assets/food_16.pxs"))?;
+        let food = ctx
+            .assets
+            .load_sprite(include_bytes!("assets/food_16.pxs"))?;
         let _ = ctx
             .assets
             .load_tileset(include_bytes!("assets/tileset_16.pxt"))?;

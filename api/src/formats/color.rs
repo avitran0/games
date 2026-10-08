@@ -288,9 +288,11 @@ mod tests {
             let [red, green, blue] = color.rgb();
             red == green && green == blue
         }));
-        assert!(!Color::ALL
-            .iter()
-            .any(|color| color.rgb() == [0x7f, 0x00, 0xff]));
+        assert!(
+            !Color::ALL
+                .iter()
+                .any(|color| color.rgb() == [0x7f, 0x00, 0xff])
+        );
     }
 
     #[test]

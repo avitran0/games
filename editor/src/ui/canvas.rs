@@ -2,8 +2,8 @@ mod pixel;
 mod tilemap;
 
 pub use pixel::{
-    PixelAction, PixelEdit, PixelMode, PixelRect, PixelSelection, selection_controls,
-    show_pixels, show_pixels_with_selection,
+    PixelAction, PixelEdit, PixelMode, PixelRect, PixelSelection, selection_controls, show_pixels,
+    show_pixels_with_selection,
 };
 pub use tilemap::{CellEdit, TilePlacement, show_tilemap};
 
@@ -108,11 +108,12 @@ fn canvas_geometry(
         view.pan += delta;
         ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
     } else if response.hovered() {
-        ui.ctx().set_cursor_icon(if ui.input(|input| input.key_down(egui::Key::Space)) {
-            egui::CursorIcon::Grab
-        } else {
-            egui::CursorIcon::Crosshair
-        });
+        ui.ctx()
+            .set_cursor_icon(if ui.input(|input| input.key_down(egui::Key::Space)) {
+                egui::CursorIcon::Grab
+            } else {
+                egui::CursorIcon::Crosshair
+            });
     }
 
     if response.hovered() {
