@@ -160,19 +160,16 @@ impl<T: SliderValue> Widget for Slider<'_, T> {
             false,
             response,
         );
-        let bar_width = rect
-            .size
-            .x
-            .saturating_sub(ui.style.padding.saturating_mul(2));
+        let bar_width = rect.size.x.saturating_sub(2);
         let bar = Rect {
-            position: rect.position + ivec2(ui.style.padding as i32, rect.size.y as i32 - 3),
-            size: uvec2(bar_width, 2),
+            position: rect.position + ivec2(1, rect.size.y as i32 - 1),
+            size: uvec2(bar_width, 1),
         };
         ui.draw_rect(bar, ui.style.panel_border, 1);
         let filled = self.value.fill_width(self.min, self.max, bar_width);
         ui.draw_rect(
             Rect {
-                size: uvec2(filled, 2),
+                size: uvec2(filled, 1),
                 ..bar
             },
             ui.style.accent,

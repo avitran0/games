@@ -1,21 +1,40 @@
-use api::{Anchor, Button, HEIGHT, WIDTH, glam::ivec2};
-use ui::Ui;
+use api::{Anchor, Button, Color, HEIGHT, WIDTH, glam::ivec2};
+use ui::{EnumIter, Label, ProgressBar, Rect, Ui};
 
 use crate::state::State;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, EnumIter)]
+#[strum(crate = "ui")]
+enum DemoTab {
+    Widgets,
+    Layout,
+}
+
 pub struct GameScreen {
     ui: Ui,
-    btn: bool,
+    tab: DemoTab,
+    sound: bool,
+    volume: f32,
+    lives: u8,
+    speed: u8,
+    selected_mode: u8,
+    clicks: u32,
+    scroll_offset: u32,
     pressed_buttons: String,
 }
 
 impl GameScreen {
-    const PADDLE_HEIGHT: u32 = 24;
-
     pub fn new(_ctx: &mut api::ScreenContext<State>) -> Self {
         Self {
             ui: Ui::new(),
-            btn: false,
+            tab: DemoTab::Widgets,
+            sound: true,
+            volume: 0.65,
+            lives: 3,
+            speed: 1,
+            selected_mode: 0,
+            clicks: 0,
+            scroll_offset: 0,
             pressed_buttons: String::new(),
         }
     }
@@ -23,12 +42,67 @@ impl GameScreen {
 
 impl api::Screen<State> for GameScreen {
     fn update(&mut self, ctx: &mut api::ScreenContext<'_, State>) -> api::ScreenAction<State> {
+        if ctx.input.is_pressed(Button::Start) && ctx.input.is_pressed(Button::Select) {
+            return api::ScreenAction::Quit;
+        }
+
         self.ui.begin_frame(ctx.input);
         self.pressed_buttons = pressed_button_icons(ctx.input);
 
-        self.ui.add(ui::Button::new("Button"));
-        self.ui.add(ui::Checkbox::new("Chk", &mut self.btn));
-        self.ui.add(ui::ProgressBar::new(0.5).label("Progress"));
+        let Self {
+            ui,
+            tab,
+            sound,
+            volume,
+            lives,
+            speed,
+            selected_mode,
+            clicks,
+            scroll_offset,
+            ..
+        } = self;
+
+        ui.background(Rect::new(0, 0, WIDTH, HEIGHT), Color::CodGray);
+        ui.tab_bar(tab, |ui, active_tab| match active_tab {
+            DemoTab::Widgets => {
+                ui.add(Label::new("BUTTONS AND VALUES").heading());
+                ui.horizontal(2, 4, |ui| {
+                    if ui.button(format!("Button ({clicks})")).clicked {
+                        *clicks = clicks.saturating_add(1);
+                    }
+                    ui.checkbox("Sound", sound);
+                });
+                ui.horizontal(2, 4, |ui| {
+                    ui.slider("Volume", volume, 0.0_f32, 1.0_f32);
+                    ui.slider("Lives", lives, 1_u8, 9_u8);
+                });
+                ui.horizontal(3, 3, |ui| {
+                    ui.radio("Slow", speed, 0_u8);
+                    ui.radio("Normal", speed, 1_u8);
+                    ui.radio("Fast", speed, 2_u8);
+                });
+                ui.horizontal(2, 4, |ui| {
+                    if ui.selectable("Classic", *selected_mode == 0).clicked {
+                        *selected_mode = 0;
+                    }
+                    if ui.selectable("Arcade", *selected_mode == 1).clicked {
+                        *selected_mode = 1;
+                    }
+                });
+                ui.add(ProgressBar::new(*volume).label("Volume level"));
+            }
+            DemoTab::Layout => {
+                ui.add(Label::new("SCROLL WITH BUTTON FOCUS").heading());
+                ui.scroll_area(Rect::new(4, 41, WIDTH - 8, 64), scroll_offset, |ui| {
+                    for item in 0..8 {
+                        ui.button(format!("Scrollable row {}", item + 1));
+                    }
+                });
+                ui.panel(Rect::new(4, 120, WIDTH - 8, 36), "Nested panel", |ui| {
+                    ui.label("No border, no outside margin.");
+                });
+            }
+        });
 
         api::ScreenAction::None
     }
@@ -42,7 +116,7 @@ impl api::Screen<State> for GameScreen {
         };
         frame.text(
             display,
-            ivec2(WIDTH as i32 - 5, HEIGHT as i32 - 5),
+            ivec2(WIDTH as i32 - 4, HEIGHT as i32 - 4),
             Anchor::BottomRight,
         );
     }

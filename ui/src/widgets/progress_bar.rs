@@ -48,7 +48,7 @@ impl Widget for ProgressBar {
         if !self.label.is_empty() {
             ui.draw_text(
                 self.label,
-                rect.position + ivec2(inset as i32 + 2, 1),
+                rect.position + ivec2(inset as i32 + 2, 2),
                 ui.style.text,
             );
         }

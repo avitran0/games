@@ -15,28 +15,36 @@ pub struct Style {
     pub row_height: u32,
     pub spacing: u32,
     pub padding: u32,
+    pub outer_padding: u32,
     pub border_width: u32,
     pub corner_radius: u32,
+    pub scrollbar_width: u32,
+    pub scrollbar_track: Color,
+    pub scrollbar_thumb: Color,
 }
 
 impl Default for Style {
     fn default() -> Self {
         Self {
-            background: Color::Transparent,
+            background: Color::CodGray,
             panel: Color::MineShaft,
-            panel_border: Color::DoveGray,
+            panel_border: Color::MineShaft2,
             text: Color::White,
-            muted_text: Color::Silver,
-            widget: Color::Tundora,
-            widget_focused: Color::Emperor,
-            widget_pressed: Color::DodgerBlue,
+            muted_text: Color::Gray,
+            widget: Color::MineShaft,
+            widget_focused: Color::MineShaft2,
+            widget_pressed: Color::Tundora,
             accent: Color::DodgerBlue,
             disabled: Color::Gray,
-            row_height: 12,
+            row_height: 14,
             spacing: 3,
-            padding: 5,
+            padding: 4,
+            outer_padding: 4,
             border_width: 1,
             corner_radius: 2,
+            scrollbar_width: 5,
+            scrollbar_track: Color::MineShaft2,
+            scrollbar_thumb: Color::Gray,
         }
     }
 }
