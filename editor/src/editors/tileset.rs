@@ -1,6 +1,6 @@
 use crate::{
     document::AssetKind,
-    editors::{FileState, apply_pixel_edit},
+    editors::{FileState, apply_pixel_action},
     ui::{self, canvas::PixelMode},
 };
 use api::formats::{SpriteDocument, TilesetDocument};
@@ -124,5 +124,10 @@ fn canvas(ui: &mut Ui, document: &mut TilesetDocument, state: &mut State) -> boo
         PixelMode::Indexed,
         &mut state.canvas,
     );
-    apply_pixel_edit(frame.pixels_mut(), document.tile_size, edit)
+    apply_pixel_action(
+        frame.pixels_mut(),
+        document.tile_size,
+        edit,
+        &mut state.selected_color,
+    )
 }

@@ -155,6 +155,10 @@ fn canvas(ui: &mut Ui, document: &mut FontDocument, state: &mut State) -> bool {
         PixelMode::Monochrome,
         &mut state.canvas,
     );
+    let edit = edit.and_then(|action| match action {
+        ui::canvas::PixelAction::Paint(edit) => Some(edit),
+        ui::canvas::PixelAction::PickColor(_) => None,
+    });
     apply_pixel_edit(&mut glyph.bitmap, size, edit)
 }
 

@@ -7,11 +7,27 @@ mod tileset;
 
 use crate::document::AssetDocument;
 use crate::file_io::LoadedAsset;
-use crate::ui::canvas::PixelEdit;
+use crate::ui::canvas::{PixelAction, PixelEdit};
 use api::glam::UVec2;
 use eframe::egui::Ui;
 
 pub use session::FileState;
+
+pub(super) fn apply_pixel_action(
+    pixels: &mut [u8],
+    size: UVec2,
+    action: Option<PixelAction>,
+    selected_color: &mut u8,
+) -> bool {
+    match action {
+        Some(PixelAction::PickColor(color)) => {
+            *selected_color = color;
+            false
+        }
+        Some(PixelAction::Paint(edit)) => apply_pixel_edit(pixels, size, Some(edit)),
+        None => false,
+    }
+}
 
 pub(super) fn apply_pixel_edit(pixels: &mut [u8], size: UVec2, edit: Option<PixelEdit>) -> bool {
     let Some(edit) = edit else { return false };

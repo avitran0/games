@@ -44,7 +44,11 @@ Click the canvas with the left mouse button to paint with the selected color. Cl
 
 ## Palette
 
-The palette groups colors into perceptual shade ramps. Each ramp goes from dark to light.
+The palette groups colors into 16-color bands. Each band groups similar hues. Each band has muted and vivid shade ramps.
+
+On a color canvas, move the pointer over a pixel and press `P` to select its color. The editor does not change the pixel.
+
+Press `P` over a transparent pixel to select Transparent. Paint with Transparent to clear pixels.
 
 Hover over a palette color to see its name and hex code.
 

@@ -1,6 +1,6 @@
 use crate::{
     document::AssetKind,
-    editors::{FileState, apply_pixel_edit},
+    editors::{FileState, apply_pixel_action},
     ui::{self, animation_timeline, canvas::PixelMode},
 };
 use api::formats::{AnimatedSpriteDocument, AnimationDirection};
@@ -232,7 +232,12 @@ fn canvas(ui: &mut Ui, document: &mut AnimatedSpriteDocument, state: &mut State)
         PixelMode::Indexed,
         &mut state.canvas,
     );
-    apply_pixel_edit(frame.pixels_mut(), document.size, edit)
+    apply_pixel_action(
+        frame.pixels_mut(),
+        document.size,
+        edit,
+        &mut state.selected_color,
+    )
 }
 
 fn direction_name(direction: AnimationDirection) -> &'static str {

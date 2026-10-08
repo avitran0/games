@@ -40,7 +40,7 @@ Each sprite and tile pixel uses one byte:
 - `0` means transparent.
 - Values `1` through `255` select colors in the Aurora palette.
 
-The file does not contain the palette. `api/src/formats/color.rs` defines the Aurora colors and their order. The palette groups similar colors into shade ramps. Each ramp goes from dark to light. `assets/palette.pal` uses the same order for palette tools.
+The file does not contain the palette. `api/src/formats/color.rs` defines the Aurora colors and their order. The palette uses 16-color bands. The first band contains grays. Each other band groups similar hues into two shade ramps. The first ramp contains muted colors. The second ramp contains vivid colors. Each ramp goes from dark to light. The last band has 15 colors. `assets/palette.pal` uses the same order for palette tools.
 
 Font height must be 1 to 64 pixels. Each glyph uses a square bitmap. Each bitmap pixel uses one byte. Zero means clear. A nonzero value means set.
 

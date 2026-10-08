@@ -10,6 +10,11 @@ const VERTICAL_SPACING: f32 = 3.0;
 pub fn show(ui: &mut Ui, selected_color: u8) -> Option<u8> {
     let mut selection = None;
     ui.heading("Palette");
+    let transparent = ui.selectable_label(selected_color == 0, "Transparent");
+    if transparent.clicked() {
+        selection = Some(0);
+    }
+    transparent.on_hover_text("Transparent (#00000000)");
 
     for row in 0..ROWS {
         ui.horizontal(|ui| {

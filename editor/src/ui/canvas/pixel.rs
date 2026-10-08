@@ -11,6 +11,12 @@ pub struct PixelEdit {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PixelAction {
+    Paint(PixelEdit),
+    PickColor(u8),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PixelMode {
     Indexed,
     Monochrome,
@@ -23,7 +29,7 @@ pub fn show_pixels(
     selected_value: u8,
     mode: PixelMode,
     view: &mut CanvasView,
-) -> Option<PixelEdit> {
+) -> Option<PixelAction> {
     let width = size.x as usize;
     let height = size.y as usize;
     let (viewport, rect, cell, response) = canvas_geometry(ui, size, view);
@@ -66,13 +72,31 @@ pub fn show_pixels(
         egui::StrokeKind::Outside,
     );
 
+    if mode == PixelMode::Indexed
+        && response.hovered()
+        && !ui.ctx().egui_wants_keyboard_input()
+        && ui.input(|input| input.key_pressed(egui::Key::P))
+        && let Some(pointer) = response.hover_pos()
+        && rect.contains(pointer)
+    {
+        let x = ((pointer.x - rect.left()) / cell).floor() as usize;
+        let y = ((pointer.y - rect.top()) / cell).floor() as usize;
+        if x < width && y < height {
+            return Some(PixelAction::PickColor(
+                pixels.get(y * width + x).copied().unwrap_or(0),
+            ));
+        }
+    }
+
     active_pointer(&response, ui).and_then(|(pointer, secondary)| {
         let x = ((pointer.x - rect.left()) / cell).floor() as usize;
         let y = ((pointer.y - rect.top()) / cell).floor() as usize;
-        (rect.contains(pointer) && x < width && y < height).then_some(PixelEdit {
-            x,
-            y,
-            value: if secondary { 0 } else { selected_value },
-        })
+        (rect.contains(pointer) && x < width && y < height).then_some(PixelAction::Paint(
+            PixelEdit {
+                x,
+                y,
+                value: if secondary { 0 } else { selected_value },
+            },
+        ))
     })
 }

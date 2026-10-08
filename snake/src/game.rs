@@ -161,7 +161,6 @@ impl api::Screen<State> for GameScreen {
                 self.snake.len().saturating_sub(1)
             };
             if self.snake[..collision_len].contains(&next) {
-                // Ends the game.
                 self.reset();
                 return api::ScreenAction::Replace(Box::new(GameOverScreen));
             } else {

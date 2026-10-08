@@ -1,7 +1,7 @@
 mod pixel;
 mod tilemap;
 
-pub use pixel::{PixelEdit, PixelMode, show_pixels};
+pub use pixel::{PixelAction, PixelEdit, PixelMode, show_pixels};
 pub use tilemap::{CellEdit, TilePlacement, show_tilemap};
 
 use eframe::egui::{self, Color32, Pos2, Rect, Response, Sense, Ui, Vec2};

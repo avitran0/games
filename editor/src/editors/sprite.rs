@@ -1,6 +1,6 @@
 use crate::{
     document::AssetKind,
-    editors::{FileState, apply_pixel_edit},
+    editors::{FileState, apply_pixel_action},
     ui::{self, canvas::PixelMode},
 };
 use api::formats::SpriteDocument;
@@ -75,9 +75,14 @@ fn canvas(ui: &mut Ui, document: &mut SpriteDocument, state: &mut State) -> bool
         ui,
         document.pixels.pixels(),
         document.size,
-        state.selected_color.max(1),
+        state.selected_color,
         PixelMode::Indexed,
         &mut state.canvas,
     );
-    apply_pixel_edit(document.pixels.pixels_mut(), document.size, edit)
+    apply_pixel_action(
+        document.pixels.pixels_mut(),
+        document.size,
+        edit,
+        &mut state.selected_color,
+    )
 }
