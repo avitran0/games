@@ -87,9 +87,11 @@ impl<State: 'static> Context<State> {
         }
     }
 
-    pub(crate) fn setup<F>(&mut self, setup: F) -> Box<dyn Screen<State>>
+    pub(crate) fn setup<F>(&mut self, setup: F)
     where
-        F: FnOnce(&mut ScreenContext<'_, State>) -> Box<dyn Screen<State>>,
+        F: FnOnce(
+            &mut ScreenContext<'_, State>,
+        ) -> Result<Box<dyn Screen<State>>, ScreenAction<State>>,
     {
         let mut screen_ctx = ScreenContext {
             input: &self.input,
@@ -97,7 +99,10 @@ impl<State: 'static> Context<State> {
             state: &mut self.state,
             tick: self.tick,
         };
-        setup(&mut screen_ctx)
+        match setup(&mut screen_ctx) {
+            Ok(screen) => self.push_screen(screen),
+            Err(action) => self.handle_action(action),
+        }
     }
 
     pub(crate) fn begin_frame(&mut self) {
@@ -130,6 +135,10 @@ impl<State: 'static> Context<State> {
             tick: self.tick,
         };
         let action = screen.update(&mut screen_ctx);
+        self.handle_action(action);
+    }
+
+    fn handle_action(&mut self, action: ScreenAction<State>) {
         match action {
             ScreenAction::None => {}
             ScreenAction::Push(screen) => self.screens.push(screen),

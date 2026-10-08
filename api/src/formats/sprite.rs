@@ -311,7 +311,7 @@ impl SpriteFrame {
 pub(super) fn validate_sprite_size(size: UVec2) -> Result<(), InvalidSizeError> {
     if [size.x, size.y]
         .into_iter()
-        .all(|side| (8..=64).contains(&side) && side.is_multiple_of(8))
+        .all(|side| (8..=96).contains(&side) && side.is_multiple_of(8))
     {
         Ok(())
     } else {
@@ -334,7 +334,13 @@ pub(super) fn validate_frame(size: UVec2, frame: &SpriteFrame) -> Result<(), Inv
 mod tests {
     use glam::uvec2;
 
-    use super::SpriteDocument;
+    use super::{SpriteDocument, validate_sprite_size};
+
+    #[test]
+    fn sprite_sizes_allow_up_to_96_pixels() {
+        assert!(validate_sprite_size(uvec2(96, 96)).is_ok());
+        assert!(validate_sprite_size(uvec2(104, 8)).is_err());
+    }
 
     #[test]
     fn editor_can_mutate_sprite_frame_pixels() {

@@ -8,11 +8,12 @@ use crate::{
     assets::Assets,
     formats::palette::Palette,
     render::{
-        draw_cmd::{DrawCmd, ShapeCmd, SpriteCmd, TextCmd, TilemapCmd},
+        draw_cmd::{AnimatedSpriteCmd, DrawCmd, ShapeCmd, SpriteCmd, TextCmd, TilemapCmd},
         framebuffer::Framebuffer,
         palette::GlPalette,
         quad::Quad,
         shader::Shader,
+        sprite::GlSprite,
     },
 };
 
@@ -70,6 +71,7 @@ impl Renderer {
     pub(crate) fn draw(&self, assets: &Assets, cmd: &DrawCmd) {
         match cmd {
             DrawCmd::Sprite(cmd) => self.draw_sprite(assets, cmd),
+            DrawCmd::AnimatedSprite(cmd) => self.draw_animated_sprite(assets, cmd),
             DrawCmd::Tilemap(cmd) => self.draw_tilemap(assets, cmd),
             DrawCmd::Text(cmd) => self.draw_text(assets, cmd),
             DrawCmd::Shape(cmd) => self.draw_shape(cmd),
@@ -80,35 +82,67 @@ impl Renderer {
         let Some(sprite) = assets.get_sprite(cmd.sprite) else {
             return;
         };
+        self.draw_sprite_frame(
+            sprite,
+            cmd.position,
+            cmd.anchor,
+            cmd.rotation,
+            cmd.rotation_anchor,
+            &cmd.flip,
+            cmd.flip_diagonal,
+            0,
+        );
+    }
 
+    fn draw_animated_sprite(&self, assets: &Assets, cmd: &AnimatedSpriteCmd) {
+        let Some(sprite) = assets.get_sprite(cmd.sprite) else {
+            return;
+        };
+        let frame = sprite.animation_frame(
+            cmd.animation.as_deref(),
+            cmd.animation_tick,
+            cmd.animation_divisor,
+        );
+        self.draw_sprite_frame(
+            sprite,
+            cmd.position,
+            cmd.anchor,
+            cmd.rotation,
+            cmd.rotation_anchor,
+            &cmd.flip,
+            cmd.flip_diagonal,
+            frame,
+        );
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn draw_sprite_frame(
+        &self,
+        sprite: &GlSprite,
+        position: glam::IVec2,
+        anchor: Anchor,
+        rotation: f32,
+        rotation_anchor: Anchor,
+        flip: &Flip,
+        flip_diagonal: bool,
+        frame: u32,
+    ) {
         let shader = &self.shaders.sprite;
+        let size = sprite.size().as_vec2();
         shader.bind();
         shader.set_vec2("resolution", vec2(WIDTH as f32, HEIGHT as f32));
-        shader.set_vec2("position", cmd.position.as_vec2());
-        shader.set_vec2("size", sprite.size().as_vec2());
-        shader.set_vec2(
-            "rotation_anchor",
-            cmd.rotation_anchor.offset(sprite.size().as_vec2()),
-        );
-        shader.set_f32("rotation", cmd.rotation);
-        shader.set_vec2("flip", cmd.flip.vector());
-        shader.set_i32("flip_diagonal", i32::from(cmd.flip_diagonal));
+        shader.set_vec2("position", position.as_vec2() - anchor.offset(size));
+        shader.set_vec2("size", size);
+        shader.set_vec2("rotation_anchor", rotation_anchor.offset(size));
+        shader.set_f32("rotation", rotation);
+        shader.set_vec2("flip", flip.vector());
+        shader.set_i32("flip_diagonal", i32::from(flip_diagonal));
 
         unsafe {
             self.gl.active_texture(glow::TEXTURE0);
         }
         sprite.bind();
         shader.set_i32("sprite_texture", 0);
-        let frame = if cmd.animation.is_some() {
-            sprite.animation_frame(
-                cmd.animation.as_deref(),
-                cmd.animation_tick,
-                cmd.animation_divisor,
-            )
-        } else {
-            (((cmd.animation_tick / cmd.animation_divisor.max(1)) as usize)
-                .rem_euclid(sprite.frame_count())) as u32
-        };
         shader.set_i32("sprite_frame", frame as i32);
 
         unsafe {
@@ -156,22 +190,18 @@ impl Renderer {
                     (false, true) => Flip::Vertical,
                     (true, true) => Flip::Both,
                 };
-                self.draw_sprite(
-                    assets,
-                    &SpriteCmd {
-                        sprite: tileset_id,
-                        position: ivec2(
-                            (origin_x + x as i64 * tile_width) as i32,
-                            (origin_y + y as i64 * tile_height) as i32,
-                        ),
-                        rotation: 0.0,
-                        rotation_anchor: Anchor::TopLeft,
-                        animation: None,
-                        animation_tick: tile.id as u16,
-                        animation_divisor: 1,
-                        flip,
-                        flip_diagonal: tile.flip_diagonal,
-                    },
+                self.draw_sprite_frame(
+                    tileset,
+                    ivec2(
+                        (origin_x + x as i64 * tile_width) as i32,
+                        (origin_y + y as i64 * tile_height) as i32,
+                    ),
+                    Anchor::TopLeft,
+                    0.0,
+                    Anchor::TopLeft,
+                    &flip,
+                    tile.flip_diagonal,
+                    tile.id as u32,
                 );
             }
         }

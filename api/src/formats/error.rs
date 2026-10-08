@@ -20,6 +20,7 @@ impl InvalidSizeError {
 pub enum InvalidFrameError {
     #[error("Invalid buffer length: expected {expected}, got {actual}")]
     BufferLength { expected: usize, actual: usize },
+    #[cfg(feature = "dev")]
     #[error("Invalid pixel index: {0}")]
     PixelIndex(u8),
 }

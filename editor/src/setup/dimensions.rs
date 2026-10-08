@@ -37,7 +37,7 @@ fn pixel_dimension(ui: &mut Ui, id: &'static str, value: &mut u32) {
     egui::ComboBox::from_id_salt(id)
         .selected_text(format!("{value}px"))
         .show_ui(ui, |ui| {
-            for size in (8..=64).step_by(8) {
+            for size in (8..=96).step_by(8) {
                 ui.selectable_value(value, size, format!("{size}px"));
             }
         });

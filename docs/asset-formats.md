@@ -33,7 +33,7 @@ The patterns show the file fields. They check the ID, version, dimensions, and f
 
 ## Pixels and dimensions
 
-Sprite and tile widths and heights must be multiples of 8. Each dimension must be 8 to 64 pixels.
+Sprite and tile widths and heights must be multiples of 8. Each dimension must be 8 to 96 pixels.
 
 Each sprite and tile pixel uses one byte:
 

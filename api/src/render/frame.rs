@@ -1,8 +1,8 @@
-use glam::{vec2, IVec2, UVec2, Vec2};
+use glam::{IVec2, UVec2, Vec2, vec2};
 
 use crate::{
-    render::draw_cmd::{DrawCmd, ShapeCmd, SpriteCmd, TextCmd, TilemapCmd},
     AnimatedSprite, Color, Font, Sprite, Tilemap,
+    render::draw_cmd::{AnimatedSpriteCmd, DrawCmd, ShapeCmd, SpriteCmd, TextCmd, TilemapCmd},
 };
 
 #[derive(Default)]
@@ -23,10 +23,6 @@ impl Frame {
         self.draw_cmds.clear();
     }
 
-    pub fn sprite(&mut self, sprite: &Sprite, position: IVec2) {
-        self.sprite_flip(sprite, position, Flip::None);
-    }
-
     pub fn tilemap(&mut self, tilemap: &Tilemap, position: IVec2) {
         self.add(DrawCmd::Tilemap(TilemapCmd {
             tilemap: tilemap.id,
@@ -34,7 +30,6 @@ impl Frame {
         }));
     }
 
-    /// Draws a filled rectangle in logical screen pixels. Its sides are horizontal and vertical.
     pub fn rectangle(&mut self, position: IVec2, size: UVec2, color: Color) {
         self.shape(
             position,
@@ -46,7 +41,6 @@ impl Frame {
         );
     }
 
-    /// Draws a filled rectangle with rounded corners.
     pub fn rounded_rectangle(&mut self, position: IVec2, size: UVec2, radius: u32, color: Color) {
         self.shape(
             position,
@@ -58,7 +52,6 @@ impl Frame {
         );
     }
 
-    /// Draws a rounded rectangle with an inset border.
     pub fn bordered_rectangle(
         &mut self,
         position: IVec2,
@@ -78,7 +71,6 @@ impl Frame {
         );
     }
 
-    /// Draws a rounded rectangle outline with a transparent fill.
     pub fn rounded_rectangle_outline(
         &mut self,
         position: IVec2,
@@ -117,7 +109,6 @@ impl Frame {
         }));
     }
 
-    /// Draws a one-pixel-wide line between two logical screen positions.
     pub fn line(&mut self, start: IVec2, end: IVec2, color: Color) {
         let delta = (end - start).as_vec2();
         let length = delta.length();
@@ -136,6 +127,57 @@ impl Frame {
         }));
     }
 
+    fn add_sprite_command(
+        &mut self,
+        sprite: &Sprite,
+        position: IVec2,
+        anchor: Anchor,
+        rotation: f32,
+        rotation_anchor: Anchor,
+        flip: Flip,
+    ) {
+        self.add(DrawCmd::Sprite(SpriteCmd {
+            sprite: sprite.id,
+            position,
+            anchor,
+            rotation: rotation.to_radians(),
+            rotation_anchor,
+            flip,
+            flip_diagonal: false,
+        }));
+    }
+
+    fn add_animated_sprite_command(
+        &mut self,
+        sprite: &AnimatedSprite,
+        position: IVec2,
+        anchor: Anchor,
+        rotation: f32,
+        rotation_anchor: Anchor,
+        flip: Flip,
+    ) {
+        self.add(DrawCmd::AnimatedSprite(AnimatedSpriteCmd {
+            sprite: sprite.id,
+            position,
+            anchor,
+            rotation: rotation.to_radians(),
+            rotation_anchor,
+            animation: sprite.animation().map(str::to_owned),
+            animation_tick: sprite.animation_tick(),
+            animation_divisor: sprite.animation_divisor(),
+            flip,
+            flip_diagonal: false,
+        }));
+    }
+
+    pub fn sprite(&mut self, sprite: &Sprite, position: IVec2) {
+        self.sprite_anchor(sprite, position, Anchor::TopLeft);
+    }
+
+    pub fn sprite_anchor(&mut self, sprite: &Sprite, position: IVec2, anchor: Anchor) {
+        self.add_sprite_command(sprite, position, anchor, 0.0, Anchor::TopLeft, Flip::None);
+    }
+
     pub fn sprite_rotate(
         &mut self,
         sprite: &Sprite,
@@ -143,35 +185,89 @@ impl Frame {
         rotation: f32,
         rotation_anchor: Anchor,
     ) {
-        self.add(DrawCmd::Sprite(SpriteCmd {
-            sprite: sprite.id,
+        self.sprite_rotate_anchor(sprite, position, Anchor::TopLeft, rotation, rotation_anchor);
+    }
+
+    pub fn sprite_rotate_anchor(
+        &mut self,
+        sprite: &Sprite,
+        position: IVec2,
+        anchor: Anchor,
+        rotation: f32,
+        rotation_anchor: Anchor,
+    ) {
+        self.sprite_rotate_flip_anchor(
+            sprite,
             position,
-            rotation: rotation.to_radians(),
+            anchor,
+            rotation,
             rotation_anchor,
-            animation: None,
-            animation_tick: 0,
-            animation_divisor: 1,
-            flip: Flip::None,
-            flip_diagonal: false,
-        }));
+            Flip::None,
+        );
+    }
+
+    pub fn sprite_rotate_flip(
+        &mut self,
+        sprite: &Sprite,
+        position: IVec2,
+        rotation: f32,
+        rotation_anchor: Anchor,
+        flip: Flip,
+    ) {
+        self.sprite_rotate_flip_anchor(
+            sprite,
+            position,
+            Anchor::TopLeft,
+            rotation,
+            rotation_anchor,
+            flip,
+        );
+    }
+
+    pub fn sprite_rotate_flip_anchor(
+        &mut self,
+        sprite: &Sprite,
+        position: IVec2,
+        anchor: Anchor,
+        rotation: f32,
+        rotation_anchor: Anchor,
+        flip: Flip,
+    ) {
+        self.add_sprite_command(sprite, position, anchor, rotation, rotation_anchor, flip);
     }
 
     pub fn sprite_flip(&mut self, sprite: &Sprite, position: IVec2, flip: Flip) {
-        self.add(DrawCmd::Sprite(SpriteCmd {
-            sprite: sprite.id,
-            position,
-            rotation: 0.0,
-            rotation_anchor: Anchor::TopLeft,
-            animation: None,
-            animation_tick: 0,
-            animation_divisor: 1,
-            flip,
-            flip_diagonal: false,
-        }));
+        self.sprite_flip_anchor(sprite, position, flip, Anchor::TopLeft);
+    }
+
+    pub fn sprite_flip_anchor(
+        &mut self,
+        sprite: &Sprite,
+        position: IVec2,
+        flip: Flip,
+        anchor: Anchor,
+    ) {
+        self.add_sprite_command(sprite, position, anchor, 0.0, Anchor::TopLeft, flip);
     }
 
     pub fn animated_sprite(&mut self, sprite: &AnimatedSprite, position: IVec2) {
-        self.animated_sprite_flip(sprite, position, Flip::None);
+        self.animated_sprite_anchor(sprite, position, Anchor::TopLeft);
+    }
+
+    pub fn animated_sprite_anchor(
+        &mut self,
+        sprite: &AnimatedSprite,
+        position: IVec2,
+        anchor: Anchor,
+    ) {
+        self.add_animated_sprite_command(
+            sprite,
+            position,
+            anchor,
+            0.0,
+            Anchor::TopLeft,
+            Flip::None,
+        );
     }
 
     pub fn animated_sprite_rotate(
@@ -181,31 +277,75 @@ impl Frame {
         rotation: f32,
         rotation_anchor: Anchor,
     ) {
-        self.add(DrawCmd::Sprite(SpriteCmd {
-            sprite: sprite.id,
+        self.animated_sprite_rotate_anchor(
+            sprite,
             position,
-            rotation: rotation.to_radians(),
+            Anchor::TopLeft,
+            rotation,
             rotation_anchor,
-            animation: sprite.animation().map(str::to_owned),
-            animation_tick: sprite.animation_tick(),
-            animation_divisor: sprite.animation_divisor(),
-            flip: Flip::None,
-            flip_diagonal: false,
-        }));
+        );
+    }
+
+    pub fn animated_sprite_rotate_anchor(
+        &mut self,
+        sprite: &AnimatedSprite,
+        position: IVec2,
+        anchor: Anchor,
+        rotation: f32,
+        rotation_anchor: Anchor,
+    ) {
+        self.animated_sprite_rotate_flip_anchor(
+            sprite,
+            position,
+            anchor,
+            rotation,
+            rotation_anchor,
+            Flip::None,
+        );
+    }
+
+    pub fn animated_sprite_rotate_flip(
+        &mut self,
+        sprite: &AnimatedSprite,
+        position: IVec2,
+        rotation: f32,
+        rotation_anchor: Anchor,
+        flip: Flip,
+    ) {
+        self.animated_sprite_rotate_flip_anchor(
+            sprite,
+            position,
+            Anchor::TopLeft,
+            rotation,
+            rotation_anchor,
+            flip,
+        );
+    }
+
+    pub fn animated_sprite_rotate_flip_anchor(
+        &mut self,
+        sprite: &AnimatedSprite,
+        position: IVec2,
+        anchor: Anchor,
+        rotation: f32,
+        rotation_anchor: Anchor,
+        flip: Flip,
+    ) {
+        self.add_animated_sprite_command(sprite, position, anchor, rotation, rotation_anchor, flip);
     }
 
     pub fn animated_sprite_flip(&mut self, sprite: &AnimatedSprite, position: IVec2, flip: Flip) {
-        self.add(DrawCmd::Sprite(SpriteCmd {
-            sprite: sprite.id,
-            position,
-            rotation: 0.0,
-            rotation_anchor: Anchor::TopLeft,
-            animation: sprite.animation().map(str::to_owned),
-            animation_tick: sprite.animation_tick(),
-            animation_divisor: sprite.animation_divisor(),
-            flip,
-            flip_diagonal: false,
-        }));
+        self.animated_sprite_flip_anchor(sprite, position, flip, Anchor::TopLeft);
+    }
+
+    pub fn animated_sprite_flip_anchor(
+        &mut self,
+        sprite: &AnimatedSprite,
+        position: IVec2,
+        flip: Flip,
+        anchor: Anchor,
+    ) {
+        self.add_animated_sprite_command(sprite, position, anchor, 0.0, Anchor::TopLeft, flip);
     }
 
     pub fn text(&mut self, text: impl Into<String>, position: IVec2, anchor: Anchor) {

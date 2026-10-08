@@ -9,7 +9,11 @@ impl api::Screen<State> for PauseScreen {
         if ctx.input.just_pressed(Button::Start) {
             api::ScreenAction::Pop
         } else if ctx.input.just_pressed(Button::Select) {
-            api::ScreenAction::ClearAndPush(Box::new(MainMenu::default()))
+            let menu = match MainMenu::new(ctx) {
+                Ok(menu) => menu,
+                Err(action) => return action,
+            };
+            api::ScreenAction::ClearAndPush(Box::new(menu))
         } else {
             api::ScreenAction::None
         }

@@ -30,8 +30,8 @@ impl Difficulty {
     pub fn move_interval(&self) -> usize {
         match self {
             Self::Easy => 25,
-            Self::Normal => 15,
-            Self::Hard => 12,
+            Self::Normal => 22,
+            Self::Hard => 20,
         }
     }
 }

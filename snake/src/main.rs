@@ -7,7 +7,7 @@ mod pause;
 mod state;
 
 fn main() {
-    api::run("Snake", State::default(), |_ctx| {
-        Box::new(MainMenu::default())
+    api::run("Snake", State::default(), |ctx| {
+        Ok(Box::new(MainMenu::new(ctx)?))
     });
 }

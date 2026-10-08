@@ -16,8 +16,8 @@ struct Sprite {
     std::assert(magic == "SPRT" && version == 1, "Use SPRT version 1.");
     u16 width;
     u16 height;
-    std::assert(width >= 8 && width <= 64 && width % 8 == 0, "Use a valid sprite width.");
-    std::assert(height >= 8 && height <= 64 && height % 8 == 0, "Use a valid sprite height.");
+    std::assert(width >= 8 && width <= 96 && width % 8 == 0, "Use a valid sprite width.");
+    std::assert(height >= 8 && height <= 96 && height % 8 == 0, "Use a valid sprite height.");
     // Pixels use row-major order. Zero is clear.
     PalettePixel pixels[width * height];
 };

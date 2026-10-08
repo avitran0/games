@@ -40,7 +40,9 @@ Drag with the middle mouse button to pan the canvas. You can also hold Space and
 
 Use the View controls to fit the canvas in the view. Use the same controls to select a light or dark grid.
 
-Click the canvas with the left mouse button to paint with the selected color. Click with the right mouse button to erase.
+Choose **Draw** to paint. Left-click to use the selected color. Right-click to erase.
+
+Choose **Select**. Drag on the canvas to select a rectangle. Drag inside it to move it. The editor keeps the selection inside the sprite. Press `Esc` or click **Deselect** to clear it.
 
 ## Palette
 

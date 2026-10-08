@@ -8,7 +8,11 @@ impl Screen<State> for GameOverScreen {
     fn update(&mut self, ctx: &mut api::ScreenContext<'_, State>) -> api::ScreenAction<State> {
         if ctx.input.just_pressed(Button::Start) || ctx.input.just_pressed(Button::A) {
             ctx.state.score = 0;
-            api::ScreenAction::Replace(Box::new(MainMenu::default()))
+            let menu = match MainMenu::new(ctx) {
+                Ok(menu) => menu,
+                Err(action) => return action,
+            };
+            api::ScreenAction::Replace(Box::new(menu))
         } else {
             api::ScreenAction::None
         }

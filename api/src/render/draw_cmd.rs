@@ -8,6 +8,7 @@ use crate::{
 
 pub(crate) enum DrawCmd {
     Sprite(SpriteCmd),
+    AnimatedSprite(AnimatedSpriteCmd),
     Tilemap(TilemapCmd),
     Text(TextCmd),
     Shape(ShapeCmd),
@@ -16,6 +17,17 @@ pub(crate) enum DrawCmd {
 pub(crate) struct SpriteCmd {
     pub(crate) sprite: SpriteId,
     pub(crate) position: IVec2,
+    pub(crate) anchor: Anchor,
+    pub(crate) rotation: f32,
+    pub(crate) rotation_anchor: Anchor,
+    pub(crate) flip: Flip,
+    pub(crate) flip_diagonal: bool,
+}
+
+pub(crate) struct AnimatedSpriteCmd {
+    pub(crate) sprite: SpriteId,
+    pub(crate) position: IVec2,
+    pub(crate) anchor: Anchor,
     pub(crate) rotation: f32,
     pub(crate) rotation_anchor: Anchor,
     pub(crate) animation: Option<String>,

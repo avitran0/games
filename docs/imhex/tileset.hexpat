@@ -24,8 +24,8 @@ struct Tileset {
     u16 tile_width;
     u16 tile_height;
     u16 tile_count;
-    std::assert(tile_width >= 8 && tile_width <= 64 && tile_width % 8 == 0, "Use a valid tile width.");
-    std::assert(tile_height >= 8 && tile_height <= 64 && tile_height % 8 == 0, "Use a valid tile height.");
+    std::assert(tile_width >= 8 && tile_width <= 96 && tile_width % 8 == 0, "Use a valid tile width.");
+    std::assert(tile_height >= 8 && tile_height <= 96 && tile_height % 8 == 0, "Use a valid tile height.");
     std::assert(tile_count >= 1, "Add at least one tile.");
     // Tile IDs start at one. Array index zero has ID one.
     TileImage<tile_width, tile_height> tiles[tile_count];

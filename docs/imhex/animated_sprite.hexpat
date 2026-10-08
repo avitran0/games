@@ -40,8 +40,8 @@ struct AnimatedSprite {
     std::assert(magic == "ANIM" && version == 1, "Use ANIM version 1.");
     u16 width;
     u16 height;
-    std::assert(width >= 8 && width <= 64 && width % 8 == 0, "Use a valid frame width.");
-    std::assert(height >= 8 && height <= 64 && height % 8 == 0, "Use a valid frame height.");
+    std::assert(width >= 8 && width <= 96 && width % 8 == 0, "Use a valid frame width.");
+    std::assert(height >= 8 && height <= 96 && height % 8 == 0, "Use a valid frame height.");
     // The API stores both counts as u16 values.
     u16 frame_count;
     u16 tag_count;

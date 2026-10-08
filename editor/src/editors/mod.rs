@@ -7,7 +7,7 @@ mod tileset;
 
 use crate::document::AssetDocument;
 use crate::file_io::LoadedAsset;
-use crate::ui::canvas::{PixelAction, PixelEdit};
+use crate::ui::canvas::{PixelAction, PixelEdit, PixelRect};
 use api::glam::UVec2;
 use eframe::egui::Ui;
 
@@ -25,8 +25,65 @@ pub(super) fn apply_pixel_action(
             false
         }
         Some(PixelAction::Paint(edit)) => apply_pixel_edit(pixels, size, Some(edit)),
+        Some(PixelAction::MoveSelection { from, to }) => {
+            move_selection(pixels, size, from, to)
+        }
         None => false,
     }
+}
+
+fn move_selection(pixels: &mut [u8], size: UVec2, from: PixelRect, to: PixelRect) -> bool {
+    let width = size.x as usize;
+    let height = size.y as usize;
+    let Some(from_right) = from.x.checked_add(from.width) else {
+        return false;
+    };
+    let Some(from_bottom) = from.y.checked_add(from.height) else {
+        return false;
+    };
+    let Some(to_right) = to.x.checked_add(from.width) else {
+        return false;
+    };
+    let Some(to_bottom) = to.y.checked_add(from.height) else {
+        return false;
+    };
+    if from == to
+        || from.width == 0
+        || from.height == 0
+        || to.width != from.width
+        || to.height != from.height
+        || from_right > width
+        || from_bottom > height
+        || to_right > width
+        || to_bottom > height
+        || pixels.len() != width * height
+    {
+        return false;
+    }
+
+    let mut selected = Vec::with_capacity(from.width * from.height);
+    for y in 0..from.height {
+        let start = (from.y + y) * width + from.x;
+        selected.extend_from_slice(&pixels[start..start + from.width]);
+    }
+
+    let mut changed = false;
+    for y in 0..from.height {
+        let start = (from.y + y) * width + from.x;
+        changed |= pixels[start..start + from.width].iter().any(|pixel| *pixel != 0);
+        pixels[start..start + from.width].fill(0);
+    }
+    for y in 0..from.height {
+        for x in 0..from.width {
+            let value = selected[y * from.width + x];
+            if value != 0 {
+                let pixel = &mut pixels[(to.y + y) * width + to.x + x];
+                changed |= *pixel != value;
+                *pixel = value;
+            }
+        }
+    }
+    changed
 }
 
 pub(super) fn apply_pixel_edit(pixels: &mut [u8], size: UVec2, edit: Option<PixelEdit>) -> bool {

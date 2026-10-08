@@ -157,7 +157,9 @@ fn canvas(ui: &mut Ui, document: &mut FontDocument, state: &mut State) -> bool {
     );
     let edit = edit.and_then(|action| match action {
         ui::canvas::PixelAction::Paint(edit) => Some(edit),
-        ui::canvas::PixelAction::PickColor(_) => None,
+        ui::canvas::PixelAction::PickColor(_) | ui::canvas::PixelAction::MoveSelection { .. } => {
+            None
+        }
     });
     apply_pixel_edit(&mut glyph.bitmap, size, edit)
 }

@@ -30,7 +30,9 @@ const TICK_DURATION: Duration = Duration::from_nanos(1_000_000_000 / 60);
 
 pub fn run<State: 'static, Setup>(title: &str, state: State, setup: Setup)
 where
-    Setup: FnOnce(&mut ScreenContext<'_, State>) -> Box<dyn Screen<State>>,
+    Setup: FnOnce(
+        &mut ScreenContext<'_, State>,
+    ) -> Result<Box<dyn Screen<State>>, ScreenAction<State>>,
 {
     utils::log::init();
 
@@ -41,8 +43,7 @@ where
             std::process::exit(1);
         }
     };
-    let initial_screen = ctx.setup(setup);
-    ctx.push_screen(initial_screen);
+    ctx.setup(setup);
     info!("Runtime is ready.");
 
     let mut next_tick = Instant::now();

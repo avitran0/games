@@ -1,5 +1,5 @@
 use api::{
-    Anchor, Button,
+    Anchor, Button, Flip,
     glam::{IVec2, ivec2},
 };
 
@@ -55,6 +55,7 @@ impl Direction {
 
 struct Sprites {
     head: api::Sprite,
+    head_only: api::Sprite,
     body: api::Sprite,
     body_angled: api::Sprite,
     tail: api::Sprite,
@@ -64,20 +65,32 @@ struct Sprites {
 
 impl Sprites {
     fn load(ctx: &mut api::ScreenContext<State>) -> Result<Self, api::ScreenAction<State>> {
-        let head = ctx.assets.load_sprite(include_bytes!("assets/head_16.pxs"))?;
-        let body = ctx.assets.load_sprite(include_bytes!("assets/body_16.pxs"))?;
+        let head = ctx
+            .assets
+            .load_sprite(include_bytes!("assets/head_16.pxs"))?;
+        let head_only = ctx
+            .assets
+            .load_sprite(include_bytes!("assets/head_only_16.pxs"))?;
+        let body = ctx
+            .assets
+            .load_sprite(include_bytes!("assets/body_16.pxs"))?;
         let body_angled = ctx
             .assets
             .load_sprite(include_bytes!("assets/body_angled_16.pxs"))?;
-        let tail = ctx.assets.load_sprite(include_bytes!("assets/tail_16.pxs"))?;
-        let food = ctx.assets.load_sprite(include_bytes!("assets/food.pxs"))?;
+        let tail = ctx
+            .assets
+            .load_sprite(include_bytes!("assets/tail_16.pxs"))?;
+        let food = ctx.assets.load_sprite(include_bytes!("assets/food_16.pxs"))?;
         let _ = ctx
             .assets
             .load_tileset(include_bytes!("assets/tileset_16.pxt"))?;
-        let background = ctx.assets.load_tilemap(include_bytes!("assets/map_16.pxm"))?;
+        let background = ctx
+            .assets
+            .load_tilemap(include_bytes!("assets/map_16.pxm"))?;
 
         Ok(Self {
             head,
+            head_only,
             body,
             body_angled,
             tail,
@@ -184,41 +197,47 @@ impl api::Screen<State> for GameScreen {
         frame.tilemap(&self.sprites.background, ivec2(0, 0));
 
         for (index, &segment) in self.snake.iter().enumerate() {
-            let (sprite, rotation) = if index == 0 {
-                (&self.sprites.head, self.direction.rotation())
+            let (sprite, rotation, flip) = if self.snake.len() == 1 {
+                (
+                    &self.sprites.head_only,
+                    self.direction.rotation(),
+                    Flip::None,
+                )
+            } else if index == 0 {
+                (&self.sprites.head, self.direction.rotation(), Flip::None)
             } else if index + 1 == self.snake.len() {
                 let direction = Direction::between(segment, self.snake[index - 1]);
-                (&self.sprites.tail, direction.rotation())
+                (&self.sprites.tail, direction.rotation(), Flip::None)
             } else {
                 let from = Direction::between(self.snake[index], self.snake[index - 1]);
                 let to = Direction::between(self.snake[index + 1], self.snake[index]);
                 if from == to {
-                    let rotation = if from.vector().x != 0 { 90.0 } else { 0.0 };
-                    (&self.sprites.body, rotation)
+                    (&self.sprites.body, from.rotation(), Flip::None)
                 } else {
-                    (&self.sprites.body_angled, corner_rotation(from, to))
+                    let (rotation, flip) = corner_rotation(from, to);
+                    (&self.sprites.body_angled, rotation, flip)
                 }
             };
 
-            frame.sprite_rotate(sprite, segment * TILE_SIZE, rotation, Anchor::Center);
+            frame.sprite_rotate_flip(sprite, segment * TILE_SIZE, rotation, Anchor::Center, flip);
         }
 
         frame.sprite(&self.sprites.food, self.food * TILE_SIZE);
     }
 }
 
-fn corner_rotation(from: Direction, to: Direction) -> f32 {
+fn corner_rotation(from: Direction, to: Direction) -> (f32, Flip) {
     match (from, to) {
-        // Checks for a right turn.
-        (Direction::Right, Direction::Up) => 90.0,
-        (Direction::Down, Direction::Right) => 180.0,
-        (Direction::Left, Direction::Down) => 270.0,
-        (Direction::Up, Direction::Left) => 0.0,
-        // Checks for a left turn.
-        (Direction::Up, Direction::Right) => 270.0,
-        (Direction::Right, Direction::Down) => 0.0,
-        (Direction::Down, Direction::Left) => 90.0,
-        (Direction::Left, Direction::Up) => 180.0,
-        _ => 0.0,
+        // right turn, no flip
+        (Direction::Up, Direction::Left) => (0.0, Flip::None),
+        (Direction::Right, Direction::Up) => (90.0, Flip::None),
+        (Direction::Down, Direction::Right) => (180.0, Flip::None),
+        (Direction::Left, Direction::Down) => (270.0, Flip::None),
+        // left turn, including flip, otherwise the sprites don't connect properly
+        (Direction::Up, Direction::Right) => (0.0, Flip::Horizontal),
+        (Direction::Right, Direction::Down) => (90.0, Flip::Horizontal),
+        (Direction::Down, Direction::Left) => (180.0, Flip::Horizontal),
+        (Direction::Left, Direction::Up) => (270.0, Flip::Horizontal),
+        _ => (0.0, Flip::None),
     }
 }

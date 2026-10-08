@@ -2,14 +2,25 @@ use api::{Anchor, Button, Color, HEIGHT, Screen, WIDTH, glam::uvec2};
 
 use crate::{game::GameScreen, state::State};
 
-#[derive(Default)]
 pub struct MainMenu {
+    title: api::Sprite,
     last_press: Option<Press>,
 }
 
 struct Press {
     tick: usize,
     higher: bool,
+}
+
+impl MainMenu {
+    pub fn new(ctx: &mut api::ScreenContext<State>) -> Result<Self, api::ScreenAction<State>> {
+        let title = ctx.assets.load_sprite(include_bytes!("assets/title.pxs"))?;
+
+        Ok(Self {
+            title,
+            last_press: None,
+        })
+    }
 }
 
 impl Screen<State> for MainMenu {
@@ -50,6 +61,12 @@ impl Screen<State> for MainMenu {
     }
 
     fn draw(&mut self, state: &State, frame: &mut api::Frame) {
+        frame.sprite_anchor(
+            &self.title,
+            uvec2(WIDTH / 2, HEIGHT / 4).as_ivec2(),
+            Anchor::Center,
+        );
+
         frame.text(
             format!("{:?}", state.difficulty),
             uvec2(WIDTH / 2, HEIGHT / 2).as_ivec2(),
@@ -57,7 +74,7 @@ impl Screen<State> for MainMenu {
         );
 
         let up_color = match &self.last_press {
-            Some(press) if press.higher => Color::RoyalBlue,
+            Some(press) if press.higher => Color::AzureRadiance,
             _ => Color::White,
         };
         frame.text_color(
@@ -68,7 +85,7 @@ impl Screen<State> for MainMenu {
         );
 
         let down_color = match &self.last_press {
-            Some(press) if !press.higher => Color::RoyalBlue,
+            Some(press) if !press.higher => Color::AzureRadiance,
             _ => Color::White,
         };
         frame.text_color(
