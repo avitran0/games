@@ -43,6 +43,10 @@ impl Input {
         Self::set_bit(&mut self.gamepad, button, down);
     }
 
+    pub(crate) fn clear_gamepad(&mut self) {
+        self.gamepad = 0;
+    }
+
     fn set_bit(bits: &mut u16, button: Button, down: bool) {
         if down {
             *bits |= button.bit();

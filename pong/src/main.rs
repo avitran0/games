@@ -1,6 +1,10 @@
+use crate::{game::GameScreen, state::State};
+
 mod game;
 mod state;
 
 fn main() {
-    println!("Hello, world!");
+    api::run("Pong", State::default(), |ctx| {
+        Ok(Box::new(GameScreen::new(ctx)))
+    });
 }

@@ -1,11 +1,12 @@
 [workspace]
-members = ["api", "editor", "formats", "pong", "snake"]
+members = ["api", "editor", "formats", "pong", "snake", "ui"]
 default-members = ["pong", "snake"]
 resolver = "3"
 
 [workspace.dependencies]
 api.path = "api"
 formats.path = "formats"
+ui.path = "ui"
 
 [profile.release]
 lto = true

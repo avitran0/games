@@ -70,6 +70,7 @@ impl<State: 'static> Context<State> {
                 }
                 Event::GamepadRemoved { which, .. } => {
                     self.platform.close_gamepad(which);
+                    self.input.clear_gamepad();
                 }
                 Event::GamepadButtonDown { button, .. } => {
                     if let Some(button) = gamepad_button_to_button(button) {
