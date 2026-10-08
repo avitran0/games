@@ -52,7 +52,6 @@ impl Screen {
 
 struct State {
     selected_color: u8,
-    tool: ui::canvas::PixelTool,
     selection: ui::canvas::PixelSelection,
     timeline: animation_timeline::State,
     canvas: ui::canvas::CanvasView,
@@ -62,7 +61,6 @@ impl Default for State {
     fn default() -> Self {
         Self {
             selected_color: 1,
-            tool: ui::canvas::PixelTool::Draw,
             selection: ui::canvas::PixelSelection::default(),
             timeline: animation_timeline::State::default(),
             canvas: ui::canvas::CanvasView::default(),
@@ -122,7 +120,7 @@ fn tools(ui: &mut Ui, document: &mut AnimatedSpriteDocument, state: &mut State) 
         return false;
     }
 
-    ui::canvas::selection_controls(ui, &mut state.tool, &mut state.selection);
+    ui::canvas::selection_controls(ui, &mut state.selection);
     if let Some(color) = ui::palette::show(ui, state.selected_color) {
         state.selected_color = color;
     }
@@ -235,7 +233,6 @@ fn canvas(ui: &mut Ui, document: &mut AnimatedSpriteDocument, state: &mut State)
         document.size,
         state.selected_color,
         PixelMode::Indexed,
-        &mut state.tool,
         &mut state.selection,
         &mut state.canvas,
     );

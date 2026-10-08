@@ -201,7 +201,7 @@ impl Renderer {
                     Anchor::TopLeft,
                     &flip,
                     tile.flip_diagonal,
-                    tile.id as u32,
+                    tile.id,
                 );
             }
         }

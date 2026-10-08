@@ -71,6 +71,13 @@ impl App {
                         editor.mark_dirty();
                     }
                 });
+        } else if editor.has_preview_panel() {
+            egui::Panel::bottom("font-preview-panel")
+                .default_size(150.0)
+                .min_size(100.0)
+                .max_size(280.0)
+                .resizable(true)
+                .show(ui, |ui| editor.preview_panel(ui));
         }
         egui::Panel::left("asset-tools")
             .default_size(178.0)

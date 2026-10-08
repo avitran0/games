@@ -1,4 +1,4 @@
-#pragma description Bitmap font. FONT version 1. Extension .pxf.
+#pragma description Variable-width bitmap font. FONT version 1. Extension .pxf.
 #pragma endian little
 #pragma array_limit 0x1000000
 
@@ -9,9 +9,10 @@ struct Glyph<auto Height> {
     u32 codepoint;
     std::assert(codepoint <= 0x10FFFF && (codepoint < 0xD800 || codepoint > 0xDFFF), "Use a Unicode scalar value.");
     u16 advance;
-    // Each glyph has a square bitmap. Pixels use row-major order.
-    // Zero is clear. Any nonzero value is set by the runtime.
-    u8 bitmap[Height * Height];
+    u16 width;
+    std::assert(width > 0, "Use a nonzero glyph width.");
+    // Pixels use row-major order. Zero is clear.
+    u8 bitmap[width * Height];
 };
 
 struct Font {

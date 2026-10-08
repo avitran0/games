@@ -54,6 +54,14 @@ Press `P` over a transparent pixel to select Transparent. Paint with Transparent
 
 Hover over a palette color to see its name and hex code.
 
+## Bitmap fonts
+
+Use **Width** to set the selected glyph's bitmap width. Use **Advance** to set the spacing after it.
+
+Use the **Code point** field to rename the glyph. Enter a Unicode value such as `U+0041`. The editor rejects duplicate values.
+
+Select a glyph in the strip at the bottom of the window. Scroll horizontally to browse the glyphs.
+
 ## Animation controls
 
 Click a frame in the timeline to select it.

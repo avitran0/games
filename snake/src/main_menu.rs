@@ -96,8 +96,8 @@ impl Screen<State> for MainMenu {
         );
 
         frame.text(
-            "Press Select to quit",
-            uvec2(WIDTH, HEIGHT).as_ivec2(),
+            "Press \u{E015} to quit",
+            uvec2(WIDTH - 5, HEIGHT - 5).as_ivec2(),
             Anchor::BottomRight,
         );
     }

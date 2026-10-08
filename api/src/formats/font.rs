@@ -11,24 +11,10 @@ use crate::formats::error::FontEncodeError;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GlyphDocument {
     pub codepoint: char,
+    pub width: u16,
     pub advance: u16,
-    /// row-major, one byte per pixel (wasteful, i know...)
+    /// Row-major bitmap. Each pixel uses one byte.
     pub bitmap: Vec<u8>,
-}
-
-impl GlyphDocument {
-    pub fn width(&self, height: u16) -> u16 {
-        (0..height)
-            .rev()
-            .find(|&x| {
-                (0..height).any(|y| {
-                    self.bitmap
-                        .get(y as usize * height as usize + x as usize)
-                        .is_some_and(|&p| p != 0)
-                })
-            })
-            .map_or(0, |x| x + 1)
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -56,6 +42,7 @@ impl FontDocument {
             height,
             glyphs: vec![GlyphDocument {
                 codepoint: '\u{FFFD}',
+                width: height,
                 advance: 1,
                 bitmap,
             }],
@@ -68,16 +55,22 @@ impl FontDocument {
         if !(1..=u16::MAX as usize).contains(&self.glyphs.len()) {
             return Err(FontEncodeError::InvalidGlyphCount(self.glyphs.len()));
         }
-        let bitmap_len = self.height as usize * self.height as usize;
         let mut codepoints = HashSet::new();
         for glyph in &self.glyphs {
             if !codepoints.insert(glyph.codepoint) {
                 return Err(FontEncodeError::DuplicateCodepoint(glyph.codepoint));
             }
-            if glyph.bitmap.len() != bitmap_len {
+            if glyph.width == 0 {
+                return Err(FontEncodeError::InvalidGlyphWidth {
+                    codepoint: glyph.codepoint,
+                    width: glyph.width,
+                });
+            }
+            let expected = usize::from(glyph.width) * usize::from(self.height);
+            if glyph.bitmap.len() != expected {
                 return Err(FontEncodeError::InvalidBitmapLength {
                     codepoint: glyph.codepoint,
-                    expected: bitmap_len,
+                    expected,
                     actual: glyph.bitmap.len(),
                 });
             }
@@ -97,6 +90,7 @@ impl FontDocument {
         for glyph in &self.glyphs {
             writer.write_u32(glyph.codepoint as u32)?;
             writer.write_u16(glyph.advance)?;
+            writer.write_u16(glyph.width)?;
             writer.write_bytes(&glyph.bitmap)?;
         }
         Ok(bytes)
@@ -118,31 +112,42 @@ impl FontDocument {
         if count == 0 {
             return Err(FontDecodeError::InvalidGlyphCount(count));
         }
-        let bitmap_len = height as usize * height as usize;
-        let expected_len = 10 + count * (6 + bitmap_len);
-        if bytes.len() != expected_len {
-            return Err(FontDecodeError::InvalidDataLength {
-                expected: expected_len,
-                actual: bytes.len(),
-            });
-        }
+        let mut expected_len = 10_usize;
         let mut codepoints = HashSet::new();
         let mut glyphs = Vec::with_capacity(count);
         for _ in 0..count {
-            let codepoint = reader.read_u32()?;
+            let codepoint = decode_codepoint(reader.read_u32()?)?;
             let advance = reader.read_u16()?;
+            let width = reader.read_u16()?;
+            if width == 0 {
+                return Err(FontDecodeError::InvalidGlyphWidth { codepoint, width });
+            }
+            let bitmap_len = usize::from(width) * usize::from(height);
+            expected_len = expected_len.saturating_add(8 + bitmap_len);
             let bitmap = reader.read_bytes(bitmap_len)?;
-            let codepoint = decode_codepoint(codepoint)?;
             if !codepoints.insert(codepoint) {
                 return Err(FontDecodeError::DuplicateCodepoint(codepoint));
             }
             glyphs.push(GlyphDocument {
                 codepoint,
+                width,
                 advance,
                 bitmap,
             });
         }
+        validate_font_data_length(bytes, expected_len)?;
         Ok(Self { height, glyphs })
+    }
+}
+
+fn validate_font_data_length(bytes: &[u8], expected: usize) -> Result<(), FontDecodeError> {
+    if bytes.len() == expected {
+        Ok(())
+    } else {
+        Err(FontDecodeError::InvalidDataLength {
+            expected,
+            actual: bytes.len(),
+        })
     }
 }
 
@@ -180,12 +185,12 @@ impl Font {
             .glyphs
             .iter()
             .map(|glyph| {
-                let width = glyph.width(height);
-                let stride = (width as usize).div_ceil(8);
-                let mut bitmap = vec![0; stride * height as usize];
-                for y in 0..height as usize {
-                    for x in 0..width as usize {
-                        if glyph.bitmap[y * height as usize + x] != 0 {
+                let width = usize::from(glyph.width);
+                let stride = width.div_ceil(8);
+                let mut bitmap = vec![0; stride * usize::from(height)];
+                for y in 0..usize::from(height) {
+                    for x in 0..width {
+                        if glyph.bitmap[y * width + x] != 0 {
                             bitmap[y * stride + x / 8] |= 0x80 >> (x % 8);
                         }
                     }
@@ -193,7 +198,7 @@ impl Font {
                 Glyph {
                     codepoint: glyph.codepoint,
                     advance: glyph.advance,
-                    width,
+                    width: glyph.width,
                     bitmap,
                 }
             })

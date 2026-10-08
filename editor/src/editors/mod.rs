@@ -142,6 +142,12 @@ trait Editor {
     fn tile_strip(&mut self, _ui: &mut Ui) -> bool {
         false
     }
+
+    fn has_preview_panel(&self) -> bool {
+        false
+    }
+
+    fn preview_panel(&mut self, _ui: &mut Ui) {}
 }
 
 macro_rules! impl_editor {
@@ -188,6 +194,12 @@ impl_editor!(
     },
     fn toolbar(&mut self, ui: &mut Ui) -> bool {
         font::Screen::toolbar(self, ui)
+    },
+    fn has_preview_panel(&self) -> bool {
+        true
+    },
+    fn preview_panel(&mut self, ui: &mut Ui) {
+        font::Screen::preview_panel(self, ui)
     }
 );
 
@@ -297,6 +309,14 @@ impl EditorScreen {
 
     pub fn has_tile_strip(&self) -> bool {
         self.0.has_tile_strip()
+    }
+
+    pub fn has_preview_panel(&self) -> bool {
+        self.0.has_preview_panel()
+    }
+
+    pub fn preview_panel(&mut self, ui: &mut Ui) {
+        self.0.preview_panel(ui);
     }
 
     pub fn tile_strip(&mut self, ui: &mut Ui) -> bool {

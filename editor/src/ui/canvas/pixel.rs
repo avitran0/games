@@ -34,6 +34,7 @@ pub enum PixelTool {
 
 #[derive(Default)]
 pub struct PixelSelection {
+    tool: PixelTool,
     rect: Option<PixelRect>,
     drag: Option<SelectionDrag>,
 }
@@ -102,7 +103,6 @@ pub fn show_pixels_with_selection(
     size: UVec2,
     selected_value: u8,
     mode: PixelMode,
-    tool: &mut PixelTool,
     selection: &mut PixelSelection,
     view: &mut CanvasView,
 ) -> Option<PixelAction> {
@@ -113,14 +113,14 @@ pub fn show_pixels_with_selection(
         selected_value,
         mode,
         view,
-        Some((tool, selection)),
+        Some(selection),
     )
 }
 
-pub fn selection_controls(ui: &mut Ui, tool: &mut PixelTool, selection: &mut PixelSelection) {
+pub fn selection_controls(ui: &mut Ui, selection: &mut PixelSelection) {
     ui.horizontal(|ui| {
-        ui.selectable_value(tool, PixelTool::Draw, "Draw");
-        ui.selectable_value(tool, PixelTool::Select, "Select");
+        ui.selectable_value(&mut selection.tool, PixelTool::Draw, "Draw");
+        ui.selectable_value(&mut selection.tool, PixelTool::Select, "Select");
         if selection.has_selection() && ui.button("Deselect").clicked() {
             selection.clear();
         }
@@ -134,7 +134,7 @@ fn show_pixels_inner(
     selected_value: u8,
     mode: PixelMode,
     view: &mut CanvasView,
-    selection: Option<(&mut PixelTool, &mut PixelSelection)>,
+    selection: Option<&mut PixelSelection>,
 ) -> Option<PixelAction> {
     let width = size.x as usize;
     let height = size.y as usize;
@@ -144,8 +144,8 @@ fn show_pixels_inner(
     let mut selection_outline = None;
     let mut preview_pixels = None;
     let mut tool = PixelTool::Draw;
-    if let Some((active_tool, selection)) = selection {
-        tool = *active_tool;
+    if let Some(selection) = selection {
+        tool = selection.tool;
         if !ui.ctx().egui_wants_keyboard_input()
             && ui.input(|input| input.key_pressed(egui::Key::Escape))
         {

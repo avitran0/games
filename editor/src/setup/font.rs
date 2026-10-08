@@ -14,7 +14,7 @@ impl Default for Screen {
 impl Screen {
     pub fn show(&mut self, ui: &mut Ui) -> Option<AssetSpec> {
         ui.heading("Bitmap font");
-        ui.label("Create a font with square glyph canvases and per-glyph advance.");
+        ui.label("Create a font with variable-width glyphs and per-glyph advance.");
         ui.add_space(12.0);
         dimensions::font_height(ui, &mut self.height);
         ui.add_space(16.0);

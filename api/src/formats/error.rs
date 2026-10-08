@@ -176,6 +176,8 @@ pub enum FontEncodeError {
     InvalidGlyphCount(usize),
     #[error("Duplicate glyph codepoint: {0:?}")]
     DuplicateCodepoint(char),
+    #[error("Invalid width for glyph {codepoint:?}: width must be greater than zero")]
+    InvalidGlyphWidth { codepoint: char, width: u16 },
     #[error("Glyph {codepoint:?} bitmap length is invalid: expected {expected}, got {actual}")]
     InvalidBitmapLength {
         codepoint: char,
@@ -200,6 +202,8 @@ pub enum FontDecodeError {
     InvalidCodepoint(u32),
     #[error("Duplicate glyph codepoint: {0:?}")]
     DuplicateCodepoint(char),
+    #[error("Invalid width for glyph {codepoint:?}: width must be greater than zero")]
+    InvalidGlyphWidth { codepoint: char, width: u16 },
     #[error("Invalid font data length: expected {expected}, got {actual}")]
     InvalidDataLength { expected: usize, actual: usize },
 }

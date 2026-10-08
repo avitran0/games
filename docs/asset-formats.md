@@ -42,7 +42,7 @@ Each sprite and tile pixel uses one byte:
 
 The file does not contain the palette. `api/src/formats/color.rs` defines the Aurora colors and their order. The palette uses 16-color bands. The first band contains grays. Each other band groups similar hues into two shade ramps. The first ramp contains muted colors. The second ramp contains vivid colors. Each ramp goes from dark to light. The last band has 15 colors. `assets/palette.pal` uses the same order for palette tools.
 
-Font height must be 1 to 64 pixels. Each glyph uses a square bitmap. Each bitmap pixel uses one byte. Zero means clear. A nonzero value means set.
+Font height must be 1 to 64 pixels. Each glyph has its own width. Glyph width must be greater than zero. Each glyph bitmap uses `width * height` bytes. Zero means clear. A nonzero value means set.
 
 ## Static sprite: `SPRT`
 
@@ -106,17 +106,18 @@ The file does not contain frame durations. The runtime sets the playback speed.
 | 8 | `u16` | Glyph count |
 | 10 | Glyph data | One entry for each glyph |
 
-Each glyph uses `6 + height * height` bytes. The offsets below start at the glyph.
+Each glyph uses `8 + width * height` bytes. The offsets below start at the glyph.
 
 | Offset | Type | Field |
 | ---: | --- | --- |
 | 0 | `u32` | Unicode scalar value |
 | 4 | `u16` | Advance in pixels |
-| 6 | `u8[height * height]` | Square bitmap |
+| 6 | `u16` | Bitmap width in pixels |
+| 8 | `u8[width * height]` | Bitmap, in row-major order |
 
-Each codepoint must be a Unicode scalar value. A file must not contain the same codepoint twice.
+Each codepoint must be a Unicode scalar value. A file must not contain the same codepoint twice. Each bitmap width must be greater than zero.
 
-The API sets the visible width from the rightmost set pixel. The advance is a separate value. A blank glyph can have a nonzero advance.
+Bitmap width and advance are separate values. Use a small advance for narrow spacing. Use a large bitmap width for wide glyphs.
 
 `FontDocument` stores the decoded glyphs. `Assets::load_font` loads the file as a runtime font.
 
