@@ -1,0 +1,9 @@
+[package]
+name = "pxs-to-png"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+api.workspace = true
+formats.workspace = true
+png = "0.18"

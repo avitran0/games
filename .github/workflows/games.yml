@@ -28,8 +28,10 @@ jobs:
             libwayland-dev libwayland-bin wayland-protocols \
             libxkbcommon-dev libdecor-0-dev
 
-      - name: Build
-        run: cargo build --release --target aarch64-unknown-linux-gnu
+      - name: Build games and PXS converter
+        run: |
+          cargo build --release --target aarch64-unknown-linux-gnu
+          cargo build -p pxs-to-png --release --target aarch64-unknown-linux-gnu
 
       - name: Stage Ports layout
         run: |
