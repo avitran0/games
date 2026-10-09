@@ -59,7 +59,7 @@ impl api::Screen<State> for GameScreen {
             ..
         } = self;
 
-        ui.background(Rect::new(0, 0, WIDTH, HEIGHT), Color::CodGray);
+        ui.background(Rect::new(0, 0, WIDTH, HEIGHT), Color::Bunker);
         ui.tab_bar(tab, |ui, active_tab| match active_tab {
             DemoTab::Widgets => {
                 ui.add(Label::new("BUTTONS AND VALUES").heading());

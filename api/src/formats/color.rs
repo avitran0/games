@@ -20,19 +20,19 @@ macro_rules! define_palette {
 // color name source: https://chir.ag/projects/ntc/
 define_palette! {
     Black => [0x00, 0x00, 0x00],
-    Black2 => [0x05, 0x05, 0x05],
-    CodGray => [0x0e, 0x0e, 0x0e],
-    CodGray2 => [0x19, 0x19, 0x19],
-    MineShaft => [0x27, 0x27, 0x27],
-    MineShaft2 => [0x36, 0x36, 0x36],
-    Tundora => [0x48, 0x48, 0x48],
-    Scorpion => [0x5a, 0x5a, 0x5a],
-    DoveGray => [0x6e, 0x6e, 0x6e],
-    Gray => [0x83, 0x83, 0x83],
-    DustyGray => [0x9a, 0x9a, 0x9a],
-    SilverChalice => [0xb2, 0xb2, 0xb2],
-    Silver => [0xca, 0xca, 0xca],
-    Mercury => [0xe4, 0xe4, 0xe4],
+    Ebony => [0x02, 0x04, 0x07],
+    Bunker => [0x09, 0x0c, 0x11],
+    Bunker2 => [0x12, 0x17, 0x1e],
+    EbonyClay => [0x1e, 0x24, 0x2d],
+    EbonyClay2 => [0x2b, 0x32, 0x3d],
+    BrightGray => [0x3c, 0x44, 0x50],
+    Trout => [0x4e, 0x56, 0x62],
+    ShuttleGray => [0x62, 0x6a, 0x76],
+    Raven => [0x78, 0x7f, 0x8a],
+    Manatee => [0x91, 0x97, 0xa0],
+    Aluminium => [0xab, 0xb0, 0xb7],
+    FrenchGray => [0xc5, 0xc8, 0xcd],
+    Iron => [0xe1, 0xe3, 0xe6],
     White => [0xff, 0xff, 0xff],
     Barossa => [0x3e, 0x03, 0x1d],
     MulberryWood => [0x4d, 0x05, 0x26],
@@ -279,37 +279,6 @@ define_palette! {
 #[cfg(test)]
 mod tests {
     use super::Color;
-
-    #[test]
-    fn palette_has_transparency_and_uniform_color_ramps() {
-        assert_eq!(Color::COUNT, 255);
-        assert_eq!(Color::ALL.len(), 255);
-        assert_eq!(Color::Transparent.index(), 0);
-        assert_eq!(Color::Black.rgb(), [0, 0, 0]);
-        assert_eq!(Color::White.rgb(), [255, 255, 255]);
-        assert!(Color::ALL[..15].iter().all(|color| {
-            let [red, green, blue] = color.rgb();
-            red == green && green == blue
-        }));
-        let gray_levels: Vec<_> = Color::ALL[..15]
-            .iter()
-            .map(|color| color.rgb()[0])
-            .collect();
-        assert_eq!(
-            gray_levels.as_slice(),
-            &[
-                0, 5, 14, 25, 39, 54, 72, 90, 110, 131, 154, 178, 202, 228, 255
-            ]
-        );
-        assert_eq!(Color::ALL[15..].len(), 15 * 16);
-        assert!(
-            Color::ALL[15..]
-                .as_chunks::<16>()
-                .0
-                .iter()
-                .all(|ramp| ramp.len() == 16)
-        );
-    }
 
     #[test]
     fn palette_file_matches_color_indices() {

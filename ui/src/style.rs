@@ -26,16 +26,16 @@ pub struct Style {
 impl Default for Style {
     fn default() -> Self {
         Self {
-            background: Color::CodGray,
-            panel: Color::MineShaft,
-            panel_border: Color::MineShaft2,
+            background: Color::Bunker,
+            panel: Color::EbonyClay,
+            panel_border: Color::EbonyClay2,
             text: Color::White,
-            muted_text: Color::Gray,
-            widget: Color::MineShaft,
-            widget_focused: Color::MineShaft2,
-            widget_pressed: Color::Tundora,
+            muted_text: Color::Raven,
+            widget: Color::EbonyClay,
+            widget_focused: Color::EbonyClay2,
+            widget_pressed: Color::BrightGray,
             accent: Color::Malibu,
-            disabled: Color::Gray,
+            disabled: Color::Raven,
             row_height: 15,
             spacing: 3,
             padding: 4,
@@ -43,8 +43,8 @@ impl Default for Style {
             border_width: 1,
             corner_radius: 2,
             scrollbar_width: 3,
-            scrollbar_track: Color::MineShaft2,
-            scrollbar_thumb: Color::Gray,
+            scrollbar_track: Color::EbonyClay2,
+            scrollbar_thumb: Color::Raven,
         }
     }
 }
