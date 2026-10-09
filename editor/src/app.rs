@@ -50,9 +50,7 @@ impl App {
         });
         if editor.has_timeline() {
             egui::Panel::bottom("animation-timeline")
-                .default_size(190.0)
-                .min_size(120.0)
-                .max_size(360.0)
+                .default_size(200.0)
                 .resizable(true)
                 .show(ui, |ui| {
                     if editor.timeline(ui) {
@@ -61,9 +59,7 @@ impl App {
                 });
         } else if editor.has_tile_strip() {
             egui::Panel::bottom("tileset-overview-panel")
-                .default_size(130.0)
-                .min_size(112.0)
-                .max_size(220.0)
+                .default_size(150.0)
                 .resizable(true)
                 .show(ui, |ui| {
                     if editor.tile_strip(ui) {
@@ -71,17 +67,17 @@ impl App {
                     }
                 });
         } else if editor.has_preview_panel() {
-            egui::Panel::bottom("font-preview-panel")
+            egui::Panel::bottom("font-glyph-panel")
                 .default_size(150.0)
-                .min_size(100.0)
-                .max_size(280.0)
                 .resizable(true)
-                .show(ui, |ui| editor.preview_panel(ui));
+                .show(ui, |ui| {
+                    if editor.preview_panel(ui) {
+                        editor.mark_dirty();
+                    }
+                });
         }
         egui::Panel::left("asset-tools")
-            .default_size(178.0)
-            .min_size(154.0)
-            .max_size(260.0)
+            .default_size(180.0)
             .resizable(true)
             .show(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
@@ -98,9 +94,9 @@ impl App {
         });
         ui.ctx()
             .send_viewport_cmd(egui::ViewportCommand::Title(if editor.dirty() {
-                format!("{} * - Pixel Sprite Studio", editor.title())
+                format!("{} * - Editor", editor.title())
             } else {
-                format!("{} - Pixel Sprite Studio", editor.title())
+                format!("{} - Editor", editor.title())
             }));
         None
     }

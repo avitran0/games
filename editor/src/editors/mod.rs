@@ -128,7 +128,9 @@ trait Editor {
         false
     }
 
-    fn preview_panel(&mut self, _ui: &mut Ui) {}
+    fn preview_panel(&mut self, _ui: &mut Ui) -> bool {
+        false
+    }
 }
 
 macro_rules! impl_editor {
@@ -179,7 +181,7 @@ impl_editor!(
     fn has_preview_panel(&self) -> bool {
         true
     },
-    fn preview_panel(&mut self, ui: &mut Ui) {
+    fn preview_panel(&mut self, ui: &mut Ui) -> bool {
         font::Screen::preview_panel(self, ui)
     }
 );
@@ -296,8 +298,8 @@ impl EditorScreen {
         self.0.has_preview_panel()
     }
 
-    pub fn preview_panel(&mut self, ui: &mut Ui) {
-        self.0.preview_panel(ui);
+    pub fn preview_panel(&mut self, ui: &mut Ui) -> bool {
+        self.0.preview_panel(ui)
     }
 
     pub fn tile_strip(&mut self, ui: &mut Ui) -> bool {

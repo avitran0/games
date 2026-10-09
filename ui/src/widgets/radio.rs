@@ -1,3 +1,5 @@
+use api::{RADIO_CHECKED, RADIO_UNCHECKED};
+
 use super::Widget;
 use crate::{Response, Ui};
 
@@ -25,8 +27,12 @@ impl<T: PartialEq + Copy> Widget for Radio<'_, T> {
             *self.value = self.choice;
         }
         let label = format!(
-            "({}) {}",
-            if *self.value == self.choice { "*" } else { " " },
+            "{} {}",
+            if *self.value == self.choice {
+                RADIO_CHECKED
+            } else {
+                RADIO_UNCHECKED
+            },
             self.label
         );
         let rect = ui.row_rect();

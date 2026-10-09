@@ -17,7 +17,6 @@ pub struct GameScreen {
     volume: f32,
     lives: u8,
     speed: u8,
-    selected_mode: u8,
     clicks: u32,
     scroll_offset: u32,
     pressed_buttons: String,
@@ -32,7 +31,6 @@ impl GameScreen {
             volume: 0.65,
             lives: 3,
             speed: 1,
-            selected_mode: 0,
             clicks: 0,
             scroll_offset: 0,
             pressed_buttons: String::new(),
@@ -56,7 +54,6 @@ impl api::Screen<State> for GameScreen {
             volume,
             lives,
             speed,
-            selected_mode,
             clicks,
             scroll_offset,
             ..
@@ -80,14 +77,6 @@ impl api::Screen<State> for GameScreen {
                     ui.radio("Slow", speed, 0_u8);
                     ui.radio("Normal", speed, 1_u8);
                     ui.radio("Fast", speed, 2_u8);
-                });
-                ui.horizontal(2, 4, |ui| {
-                    if ui.selectable("Classic", *selected_mode == 0).clicked {
-                        *selected_mode = 0;
-                    }
-                    if ui.selectable("Arcade", *selected_mode == 1).clicked {
-                        *selected_mode = 1;
-                    }
                 });
                 ui.add(ProgressBar::new(*volume).label("Volume level"));
             }

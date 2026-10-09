@@ -58,8 +58,14 @@ where
         } else {
             0
         };
-        let tabs_width = rect.size.x.saturating_sub(side_width.saturating_mul(2));
+        let gap = 2;
         let count = tabs.len() as u32;
+        let gaps_width = gap * count.saturating_sub(1);
+        let tabs_width = rect
+            .size
+            .x
+            .saturating_sub(side_width.saturating_mul(2))
+            .saturating_sub(gaps_width);
         let base_width = tabs_width / count;
         let remainder = tabs_width % count;
         let mut x = rect.position.x + side_width as i32;
@@ -92,7 +98,12 @@ where
                     ui.style.muted_text
                 },
             );
-            x += width as i32;
+            x += width as i32
+                + if index + 1 < tabs.len() {
+                    gap as i32
+                } else {
+                    0
+                };
         }
 
         if tabs.len() > 1 {
@@ -100,7 +111,7 @@ where
             ui.draw_text(
                 BTN_R,
                 ivec2(
-                    rect.position.x + rect.size.x as i32 - side_width as i32 + 1,
+                    rect.position.x + rect.size.x as i32 - side_width as i32 + 4,
                     rect.position.y + 2,
                 ),
                 ui.style.accent,

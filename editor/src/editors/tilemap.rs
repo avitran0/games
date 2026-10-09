@@ -103,7 +103,28 @@ impl Screen {
                 self.state.selected_tile = (self.state.tile_index + 1) as u32;
                 true
             }
-            Some(ui::tile_strip::Action::Remove) | None => false,
+            Some(ui::tile_strip::Action::MoveLeft) if self.state.tile_index > 0 => {
+                let index = self.state.tile_index;
+                self.tileset.tiles.swap(index, index - 1);
+                swap_tile_ids(&mut self.map, index, index - 1);
+                self.state.tile_index -= 1;
+                self.state.selected_tile = (self.state.tile_index + 1) as u32;
+                true
+            }
+            Some(ui::tile_strip::Action::MoveRight)
+                if self.state.tile_index + 1 < self.tileset.tiles.len() =>
+            {
+                let index = self.state.tile_index;
+                self.tileset.tiles.swap(index, index + 1);
+                swap_tile_ids(&mut self.map, index, index + 1);
+                self.state.tile_index += 1;
+                self.state.selected_tile = (self.state.tile_index + 1) as u32;
+                true
+            }
+            Some(ui::tile_strip::Action::Remove)
+            | Some(ui::tile_strip::Action::MoveLeft)
+            | Some(ui::tile_strip::Action::MoveRight)
+            | None => false,
         }
     }
 
@@ -196,6 +217,18 @@ impl Default for State {
             flip_diagonal: false,
             map_canvas: ui::canvas::CanvasView::default(),
             tile_canvas: ui::canvas::CanvasView::default(),
+        }
+    }
+}
+
+fn swap_tile_ids(map: &mut TilemapDocument, first_index: usize, second_index: usize) {
+    let first_id = (first_index + 1) as u32;
+    let second_id = (second_index + 1) as u32;
+    for cell in &mut map.cells {
+        if cell.id == first_id {
+            cell.id = second_id;
+        } else if cell.id == second_id {
+            cell.id = first_id;
         }
     }
 }

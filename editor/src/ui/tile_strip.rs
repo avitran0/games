@@ -11,6 +11,8 @@ pub enum Action {
     Add,
     Duplicate,
     Remove,
+    MoveLeft,
+    MoveRight,
 }
 
 pub fn show(
@@ -26,6 +28,23 @@ pub fn show(
         ui.label(format!("{} tiles", tileset.tiles.len()));
         if show_edit_actions {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if let Some(index) = selected {
+                    if ui
+                        .add_enabled(
+                            index + 1 < tileset.tiles.len(),
+                            egui::Button::new("Move right →"),
+                        )
+                        .clicked()
+                    {
+                        action = Some(Action::MoveRight);
+                    }
+                    if ui
+                        .add_enabled(index > 0, egui::Button::new("← Move left"))
+                        .clicked()
+                    {
+                        action = Some(Action::MoveLeft);
+                    }
+                }
                 if ui
                     .add_enabled(tileset.tiles.len() > 1, egui::Button::new("Remove tile"))
                     .clicked()

@@ -60,6 +60,32 @@ pub fn show(ui: &mut Ui, document: &mut AnimatedSpriteDocument, state: &mut Stat
         ui.label(format!("{} frames", document.frames.len()));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             if ui
+                .add_enabled(
+                    state.frame_index + 1 < document.frames.len(),
+                    egui::Button::new("Move frame right →"),
+                )
+                .clicked()
+            {
+                document
+                    .frames
+                    .swap(state.frame_index, state.frame_index + 1);
+                state.frame_index += 1;
+                changed = true;
+            }
+            if ui
+                .add_enabled(
+                    state.frame_index > 0,
+                    egui::Button::new("← Move frame left"),
+                )
+                .clicked()
+            {
+                document
+                    .frames
+                    .swap(state.frame_index, state.frame_index - 1);
+                state.frame_index -= 1;
+                changed = true;
+            }
+            if ui
                 .add_enabled(!document.tags.is_empty(), egui::Button::new("Remove tag"))
                 .clicked()
             {

@@ -32,3 +32,8 @@ pub const BTN_LEFT: &str = "\u{E010}";
 pub const BTN_UP: &str = "\u{E011}";
 pub const BTN_RIGHT: &str = "\u{E012}";
 pub const BTN_DOWN: &str = "\u{E013}";
+
+pub const CHECKBOX_UNCHECKED: &str = "\u{E040}";
+pub const CHECKBOX_CHECKED: &str = "\u{E041}";
+pub const RADIO_UNCHECKED: &str = "\u{E042}";
+pub const RADIO_CHECKED: &str = "\u{E043}";

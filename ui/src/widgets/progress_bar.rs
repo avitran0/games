@@ -49,7 +49,7 @@ impl Widget for ProgressBar {
             ui.draw_text(
                 self.label,
                 rect.position + ivec2(inset as i32 + 2, 2),
-                ui.style.text,
+                ui.style.widget,
             );
         }
         ui.advance_row();

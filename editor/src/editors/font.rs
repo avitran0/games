@@ -30,8 +30,8 @@ impl Screen {
         tools(ui, &mut self.document, &mut self.state)
     }
 
-    pub fn preview_panel(&mut self, ui: &mut Ui) {
-        preview_panel(ui, &self.document, &mut self.state);
+    pub fn preview_panel(&mut self, ui: &mut Ui) -> bool {
+        preview_panel(ui, &mut self.document, &mut self.state)
     }
 
     pub fn canvas_controls(&mut self, ui: &mut Ui) {
@@ -58,6 +58,7 @@ struct State {
     rename_text: String,
     rename_target: Option<(usize, char)>,
     rename_error: Option<String>,
+    preview_text: String,
     canvas: ui::canvas::CanvasView,
 }
 
@@ -66,25 +67,7 @@ fn toolbar(ui: &mut Ui, document: &mut FontDocument, state: &mut State) -> bool 
     ui.horizontal(|ui| {
         let count = document.glyphs.len();
         state.glyph_index = state.glyph_index.min(count.saturating_sub(1));
-        if ui.button("Previous").clicked() {
-            state.glyph_index = (state.glyph_index + count - 1) % count;
-        }
-        egui::ComboBox::from_id_salt("font-glyph")
-            .selected_text(glyph_label(document.glyphs[state.glyph_index].codepoint))
-            .show_ui(ui, |ui| {
-                for (index, glyph) in document.glyphs.iter().enumerate() {
-                    ui.selectable_value(
-                        &mut state.glyph_index,
-                        index,
-                        glyph_label(glyph.codepoint),
-                    );
-                }
-            });
-        if ui.button("Next").clicked() {
-            state.glyph_index = (state.glyph_index + 1) % count;
-        }
 
-        ui.separator();
         ui.label("Width");
         let mut glyph_width = document.glyphs[state.glyph_index].width;
         if ui
@@ -170,6 +153,15 @@ fn resize_glyph_width(glyph: &mut GlyphDocument, height: u16, width: u16) {
 }
 
 fn tools(ui: &mut Ui, document: &mut FontDocument, state: &mut State) -> bool {
+    ui.heading("Font preview");
+    ui.add(
+        egui::TextEdit::singleline(&mut state.preview_text)
+            .desired_width(ui.available_width())
+            .hint_text("Type text to preview…"),
+    );
+    paint_font_preview(ui, document, &state.preview_text);
+    ui.separator();
+
     let mut changed = false;
     let glyph = &document.glyphs[state.glyph_index];
     let target = (state.glyph_index, glyph.codepoint);
@@ -220,12 +212,38 @@ fn tools(ui: &mut Ui, document: &mut FontDocument, state: &mut State) -> bool {
     changed
 }
 
-fn preview_panel(ui: &mut Ui, document: &FontDocument, state: &mut State) {
+fn preview_panel(ui: &mut Ui, document: &mut FontDocument, state: &mut State) -> bool {
+    let mut reordered = false;
     ui.horizontal(|ui| {
         ui.strong("Glyphs");
         ui.label(format!("{} total", document.glyphs.len()));
         ui.separator();
         ui.label("Select a glyph to edit it.");
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            if ui
+                .add_enabled(
+                    state.glyph_index + 1 < document.glyphs.len(),
+                    egui::Button::new("Move right"),
+                )
+                .clicked()
+            {
+                document
+                    .glyphs
+                    .swap(state.glyph_index, state.glyph_index + 1);
+                state.glyph_index += 1;
+                reordered = true;
+            }
+            if ui
+                .add_enabled(state.glyph_index > 0, egui::Button::new("Move left"))
+                .clicked()
+            {
+                document
+                    .glyphs
+                    .swap(state.glyph_index, state.glyph_index - 1);
+                state.glyph_index -= 1;
+                reordered = true;
+            }
+        });
     });
 
     egui::ScrollArea::horizontal()
@@ -297,6 +315,7 @@ fn preview_panel(ui: &mut Ui, document: &FontDocument, state: &mut State) {
                 }
             });
         });
+    reordered
 }
 
 fn canvas(ui: &mut Ui, document: &mut FontDocument, state: &mut State) -> bool {
@@ -318,6 +337,91 @@ fn canvas(ui: &mut Ui, document: &mut FontDocument, state: &mut State) -> bool {
         }
     });
     apply_pixel_edit(&mut glyph.bitmap, size, edit)
+}
+
+fn paint_font_preview(ui: &mut Ui, document: &FontDocument, text: &str) {
+    let scale = (44.0 / f32::from(document.height)).clamp(0.5, 3.0);
+    let line_height = f32::from(document.height) * scale + 4.0;
+    let mut line_width = 0.0_f32;
+    let mut max_width = 0.0_f32;
+    let mut lines = 1.0_f32;
+    for character in text.chars() {
+        if character == '\n' {
+            max_width = max_width.max(line_width);
+            line_width = 0.0;
+            lines += 1.0;
+        } else if character == '\t' {
+            line_width += f32::from(document.height) * scale * 4.0;
+        } else if character != '\r' {
+            let glyph = find_glyph(document, character);
+            line_width += f32::from(glyph.advance) * scale;
+        }
+    }
+    max_width = max_width.max(line_width);
+    let width = (max_width + 16.0).max(ui.available_width());
+    let height = (lines * line_height + 8.0).max(40.0);
+    egui::ScrollArea::horizontal()
+        .id_salt("font-text-preview")
+        .auto_shrink([false, false])
+        .show(ui, |ui| {
+            let (rect, _) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+            let painter = ui.painter_at(rect);
+            painter.rect_filled(rect, 2.0, ui.visuals().faint_bg_color);
+            let mut x = rect.left() + 8.0;
+            let mut y = rect.top() + 4.0;
+            for character in text.chars() {
+                match character {
+                    '\n' => {
+                        x = rect.left() + 8.0;
+                        y += line_height;
+                    }
+                    '\t' => x += f32::from(document.height) * scale * 4.0,
+                    '\r' => {}
+                    character => {
+                        let glyph = find_glyph(document, character);
+                        let glyph_width = usize::from(glyph.width);
+                        for row in 0..usize::from(document.height) {
+                            for column in 0..glyph_width {
+                                if glyph
+                                    .bitmap
+                                    .get(row * glyph_width + column)
+                                    .copied()
+                                    .unwrap_or(0)
+                                    != 0
+                                {
+                                    painter.rect_filled(
+                                        egui::Rect::from_min_size(
+                                            egui::pos2(
+                                                x + column as f32 * scale,
+                                                y + row as f32 * scale,
+                                            ),
+                                            egui::Vec2::splat(scale),
+                                        ),
+                                        0.0,
+                                        ui.visuals().text_color(),
+                                    );
+                                }
+                            }
+                        }
+                        x += f32::from(glyph.advance) * scale;
+                    }
+                }
+            }
+        });
+}
+
+fn find_glyph(document: &FontDocument, character: char) -> &GlyphDocument {
+    document
+        .glyphs
+        .iter()
+        .find(|glyph| glyph.codepoint == character)
+        .or_else(|| {
+            document
+                .glyphs
+                .iter()
+                .find(|glyph| glyph.codepoint == '\u{FFFD}')
+        })
+        .unwrap_or(&document.glyphs[0])
 }
 
 fn parse_character(text: &str) -> Option<char> {

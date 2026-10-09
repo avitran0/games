@@ -1,3 +1,5 @@
+use api::{CHECKBOX_CHECKED, CHECKBOX_UNCHECKED};
+
 use super::Widget;
 use crate::{Response, Ui};
 
@@ -21,7 +23,15 @@ impl Widget for Checkbox<'_> {
         if response.clicked {
             *self.value = !*self.value;
         }
-        let label = format!("[{}] {}", if *self.value { "x" } else { " " }, self.label);
+        let label = format!(
+            "{} {}",
+            if *self.value {
+                CHECKBOX_CHECKED
+            } else {
+                CHECKBOX_UNCHECKED
+            },
+            self.label
+        );
         let rect = ui.row_rect();
         ui.draw_interactive(rect, &label, *self.value, response);
         ui.advance_row();

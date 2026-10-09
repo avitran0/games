@@ -61,7 +61,26 @@ impl Screen {
                     self.state.selected_tile.min(self.document.tiles.len() - 1);
                 true
             }
-            Some(ui::tile_strip::Action::Remove) | None => false,
+            Some(ui::tile_strip::Action::MoveLeft) if self.state.selected_tile > 0 => {
+                self.document
+                    .tiles
+                    .swap(self.state.selected_tile, self.state.selected_tile - 1);
+                self.state.selected_tile -= 1;
+                true
+            }
+            Some(ui::tile_strip::Action::MoveRight)
+                if self.state.selected_tile + 1 < self.document.tiles.len() =>
+            {
+                self.document
+                    .tiles
+                    .swap(self.state.selected_tile, self.state.selected_tile + 1);
+                self.state.selected_tile += 1;
+                true
+            }
+            Some(ui::tile_strip::Action::Remove)
+            | Some(ui::tile_strip::Action::MoveLeft)
+            | Some(ui::tile_strip::Action::MoveRight)
+            | None => false,
         }
     }
 

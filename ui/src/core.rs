@@ -10,6 +10,7 @@ use crate::{
 
 pub struct Ui {
     pub style: Style,
+    tick: usize,
     input: Input,
     layout: Layout,
     root_bounds: Rect,
@@ -21,6 +22,7 @@ pub struct Ui {
     previous_widget_count: usize,
     focus: usize,
     focused_widget: Option<(usize, Rect)>,
+    active_widget: Option<(usize, usize)>,
     activated: bool,
 }
 
@@ -42,6 +44,7 @@ impl Ui {
         );
         Self {
             style,
+            tick: 0,
             input: Input::default(),
             layout: Layout {
                 bounds,
@@ -57,12 +60,14 @@ impl Ui {
             previous_widget_count: 0,
             focus: 0,
             focused_widget: None,
+            active_widget: None,
             activated: false,
         }
     }
 
     pub fn begin_frame(&mut self, input: &Input) {
         self.input = *input;
+        self.tick += 1;
         self.previous_widget_count = self.widget_count;
         self.widget_count = 0;
         self.paint.clear();
@@ -153,11 +158,13 @@ impl Ui {
             horizontal: false,
         };
 
+        const GAP: u32 = 2;
+
         let output = contents(self);
         let content_height = self.layout.cursor.y.saturating_sub(start_y).max(0) as u32;
         let max_offset = content_height.saturating_sub(rect.size.y);
         if max_offset > 0 {
-            content_rect.size.x = rect.size.x - scrollbar_width;
+            content_rect.size.x = rect.size.x - scrollbar_width - GAP;
         }
         let mut new_offset = old_offset.max(0) as u32;
         if widget_start == self.widget_count {
@@ -187,7 +194,7 @@ impl Ui {
         if max_offset > 0 && scrollbar_width > 0 {
             let track = Rect {
                 position: glam::ivec2(
-                    rect.position.x + content_rect.size.x as i32,
+                    rect.position.x + content_rect.size.x as i32 + GAP as i32,
                     rect.position.y,
                 ),
                 size: glam::uvec2(scrollbar_width, rect.size.y),
@@ -439,8 +446,16 @@ impl Ui {
         selected: bool,
         response: Response,
     ) {
+        const ACTIVE_TICKS: usize = 15;
+
+        if response.clicked {
+            self.active_widget = Some((self.focus, self.tick));
+        }
+        let active = self.active_widget.is_some_and(|(widget, tick)| {
+            widget == self.focus && self.tick.saturating_sub(tick) < ACTIVE_TICKS
+        });
         let fill = if response.focused {
-            if self.activated {
+            if active {
                 self.style.widget_pressed
             } else {
                 self.style.widget_focused
