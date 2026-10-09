@@ -80,7 +80,7 @@ for binary_name, package in binaries:
     if game_metadata is not None:
         if not isinstance(game_metadata, dict):
             fail(f"{package['name']}: [package.metadata.game] must be a table")
-        allowed = {"title", "description", "author", "players", "cover"}
+        allowed = {"title", "description", "author", "players", "cover", "logo"}
         unknown = set(game_metadata) - allowed
         if unknown:
             fail(f"{package['name']}: unsupported game metadata keys: {', '.join(sorted(unknown))}")
@@ -93,18 +93,27 @@ for binary_name, package in binaries:
             if value is not None:
                 add_text(entry, es_field, value)
 
-        cover = game_metadata.get("cover")
-        if cover is not None:
-            cover_path = Path(package["manifest_path"]).parent / cover
-            if not cover_path.is_file():
-                fail(f"{package['name']}: cover file does not exist: {cover_path}")
-            if cover_path.suffix.lower() != ".pxs":
-                fail(f"{package['name']}: cover must be a .pxs sprite: {cover_path}")
+        image_path = None
+        for source_field, output_name in (("cover", "cover.png"), ("logo", "logo.png")):
+            artwork = game_metadata.get(source_field)
+            if artwork is None:
+                continue
+            artwork_path = Path(package["manifest_path"]).parent / artwork
+            if not artwork_path.is_file():
+                fail(f"{package['name']}: {source_field} file does not exist: {artwork_path}")
+            if artwork_path.suffix.lower() != ".pxs":
+                fail(f"{package['name']}: {source_field} must be a .pxs sprite: {artwork_path}")
             if not converter.is_file():
                 fail(f"PXS converter not found: {converter}; build the pxs-to-png package first")
-            cover_output = game_dir / "cover.png"
-            subprocess.run([str(converter), str(cover_path), str(cover_output)], check=True)
-            add_text(entry, "image", f"./{game_name}/cover.png")
+            artwork_output = game_dir / output_name
+            subprocess.run([str(converter), str(artwork_path), str(artwork_output)], check=True)
+            relative_image_path = f"./{game_name}/{output_name}"
+            if source_field == "cover" or image_path is None:
+                image_path = relative_image_path
+            if source_field == "logo":
+                add_text(entry, "marquee", relative_image_path)
+        if image_path is not None:
+            add_text(entry, "image", image_path)
 
     print(f"Prepared {game_name} port")
 

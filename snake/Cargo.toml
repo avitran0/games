@@ -8,7 +8,7 @@ title = "Snake"
 description = "this is a sample description"
 author = "avitrano"
 players = 1
-cover = "src/assets/title.pxs"
+logo = "src/assets/title.pxs"
 
 [dependencies]
 api.workspace = true

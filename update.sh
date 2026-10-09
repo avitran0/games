@@ -107,7 +107,7 @@ TARGET = Path(sys.argv[1])
 SOURCE = Path(sys.argv[2])
 # EmulationStation and other tools own these fields. Preserve them during metadata updates.
 MANAGED_FIELDS = (
-    "name", "desc", "image", "thumbnail", "video", "releasedate",
+    "name", "desc", "image", "marquee", "thumbnail", "video", "releasedate",
     "developer", "publisher", "genre", "players",
 )
 
