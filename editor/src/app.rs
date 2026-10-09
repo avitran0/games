@@ -77,7 +77,7 @@ impl App {
                 });
         }
         egui::Panel::left("asset-tools")
-            .default_size(180.0)
+            .default_size(300.0)
             .resizable(true)
             .show(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {

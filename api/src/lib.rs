@@ -40,12 +40,12 @@ where
     let mut ctx = match Context::load(title, state) {
         Ok(ctx) => ctx,
         Err(err) => {
-            error!("Cannot start '{title}': {err}");
+            error!("failed to initialize runtime: {err}");
             std::process::exit(1);
         }
     };
     ctx.setup(setup);
-    info!("Runtime is ready.");
+    info!("initialized runtime");
 
     let mut next_tick = Instant::now();
     while !ctx.should_quit() {

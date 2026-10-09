@@ -3,6 +3,7 @@ use std::{collections::HashMap, hash::Hash, rc::Rc};
 use formats::{AnimatedSpriteDocument, SpriteDocument, TilemapDocument, TilesetDocument};
 use glam::{U16Vec2, UVec2};
 use thiserror::Error;
+use utils::info;
 use uuid::Uuid;
 
 use crate::{
@@ -63,6 +64,7 @@ impl Assets {
         let default_font =
             Self::load_font_into(&gl, &mut fonts, include_bytes!("../assets/font.pxf"))
                 .map_err(|err| err.to_string())?;
+        info!("initialized assets");
 
         Ok(Self {
             gl,

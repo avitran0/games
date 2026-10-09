@@ -34,7 +34,7 @@ impl Default for Style {
             widget: Color::MineShaft,
             widget_focused: Color::MineShaft2,
             widget_pressed: Color::Tundora,
-            accent: Color::DodgerBlue,
+            accent: Color::Malibu,
             disabled: Color::Gray,
             row_height: 15,
             spacing: 3,

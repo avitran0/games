@@ -74,7 +74,7 @@ impl Screen<State> for MainMenu {
         );
 
         let up_color = match &self.last_press {
-            Some(press) if press.higher => Color::AzureRadiance,
+            Some(press) if press.higher => Color::Indigo,
             _ => Color::White,
         };
         frame.text_color(
@@ -85,7 +85,7 @@ impl Screen<State> for MainMenu {
         );
 
         let down_color = match &self.last_press {
-            Some(press) if !press.higher => Color::AzureRadiance,
+            Some(press) if !press.higher => Color::Indigo,
             _ => Color::White,
         };
         frame.text_color(

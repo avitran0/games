@@ -34,12 +34,12 @@ impl Platform {
             .filter_map(|id| match _gamepad.open(id) {
                 Ok(gamepad) => Some(gamepad),
                 Err(err) => {
-                    warn!("Cannot open gamepad {id:?}: {err}");
+                    warn!("failed to open gamepad {id:?}: {err}");
                     None
                 }
             })
             .collect();
-        info!("Detected {} gamepads.", _gamepads.len());
+        info!("detected {} gamepads", _gamepads.len());
         let video = sdl.video()?;
 
         let gl_attr = video.gl_attr();
@@ -78,7 +78,7 @@ impl Platform {
                 );
                 gl.debug_message_callback(gl_debug);
             }
-            debug!("OpenGL debug callback is ready.");
+            debug!("initialized OpenGL debug callback");
         }
         let gl = Rc::new(gl);
 
@@ -101,7 +101,7 @@ impl Platform {
     pub(crate) fn open_gamepad(&mut self, id: sdl3::joystick::JoystickId) {
         match self._gamepad.open(id) {
             Ok(gamepad) => self._gamepads.push(gamepad),
-            Err(err) => warn!("Cannot open gamepad {id:?}: {err}"),
+            Err(err) => warn!("failed to open gamepad {id:?}: {err}"),
         }
     }
 

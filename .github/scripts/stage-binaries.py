@@ -93,8 +93,10 @@ for binary_name, package in binaries:
             if value is not None:
                 add_text(entry, es_field, value)
 
-        image_path = None
-        for source_field, output_name in (("cover", "cover.png"), ("logo", "logo.png")):
+        for source_field, es_field, output_name in (
+            ("cover", "image", "cover.png"),
+            ("logo", "marquee", "logo.png"),
+        ):
             artwork = game_metadata.get(source_field)
             if artwork is None:
                 continue
@@ -107,13 +109,9 @@ for binary_name, package in binaries:
                 fail(f"PXS converter not found: {converter}; build the pxs-to-png package first")
             artwork_output = game_dir / output_name
             subprocess.run([str(converter), str(artwork_path), str(artwork_output)], check=True)
-            relative_image_path = f"./{game_name}/{output_name}"
-            if source_field == "cover" or image_path is None:
-                image_path = relative_image_path
-            if source_field == "logo":
-                add_text(entry, "marquee", relative_image_path)
-        if image_path is not None:
-            add_text(entry, "image", image_path)
+            add_text(entry, es_field, f"./{game_name}/{output_name}")
+        if game_metadata.get("logo") is not None and game_metadata.get("cover") is None:
+            add_text(entry, "image", "")
 
     print(f"Prepared {game_name} port")
 
