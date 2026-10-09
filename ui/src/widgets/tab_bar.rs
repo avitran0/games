@@ -107,14 +107,14 @@ where
         }
 
         if tabs.len() > 1 {
-            ui.draw_text(BTN_L, rect.position + ivec2(1, 2), ui.style.accent);
+            ui.draw_text(BTN_L, rect.position + ivec2(2, 2), ui.style.text);
             ui.draw_text(
                 BTN_R,
                 ivec2(
                     rect.position.x + rect.size.x as i32 - side_width as i32 + 4,
                     rect.position.y + 2,
                 ),
-                ui.style.accent,
+                ui.style.text,
             );
         }
 
