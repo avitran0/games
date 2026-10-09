@@ -94,21 +94,22 @@ pub struct GameScreen {
     sprites: Sprites,
     rng: api::Rng,
     snake: Vec<IVec2>,
-    food: IVec2,
+    food: (api::Sprite, IVec2),
     direction: Direction,
     queued_direction: Direction,
 }
 
 impl GameScreen {
     pub fn new(ctx: &mut api::ScreenContext<State>) -> Result<Self, api::ScreenAction<State>> {
-        let sprites = Sprites::load(ctx)?;
+        let mut sprites = Sprites::load(ctx)?;
         let start = ivec2(GRID_WIDTH / 2, GRID_HEIGHT / 2);
+        let food_sprite = *sprites.foods.random();
 
         Ok(Self {
             sprites,
             rng: api::Rng::new(),
             snake: vec![start],
-            food: ivec2(5, 5),
+            food: (food_sprite, ivec2(5, 5)),
             direction: Direction::Right,
             queued_direction: Direction::Right,
         })
@@ -118,7 +119,8 @@ impl GameScreen {
         let free = free_positions(&self.snake);
         if !free.is_empty() {
             let index = self.rng.get_usize_range(0..free.len());
-            self.food = free[index];
+            let sprite = *self.sprites.foods.random();
+            self.food = (sprite, free[index]);
         }
     }
 
@@ -152,7 +154,7 @@ impl api::Screen<State> for GameScreen {
             self.direction = self.queued_direction;
             let head = self.snake[0];
             let next = next_position(head, self.direction);
-            let growing = next == self.food;
+            let growing = next == self.food.1;
 
             if hits_snake(&self.snake, next, growing) {
                 self.reset();
@@ -200,7 +202,7 @@ impl api::Screen<State> for GameScreen {
             frame.sprite_rotate_flip(sprite, segment * TILE_SIZE, rotation, Anchor::Center, flip);
         }
 
-        frame.sprite(self.sprites.foods.random(), self.food * TILE_SIZE);
+        frame.sprite(&self.food.0, self.food.1 * TILE_SIZE);
     }
 }
 

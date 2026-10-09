@@ -38,4 +38,6 @@ macro_rules! include_foods {
     };
 }
 
-include_foods!("food");
+include_foods!(
+    "apple", "banana", "cupcake", "grapes", "keks", "pizza", "schoki"
+);
