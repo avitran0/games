@@ -1,9 +1,13 @@
-use api::{Anchor, Button, Color, HEIGHT, Screen, WIDTH, glam::uvec2};
+use api::{
+    Anchor, Button, Color, HEIGHT, Screen, WIDTH,
+    glam::{ivec2, uvec2},
+};
 
-use crate::{game::GameScreen, state::State};
+use crate::{game::GameScreen, snakes::Snakes, state::State};
 
 pub struct MainMenu {
     title: api::Sprite,
+    snakes: Snakes,
     last_press: Option<Press>,
 }
 
@@ -15,9 +19,12 @@ struct Press {
 impl MainMenu {
     pub fn new(ctx: &mut api::ScreenContext<State>) -> Result<Self, api::ScreenAction<State>> {
         let title = ctx.assets.load_sprite(include_bytes!("assets/title.pxs"))?;
+        let snakes = Snakes::load(ctx)?;
+        ctx.state.config = api::ScreenContext::load("snake")?;
 
         Ok(Self {
             title,
+            snakes,
             last_press: None,
         })
     }
@@ -55,6 +62,18 @@ impl Screen<State> for MainMenu {
 
         if ctx.input.just_pressed(Button::Select) {
             return api::ScreenAction::Quit;
+        }
+
+        let count = self.snakes.len();
+        let snake = &mut ctx.state.config.snake;
+        *snake %= count;
+
+        if ctx.input.just_pressed(Button::L) {
+            *snake = (*snake + count - 1) % count;
+        }
+
+        if ctx.input.just_pressed(Button::R) {
+            *snake = (*snake + 1) % count;
         }
 
         api::ScreenAction::None
@@ -100,5 +119,10 @@ impl Screen<State> for MainMenu {
             uvec2(WIDTH - 5, HEIGHT - 5).as_ivec2(),
             Anchor::BottomRight,
         );
+
+        let snake = self.snakes.get(state.config.snake);
+        frame.sprite_rotate(&snake.head, ivec2(28, 12), 90.0, Anchor::Center);
+        frame.sprite_rotate(&snake.body_angled, ivec2(12, 12), 90.0, Anchor::Center);
+        frame.sprite(&snake.tail, ivec2(12, 28));
     }
 }

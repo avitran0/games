@@ -10,7 +10,7 @@ blake3 = "1.8"
 glam = "0.34"
 formats.workspace = true
 glow = "0.18"
-serde = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 sdl3 = { version = "0.20", features = ["build-from-source-static"] }
 thiserror = "2.0"
 toml = "1.1"

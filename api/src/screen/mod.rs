@@ -1,6 +1,16 @@
+use std::path::PathBuf;
+
 use serde::{Serialize, de::DeserializeOwned};
 
-use crate::{Assets, Frame, Input, error, warn};
+use crate::{Assets, Frame, Input};
+
+fn save_path(name: &str) -> PathBuf {
+    if name.ends_with(".toml") {
+        PathBuf::from(name)
+    } else {
+        PathBuf::from(format!("{name}.toml"))
+    }
+}
 
 pub(crate) mod error;
 
@@ -12,38 +22,66 @@ pub struct ScreenContext<'a, State> {
 }
 
 impl<'a, State> ScreenContext<'a, State> {
-    pub fn save<T: Serialize>(name: &str, save: T) {
-        let content = match toml::to_string(&save) {
+    pub fn save<T: Serialize>(name: &str, save: T) -> Result<(), ScreenAction<State>> {
+        let path = save_path(name);
+        let content = toml::to_string(&save).map_err(|source| {
+            show_save_error(SaveError::Serialize {
+                path: path.clone(),
+                source,
+            })
+        })?;
+        std::fs::write(&path, content)
+            .map_err(|source| show_save_error(SaveError::Write { path, source }))?;
+        Ok(())
+    }
+
+    pub fn load<T: Default + DeserializeOwned>(name: &str) -> Result<T, ScreenAction<State>> {
+        let path = save_path(name);
+        let content = match std::fs::read_to_string(&path) {
             Ok(content) => content,
-            Err(err) => {
-                error!("Cannot serialize save '{name}': {err}");
-                return;
+            Err(source) if source.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(T::default());
+            }
+            Err(source) => {
+                return Err(show_save_error(SaveError::Read { path, source }));
             }
         };
 
-        if let Err(err) = std::fs::write(name, content) {
-            error!("Cannot write save '{name}': {err}");
-        }
+        toml::from_str(&content)
+            .map_err(|source| show_save_error(SaveError::Parse { path, source }))
     }
+}
 
-    pub fn load<T: DeserializeOwned>(name: &str) -> Option<T> {
-        let content = match std::fs::read_to_string(name) {
-            Ok(content) => content,
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => return None,
-            Err(err) => {
-                warn!("Cannot read save '{name}': {err}");
-                return None;
-            }
-        };
+#[derive(Debug, thiserror::Error)]
+enum SaveError {
+    #[error("failed to serialize save '{path}': {source}")]
+    Serialize {
+        path: PathBuf,
+        #[source]
+        source: toml::ser::Error,
+    },
+    #[error("failed to write save '{path}': {source}")]
+    Write {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("failed to read save '{path}': {source}")]
+    Read {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("failed to parse save '{path}': {source}")]
+    Parse {
+        path: PathBuf,
+        #[source]
+        source: toml::de::Error,
+    },
+}
 
-        match toml::from_str(&content) {
-            Ok(save) => Some(save),
-            Err(err) => {
-                warn!("Cannot parse save '{name}': {err}");
-                None
-            }
-        }
-    }
+fn show_save_error<State>(error: SaveError) -> ScreenAction<State> {
+    ScreenAction::Push(Box::new(error::ErrorScreen::new(error)))
 }
 
 pub trait Screen<State>: 'static {

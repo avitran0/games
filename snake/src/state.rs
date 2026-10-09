@@ -1,5 +1,8 @@
+use crate::config::Config;
+
 #[derive(Default)]
 pub struct State {
+    pub config: Config,
     pub difficulty: Difficulty,
     pub score: u32,
 }

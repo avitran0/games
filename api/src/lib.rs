@@ -25,6 +25,7 @@ pub use render::frame::{Anchor, Flip, Frame};
 pub use screen::{Screen, ScreenAction, ScreenContext, error::ErrorScreen};
 pub use tween::{Interpolation, Tween};
 
+pub use serde;
 pub use utils::{debug, error, info, warn};
 
 const TICK_DURATION: Duration = Duration::from_nanos(1_000_000_000 / 60);

@@ -3,7 +3,9 @@ use api::{
     glam::{IVec2, ivec2},
 };
 
-use crate::{game_over::GameOverScreen, pause::PauseScreen, state::State};
+use crate::{
+    foods::Foods, game_over::GameOverScreen, pause::PauseScreen, snakes::Snakes, state::State,
+};
 
 const TILE_SIZE: i32 = 16;
 const GRID_WIDTH: i32 = (api::WIDTH / TILE_SIZE as u32) as i32;
@@ -64,35 +66,15 @@ impl Direction {
 }
 
 struct Sprites {
-    head: api::Sprite,
-    head_only: api::Sprite,
-    body: api::Sprite,
-    body_angled: api::Sprite,
-    tail: api::Sprite,
-    food: api::Sprite,
+    snakes: Snakes,
+    foods: Foods,
     background: api::Tilemap,
 }
 
 impl Sprites {
     fn load(ctx: &mut api::ScreenContext<State>) -> Result<Self, api::ScreenAction<State>> {
-        let head = ctx
-            .assets
-            .load_sprite(include_bytes!("assets/head_16.pxs"))?;
-        let head_only = ctx
-            .assets
-            .load_sprite(include_bytes!("assets/head_only_16.pxs"))?;
-        let body = ctx
-            .assets
-            .load_sprite(include_bytes!("assets/body_16.pxs"))?;
-        let body_angled = ctx
-            .assets
-            .load_sprite(include_bytes!("assets/body_angled_16.pxs"))?;
-        let tail = ctx
-            .assets
-            .load_sprite(include_bytes!("assets/tail_16.pxs"))?;
-        let food = ctx
-            .assets
-            .load_sprite(include_bytes!("assets/food_16.pxs"))?;
+        let snakes = Snakes::load(ctx)?;
+        let foods = Foods::load(ctx)?;
         let _ = ctx
             .assets
             .load_tileset(include_bytes!("assets/tileset_16.pxt"))?;
@@ -101,12 +83,8 @@ impl Sprites {
             .load_tilemap(include_bytes!("assets/map_16.pxm"))?;
 
         Ok(Self {
-            head,
-            head_only,
-            body,
-            body_angled,
-            tail,
-            food,
+            snakes,
+            foods,
             background,
         })
     }
@@ -196,36 +174,33 @@ impl api::Screen<State> for GameScreen {
         api::ScreenAction::None
     }
 
-    fn draw(&mut self, _state: &State, frame: &mut api::Frame) {
+    fn draw(&mut self, state: &State, frame: &mut api::Frame) {
         frame.tilemap(&self.sprites.background, ivec2(0, 0));
 
         for (index, &segment) in self.snake.iter().enumerate() {
+            let snake = &self.sprites.snakes.get(state.config.snake);
             let (sprite, rotation, flip) = if self.snake.len() == 1 {
-                (
-                    &self.sprites.head_only,
-                    self.direction.rotation(),
-                    Flip::None,
-                )
+                (&snake.head_only, self.direction.rotation(), Flip::None)
             } else if index == 0 {
-                (&self.sprites.head, self.direction.rotation(), Flip::None)
+                (&snake.head, self.direction.rotation(), Flip::None)
             } else if index + 1 == self.snake.len() {
                 let direction = Direction::between(segment, self.snake[index - 1]);
-                (&self.sprites.tail, direction.rotation(), Flip::None)
+                (&snake.tail, direction.rotation(), Flip::None)
             } else {
                 let from = Direction::between(self.snake[index], self.snake[index - 1]);
                 let to = Direction::between(self.snake[index + 1], self.snake[index]);
                 if from == to {
-                    (&self.sprites.body, from.rotation(), Flip::None)
+                    (&snake.body, from.rotation(), Flip::None)
                 } else {
                     let (rotation, flip) = corner_rotation(from, to);
-                    (&self.sprites.body_angled, rotation, flip)
+                    (&snake.body_angled, rotation, flip)
                 }
             };
 
             frame.sprite_rotate_flip(sprite, segment * TILE_SIZE, rotation, Anchor::Center, flip);
         }
 
-        frame.sprite(&self.sprites.food, self.food * TILE_SIZE);
+        frame.sprite(self.sprites.foods.random(), self.food * TILE_SIZE);
     }
 }
 
