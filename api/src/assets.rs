@@ -10,7 +10,10 @@ use crate::{
     AnimatedSprite, Font, ScreenAction, Sprite, Tileset,
     formats::tilemap::TilemapData,
     handle::{SpriteId, Tilemap as TilemapHandle, TilemapId},
-    render::{font::GlFont, sprite::GlSprite},
+    render::{
+        font::{GlFont, TextMetrics},
+        sprite::GlSprite,
+    },
     screen::error::ErrorScreen,
 };
 
@@ -224,6 +227,22 @@ impl Assets {
 
     pub fn default_font(&self) -> Font {
         self.default_font
+    }
+
+    /// Measure text using the built-in font used by `Frame::text`.
+    pub fn measure_text(&self, text: &str) -> glam::UVec2 {
+        self.fonts
+            .get(&self.default_font)
+            .expect("The default font is loaded")
+            .measure_text(text)
+    }
+
+    /// Return the built-in font's metrics for UI layout during a frame.
+    pub fn text_metrics(&self) -> TextMetrics {
+        self.fonts
+            .get(&self.default_font)
+            .expect("The default font is loaded")
+            .text_metrics()
     }
 }
 

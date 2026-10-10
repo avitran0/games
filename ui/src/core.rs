@@ -12,6 +12,7 @@ pub struct Ui {
     pub style: Style,
     tick: usize,
     input: Input,
+    text_metrics: Option<api::TextMetrics>,
     layout: Layout,
     root_bounds: Rect,
     panels: Vec<LayoutSnapshot>,
@@ -46,6 +47,7 @@ impl Ui {
             style,
             tick: 0,
             input: Input::default(),
+            text_metrics: None,
             layout: Layout {
                 bounds,
                 cursor: bounds.position,
@@ -65,8 +67,18 @@ impl Ui {
         }
     }
 
-    pub fn begin_frame(&mut self, input: &Input) {
+    pub fn begin_frame<State>(&mut self, ctx: &api::ScreenContext<'_, State>) {
+        self.begin_frame_inner(ctx.input, Some(ctx.assets.text_metrics()));
+    }
+
+    /// Begin a frame without an asset context, for headless layout use.
+    pub fn begin_frame_with_input(&mut self, input: &Input) {
+        self.begin_frame_inner(input, None);
+    }
+
+    fn begin_frame_inner(&mut self, input: &Input, text_metrics: Option<api::TextMetrics>) {
         self.input = *input;
+        self.text_metrics = text_metrics;
         self.tick += 1;
         self.previous_widget_count = self.widget_count;
         self.widget_count = 0;
@@ -465,7 +477,18 @@ impl Ui {
         } else {
             self.style.widget
         };
-        self.draw_rect(rect, fill, self.style.corner_radius);
+        let pill_width = self
+            .text_metrics
+            .as_ref()
+            .map(|metrics| metrics.measure_text(text).x)
+            .unwrap_or(rect.size.x)
+            .saturating_add(self.style.padding.saturating_mul(2))
+            .min(rect.size.x);
+        self.draw_rect(
+            Rect::new(rect.position.x, rect.position.y, pill_width, rect.size.y),
+            fill,
+            self.style.corner_radius,
+        );
         let color = if response.focused || selected {
             self.style.focused_text
         } else {

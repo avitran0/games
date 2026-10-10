@@ -14,7 +14,7 @@ impl MainMenu {
 
 impl api::Screen<State> for MainMenu {
     fn update(&mut self, ctx: &mut api::ScreenContext<'_, State>) -> api::ScreenAction<State> {
-        self.ui.begin_frame(ctx.input);
+        self.ui.begin_frame(ctx);
 
         self.ui.button("Play");
 

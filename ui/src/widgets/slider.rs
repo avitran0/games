@@ -1,10 +1,9 @@
 use std::fmt::Display;
 
 use api::Button as EngineButton;
-use glam::{ivec2, uvec2};
 
 use super::Widget;
-use crate::{Rect, Response, Ui};
+use crate::{Response, Ui};
 
 pub trait SliderValue: Copy + PartialOrd + Display {
     fn default_step(min: Self, max: Self) -> Self;
@@ -159,21 +158,6 @@ impl<T: SliderValue> Widget for Slider<'_, T> {
             &format!("{}: {}", self.label, *self.value),
             false,
             response,
-        );
-        let bar_width = rect.size.x.saturating_sub(2);
-        let bar = Rect {
-            position: rect.position + ivec2(1, rect.size.y as i32 - 1),
-            size: uvec2(bar_width, 1),
-        };
-        ui.draw_rect(bar, ui.style.panel_border, 1);
-        let filled = self.value.fill_width(self.min, self.max, bar_width);
-        ui.draw_rect(
-            Rect {
-                size: uvec2(filled, 1),
-                ..bar
-            },
-            ui.style.accent,
-            1,
         );
         ui.advance_row();
         Response {

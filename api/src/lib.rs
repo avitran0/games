@@ -22,7 +22,10 @@ pub use glyphs::*;
 pub use handle::{AnimatedSprite, Font, Sprite, Tilemap};
 pub use input::{Button, Input};
 pub use random::Rng;
-pub use render::frame::{Anchor, Flip, Frame};
+pub use render::{
+    TextMetrics,
+    frame::{Anchor, Flip, Frame},
+};
 pub use save::{load, save};
 pub use screen::{Screen, ScreenAction, ScreenContext, error::ErrorScreen};
 pub use tween::{Interpolation, Tween};

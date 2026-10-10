@@ -20,6 +20,7 @@ use crate::{
 pub(crate) mod draw_cmd;
 pub(crate) mod font;
 pub(crate) mod frame;
+pub use font::TextMetrics;
 mod framebuffer;
 pub(crate) mod gpu_image;
 mod palette;
