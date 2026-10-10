@@ -7,7 +7,3 @@ resolver = "3"
 api.path = "api"
 formats.path = "formats"
 ui.path = "ui"
-
-[profile.release]
-lto = true
-codegen-units = 1
