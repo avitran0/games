@@ -7,6 +7,7 @@ mod input;
 mod platform;
 mod random;
 mod render;
+mod save;
 mod screen;
 mod tween;
 
@@ -22,6 +23,7 @@ pub use handle::{AnimatedSprite, Font, Sprite, Tilemap};
 pub use input::{Button, Input};
 pub use random::Rng;
 pub use render::frame::{Anchor, Flip, Frame};
+pub use save::{load, save};
 pub use screen::{Screen, ScreenAction, ScreenContext, error::ErrorScreen};
 pub use tween::{Interpolation, Tween};
 

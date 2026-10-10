@@ -43,7 +43,7 @@ impl Default for Style {
             padding: 8,
             outer_padding: 8,
             border_width: 0,
-            corner_radius: 50,
+            corner_radius: 8,
             scrollbar_width: 3,
             scrollbar_track: Color::Bunker,
             scrollbar_thumb: Color::ShuttleGray,

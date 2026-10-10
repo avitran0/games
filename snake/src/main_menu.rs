@@ -3,7 +3,12 @@ use api::{
     glam::{ivec2, uvec2},
 };
 
-use crate::{game::GameScreen, snakes::Snakes, state::State};
+use crate::{
+    config::{CONFIG_NAME, Config},
+    game::GameScreen,
+    snakes::Snakes,
+    state::State,
+};
 
 pub struct MainMenu {
     title: api::Sprite,
@@ -20,7 +25,7 @@ impl MainMenu {
     pub fn new(ctx: &mut api::ScreenContext<State>) -> Result<Self, api::ScreenAction<State>> {
         let title = ctx.assets.load_sprite(include_bytes!("assets/title.pxs"))?;
         let snakes = Snakes::load(ctx)?;
-        ctx.state.config = api::ScreenContext::load("snake")?;
+        ctx.state.config = api::load(CONFIG_NAME)?;
 
         Ok(Self {
             title,
@@ -65,15 +70,20 @@ impl Screen<State> for MainMenu {
         }
 
         let count = self.snakes.len();
-        let snake = &mut ctx.state.config.snake;
-        *snake %= count;
+        ctx.state.config.snake %= count;
 
         if ctx.input.just_pressed(Button::L) {
-            *snake = (*snake + count - 1) % count;
+            ctx.state.config.snake = (ctx.state.config.snake + count - 1) % count;
+            if let Err(action) = api::save::<State, Config>(CONFIG_NAME, &ctx.state.config) {
+                return action;
+            }
         }
 
         if ctx.input.just_pressed(Button::R) {
-            *snake = (*snake + 1) % count;
+            ctx.state.config.snake = (ctx.state.config.snake + 1) % count;
+            if let Err(action) = api::save::<State, Config>(CONFIG_NAME, &ctx.state.config) {
+                return action;
+            }
         }
 
         api::ScreenAction::None

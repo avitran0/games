@@ -1,7 +1,3 @@
-pub enum BlockKind {
-    
-}
+pub enum BlockKind {}
 
-impl BlockKind {
-
-}
+impl BlockKind {}

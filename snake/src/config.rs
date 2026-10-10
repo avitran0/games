@@ -5,3 +5,5 @@ use api::serde::{Deserialize, Serialize};
 pub struct Config {
     pub snake: usize,
 }
+
+pub const CONFIG_NAME: &str = "snake";
