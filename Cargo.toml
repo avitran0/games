@@ -1,5 +1,5 @@
 [workspace]
-members = ["api", "editor", "formats", "pong", "snake", "tools/pxs-to-png", "ui"]
+members = ["api", "editor", "factory", "formats", "pong", "snake", "tools/pxs-to-png", "ui"]
 default-members = ["pong", "snake"]
 resolver = "3"
 
