@@ -10,7 +10,6 @@ use crate::{
 
 pub struct Ui {
     pub style: Style,
-    tick: usize,
     input: Input,
     text_metrics: Option<api::TextMetrics>,
     layout: Layout,
@@ -23,7 +22,6 @@ pub struct Ui {
     previous_widget_count: usize,
     focus: usize,
     focused_widget: Option<(usize, Rect)>,
-    active_widget: Option<(usize, usize)>,
     activated: bool,
 }
 
@@ -45,7 +43,6 @@ impl Ui {
         );
         Self {
             style,
-            tick: 0,
             input: Input::default(),
             text_metrics: None,
             layout: Layout {
@@ -62,7 +59,6 @@ impl Ui {
             previous_widget_count: 0,
             focus: 0,
             focused_widget: None,
-            active_widget: None,
             activated: false,
         }
     }
@@ -79,7 +75,6 @@ impl Ui {
     fn begin_frame_inner(&mut self, input: &Input, text_metrics: Option<api::TextMetrics>) {
         self.input = *input;
         self.text_metrics = text_metrics;
-        self.tick += 1;
         self.previous_widget_count = self.widget_count;
         self.widget_count = 0;
         self.paint.clear();
@@ -100,8 +95,7 @@ impl Ui {
                 self.focus = (self.focus + 1) % self.previous_widget_count;
             }
         }
-        self.activated =
-            input.just_pressed(EngineButton::A) || input.just_pressed(EngineButton::Start);
+        self.activated = input.just_pressed(EngineButton::A);
     }
 
     pub fn set_bounds(&mut self, bounds: Rect) {
@@ -436,6 +430,19 @@ impl Ui {
             .text(text, position, color, self.style.row_height);
     }
 
+    pub(crate) fn text_width(&self, text: &str) -> u32 {
+        self.text_metrics
+            .as_ref()
+            .map_or(0, |metrics| metrics.measure_text(text).x)
+    }
+
+    pub(crate) fn draw_right_aligned_text(&mut self, rect: Rect, text: &str, color: Color) {
+        let x = rect.position.x + rect.size.x as i32
+            - self.style.padding as i32
+            - self.text_width(text) as i32;
+        self.draw_text(text, ivec2(x, rect.position.y + 2), color);
+    }
+
     pub(crate) fn draw_rect(&mut self, rect: Rect, color: Color, radius: u32) {
         self.paint.rect(rect, color, radius);
     }
@@ -458,21 +465,7 @@ impl Ui {
         selected: bool,
         response: Response,
     ) {
-        const ACTIVE_TICKS: usize = 15;
-
-        if response.clicked {
-            self.active_widget = Some((self.focus, self.tick));
-        }
-        let active = self.active_widget.is_some_and(|(widget, tick)| {
-            widget == self.focus && self.tick.saturating_sub(tick) < ACTIVE_TICKS
-        });
-        let fill = if response.focused {
-            if active {
-                self.style.widget_pressed
-            } else {
-                self.style.widget_focused
-            }
-        } else if selected {
+        let fill = if response.focused || selected {
             self.style.widget_focused
         } else {
             self.style.widget

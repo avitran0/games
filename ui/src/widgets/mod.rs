@@ -1,5 +1,6 @@
 pub mod button;
 pub mod checkbox;
+pub mod combo_box;
 pub mod label;
 pub mod progress_bar;
 pub mod radio;
@@ -8,6 +9,7 @@ pub mod tab_bar;
 
 pub use button::Button;
 pub use checkbox::Checkbox;
+pub use combo_box::ComboBox;
 pub use label::Label;
 pub use progress_bar::ProgressBar;
 pub use radio::Radio;

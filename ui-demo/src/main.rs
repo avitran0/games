@@ -2,7 +2,7 @@ use api::{
     Color, Frame, HEIGHT, Screen, ScreenAction, ScreenContext, WIDTH,
     glam::{ivec2, uvec2},
 };
-use ui::{EnumIter, Rect, Ui};
+use ui::{EnumIter, Ui};
 
 #[derive(Default)]
 struct State {
@@ -11,6 +11,7 @@ struct State {
     enabled: bool,
     choice: Choice,
     volume: u8,
+    scaling: Scaling,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, EnumIter)]
@@ -28,6 +29,15 @@ enum Choice {
     First,
     Second,
     Third,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, EnumIter)]
+#[strum(crate = "ui")]
+enum Scaling {
+    #[default]
+    Aspect,
+    Stretch,
+    Integer,
 }
 
 struct Demo {
@@ -49,6 +59,7 @@ impl Screen<State> for Demo {
             enabled,
             choice,
             volume,
+            scaling,
         } = &mut *ctx.state;
 
         self.ui.tab_bar(page, |ui, page| match page {
@@ -64,11 +75,17 @@ impl Screen<State> for Demo {
             }
             Page::Controls => {
                 ui.heading("Controls");
-                ui.checkbox("Enable option", enabled);
-                ui.radio("First choice", choice, Choice::First);
-                ui.radio("Second choice", choice, Choice::Second);
-                ui.radio("Third choice", choice, Choice::Third);
-                ui.slider("Volume", volume, 0, 10);
+                ui.combo_box("Screen Scaling", scaling);
+                ui.columns(2, 8, |ui, column| {
+                    if column == 0 {
+                        ui.checkbox("Enable option", enabled);
+                        ui.radio("First choice", choice, Choice::First);
+                        ui.radio("Second choice", choice, Choice::Second);
+                        ui.radio("Third choice", choice, Choice::Third);
+                    } else {
+                        ui.slider("Volume", volume, 0, 10);
+                    }
+                });
             }
             Page::Layout => {
                 ui.heading("Layout and scrolling");
