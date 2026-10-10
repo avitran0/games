@@ -36,12 +36,7 @@ impl<T: PartialEq + Copy> Widget for Radio<'_, T> {
             self.label
         );
         let rect = ui.row_rect();
-        ui.draw_interactive(
-            rect,
-            &label,
-            selected || *self.value == self.choice,
-            response,
-        );
+        ui.draw_interactive(rect, &label, false, response);
         ui.advance_row();
         Response {
             changed: response.clicked && !selected,

@@ -33,7 +33,7 @@ impl Widget for Checkbox<'_> {
             self.label
         );
         let rect = ui.row_rect();
-        ui.draw_interactive(rect, &label, *self.value, response);
+        ui.draw_interactive(rect, &label, false, response);
         ui.advance_row();
         Response {
             changed: response.clicked,

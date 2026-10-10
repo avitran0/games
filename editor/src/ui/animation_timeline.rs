@@ -1,4 +1,4 @@
-use crate::palette;
+use crate::ui::tile_preview;
 use eframe::egui::{self, Color32, Pos2, Rect, Sense, Stroke, Ui, Vec2};
 use formats::{AnimatedSpriteDocument, AnimationDirection, SpriteTag};
 
@@ -133,7 +133,7 @@ pub fn show(ui: &mut Ui, document: &mut AnimatedSpriteDocument, state: &mut Stat
                 painter.rect_filled(frame_rect, 0.0, ui.visuals().faint_bg_color);
                 let image_rect =
                     Rect::from_min_size(Pos2::new(x + 10.0, rect.top() + 4.0), Vec2::splat(44.0));
-                paint_frame_thumbnail(&painter, image_rect, frame.pixels(), document.size);
+                tile_preview::paint(&painter, image_rect, frame.pixels(), document.size);
                 painter.text(
                     Pos2::new(x + FRAME_WIDTH / 2.0, rect.top() + 61.0),
                     egui::Align2::CENTER_CENTER,
@@ -334,51 +334,6 @@ pub fn remove_frame(document: &mut AnimatedSpriteDocument, state: &mut State) {
     });
     state.frame_index = state.frame_index.min(document.frames.len() - 1);
     state.tag_index = state.tag_index.min(document.tags.len().saturating_sub(1));
-}
-
-fn paint_frame_thumbnail(
-    painter: &egui::Painter,
-    rect: Rect,
-    pixels: &[u8],
-    size: api::glam::UVec2,
-) {
-    let (light, dark) = (Color32::from_gray(230), Color32::from_gray(190));
-    const CHECKER_SIZE: f32 = 8.0;
-    for y in 0..6 {
-        for x in 0..6 {
-            painter.rect_filled(
-                Rect::from_min_size(
-                    Pos2::new(
-                        rect.left() + x as f32 * CHECKER_SIZE,
-                        rect.top() + y as f32 * CHECKER_SIZE,
-                    ),
-                    Vec2::splat(CHECKER_SIZE),
-                ),
-                0.0,
-                if (x + y) % 2 == 0 { light } else { dark },
-            );
-        }
-    }
-
-    let pixel_size = 44.0 / size.x.max(size.y).max(1) as f32;
-    for y in 0..size.y as usize {
-        for x in 0..size.x as usize {
-            let value = pixels.get(y * size.x as usize + x).copied().unwrap_or(0);
-            if value != 0 {
-                painter.rect_filled(
-                    Rect::from_min_size(
-                        Pos2::new(
-                            rect.left() + x as f32 * pixel_size,
-                            rect.top() + y as f32 * pixel_size,
-                        ),
-                        Vec2::splat(pixel_size),
-                    ),
-                    0.0,
-                    palette::color(value),
-                );
-            }
-        }
-    }
 }
 
 fn tag_color(index: usize) -> Color32 {

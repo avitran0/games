@@ -74,28 +74,22 @@ where
             let width = base_width + u32::from(index + 1 == tabs.len()) * remainder;
             let active = index == selected_index;
             let tab_rect = Rect::new(x, rect.position.y, width, rect.size.y);
-            ui.draw_bordered_rect(
+            ui.draw_rect(
                 tab_rect,
                 if active {
                     ui.style.widget_focused
                 } else {
                     ui.style.widget
                 },
-                if active {
-                    ui.style.accent
-                } else {
-                    ui.style.panel_border
-                },
-                ui.style.border_width,
                 ui.style.corner_radius,
             );
             ui.draw_text(
                 format!("{tab:?}"),
                 tab_rect.position + ivec2(ui.style.padding as i32, 2),
                 if active {
-                    ui.style.text
+                    ui.style.focused_text
                 } else {
-                    ui.style.muted_text
+                    ui.style.text
                 },
             );
             x += width as i32

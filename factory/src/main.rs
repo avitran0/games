@@ -1,3 +1,11 @@
+use crate::{screen::main::MainMenu, state::State};
+
+mod core;
+mod screen;
+mod state;
+
 fn main() {
-    println!("Hello, world!");
+    api::run("Factory", State::default(), |ctx| {
+        Ok(Box::new(MainMenu::new()))
+    });
 }

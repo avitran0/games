@@ -465,26 +465,14 @@ impl Ui {
         } else {
             self.style.widget
         };
-        let border = if response.focused {
-            self.style.text
-        } else {
-            self.style.panel_border
-        };
-        self.draw_bordered_rect(
-            rect,
-            fill,
-            border,
-            self.style.border_width,
-            self.style.corner_radius,
-        );
-        let prefix = if response.focused { "> " } else { "  " };
+        self.draw_rect(rect, fill, self.style.corner_radius);
         let color = if response.focused || selected {
-            self.style.text
+            self.style.focused_text
         } else {
-            self.style.muted_text
+            self.style.text
         };
         self.draw_text(
-            format!("{prefix}{text}"),
+            text,
             rect.position + ivec2(self.style.padding as i32, 2),
             color,
         );

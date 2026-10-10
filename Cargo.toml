@@ -1,6 +1,6 @@
 [workspace]
 members = ["api", "editor", "factory", "formats", "pong", "snake", "tools/pxs-to-png", "ui"]
-default-members = ["pong", "snake"]
+default-members = ["factory", "pong", "snake"]
 resolver = "3"
 
 [workspace.dependencies]
