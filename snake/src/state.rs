@@ -1,3 +1,5 @@
+use ui::EnumIter;
+
 use crate::config::Config;
 
 #[derive(Default)]
@@ -7,7 +9,8 @@ pub struct State {
     pub score: u32,
 }
 
-#[derive(Default, Clone, Copy, Debug)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, EnumIter)]
+#[strum(crate = "ui")]
 pub enum Difficulty {
     Easy,
     #[default]
@@ -16,20 +19,6 @@ pub enum Difficulty {
 }
 
 impl Difficulty {
-    pub fn lower(&mut self) {
-        *self = match *self {
-            Self::Easy | Self::Normal => Self::Easy,
-            Self::Hard => Self::Normal,
-        };
-    }
-
-    pub fn higher(&mut self) {
-        *self = match *self {
-            Self::Easy => Self::Normal,
-            Self::Normal | Self::Hard => Self::Hard,
-        };
-    }
-
     pub fn move_interval(&self) -> usize {
         match self {
             Self::Easy => 25,

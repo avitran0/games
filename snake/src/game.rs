@@ -4,7 +4,11 @@ use api::{
 };
 
 use crate::{
-    foods::Foods, game_over::GameOverScreen, pause::PauseScreen, snakes::Snakes, state::State,
+    foods::Foods,
+    game_over::GameOverScreen,
+    pause::PauseScreen,
+    snakes::{Snake, SnakeSprites},
+    state::State,
 };
 
 const TILE_SIZE: i32 = 16;
@@ -66,14 +70,14 @@ impl Direction {
 }
 
 struct Sprites {
-    snakes: Snakes,
+    snakes: Vec<SnakeSprites>,
     foods: Foods,
     background: api::Tilemap,
 }
 
 impl Sprites {
     fn load(ctx: &mut api::ScreenContext<State>) -> Result<Self, api::ScreenAction<State>> {
-        let snakes = Snakes::load(ctx)?;
+        let snakes = Snake::load_all(ctx)?;
         let foods = Foods::load(ctx)?;
         let _ = ctx
             .assets
@@ -180,7 +184,7 @@ impl api::Screen<State> for GameScreen {
         frame.tilemap(&self.sprites.background, ivec2(0, 0));
 
         for (index, &segment) in self.snake.iter().enumerate() {
-            let snake = &self.sprites.snakes.get(state.config.snake);
+            let snake = &self.sprites.snakes[state.config.snake.index()];
             let (sprite, rotation, flip) = if self.snake.len() == 1 {
                 (&snake.head_only, self.direction.rotation(), Flip::None)
             } else if index == 0 {

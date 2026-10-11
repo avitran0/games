@@ -9,6 +9,8 @@ description = "this is a sample description"
 author = "avitrano"
 players = 1
 logo = "src/assets/title.pxs"
+cover = "src/assets/title.pxs"
 
 [dependencies]
 api.workspace = true
+ui.workspace = true
