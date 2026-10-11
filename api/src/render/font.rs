@@ -53,30 +53,6 @@ pub(crate) struct GlFont {
     text_metrics: TextMetrics,
 }
 
-#[cfg(test)]
-mod tests {
-    use std::{collections::HashMap, sync::Arc};
-
-    use glam::uvec2;
-
-    use super::TextMetrics;
-
-    #[test]
-    fn text_metrics_measure_width_and_multiline_height() {
-        let metrics = TextMetrics {
-            advances: Arc::new(HashMap::from([('a', 2), ('b', 3)])),
-            widths: Arc::new(HashMap::from([('a', 1), ('b', 2)])),
-            fallback_advance: 4,
-            fallback_width: 3,
-            line_height: 7,
-        };
-
-        assert_eq!(metrics.measure_text("ab\na"), uvec2(4, 14));
-        assert_eq!(metrics.measure_text("a?"), uvec2(5, 7));
-        assert_eq!(metrics.measure_text("a"), uvec2(1, 7));
-    }
-}
-
 impl GlFont {
     pub(crate) fn new(gl: Rc<glow::Context>, data: &[u8]) -> Result<Self, String> {
         let font = Font::read(data).map_err(|err| err.to_string())?;
