@@ -21,9 +21,9 @@ pub enum Difficulty {
 impl Difficulty {
     pub fn move_interval(&self) -> usize {
         match self {
-            Self::Easy => 25,
-            Self::Normal => 22,
-            Self::Hard => 20,
+            Self::Easy => 50,
+            Self::Normal => 44,
+            Self::Hard => 40,
         }
     }
 }

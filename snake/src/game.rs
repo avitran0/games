@@ -175,7 +175,7 @@ impl api::Screen<State> for GameScreen {
         }
 
         if ctx.input.just_pressed(Button::Start) {
-            return api::ScreenAction::Push(Box::new(PauseScreen));
+            return api::ScreenAction::Push(Box::new(PauseScreen::new()));
         }
         api::ScreenAction::None
     }

@@ -56,7 +56,7 @@ impl Platform {
 
         let sdl_gl = window.gl_create_context()?;
         window.gl_make_current(&sdl_gl)?;
-        video.gl_set_swap_interval(SwapInterval::VSync)?;
+        video.gl_set_swap_interval(SwapInterval::Immediate)?;
 
         let mut gl = unsafe {
             glow::Context::from_loader_function(|func| {

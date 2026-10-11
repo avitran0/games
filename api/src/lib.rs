@@ -33,7 +33,7 @@ pub use tween::{Interpolation, Tween};
 pub use serde;
 pub use utils::{debug, error, info, warn};
 
-const TICK_DURATION: Duration = Duration::from_nanos(1_000_000_000 / 60);
+const TICK_DURATION: Duration = Duration::from_nanos(1_000_000_000 / 120);
 
 pub fn run<State: 'static, Setup>(title: &str, state: State, setup: Setup)
 where
@@ -70,5 +70,6 @@ where
     }
 }
 
+pub const FPS: u32 = 120;
 pub const WIDTH: u32 = 240;
 pub const HEIGHT: u32 = 160;
