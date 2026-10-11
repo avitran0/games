@@ -1,4 +1,5 @@
-use ui::{Alignment, Ui};
+use api::{HEIGHT, WIDTH};
+use ui::{Alignment, Rect, Ui};
 
 use crate::state::State;
 
@@ -17,6 +18,7 @@ impl MainMenu {
 impl api::Screen<State> for MainMenu {
     fn update(&mut self, ctx: &mut api::ScreenContext<'_, State>) -> api::ScreenAction<State> {
         self.ui.begin_frame(ctx);
+        self.ui.set_bounds(Rect::new(0, 60, WIDTH, HEIGHT - 60));
 
         self.ui.button("Play");
 
