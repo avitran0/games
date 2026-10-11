@@ -10,21 +10,35 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct TextMetrics {
     advances: Arc<HashMap<char, u32>>,
+    widths: Arc<HashMap<char, u32>>,
     fallback_advance: u32,
+    fallback_width: u32,
     line_height: u32,
 }
 
 impl TextMetrics {
     pub fn measure_text(&self, text: &str) -> glam::UVec2 {
         let mut widths = text.split('\n').map(|line| {
-            line.chars().fold(0_u32, |width, character| {
-                width.saturating_add(
-                    self.advances
-                        .get(&character)
-                        .copied()
-                        .unwrap_or(self.fallback_advance),
-                )
-            })
+            let mut characters = line.chars().peekable();
+            let mut width = 0_u32;
+            while let Some(character) = characters.next() {
+                let advance = self
+                    .advances
+                    .get(&character)
+                    .copied()
+                    .unwrap_or(self.fallback_advance);
+                if characters.peek().is_some() {
+                    width = width.saturating_add(advance);
+                } else {
+                    width = width.saturating_add(
+                        self.widths
+                            .get(&character)
+                            .copied()
+                            .unwrap_or(self.fallback_width),
+                    );
+                }
+            }
+            width
         });
         let width = widths.next().unwrap_or(0).max(widths.max().unwrap_or(0));
         let line_count = text.split('\n').count() as u32;
@@ -51,12 +65,15 @@ mod tests {
     fn text_metrics_measure_width_and_multiline_height() {
         let metrics = TextMetrics {
             advances: Arc::new(HashMap::from([('a', 2), ('b', 3)])),
+            widths: Arc::new(HashMap::from([('a', 1), ('b', 2)])),
             fallback_advance: 4,
+            fallback_width: 3,
             line_height: 7,
         };
 
-        assert_eq!(metrics.measure_text("ab\na"), uvec2(5, 14));
-        assert_eq!(metrics.measure_text("a?"), uvec2(6, 7));
+        assert_eq!(metrics.measure_text("ab\na"), uvec2(4, 14));
+        assert_eq!(metrics.measure_text("a?"), uvec2(5, 7));
+        assert_eq!(metrics.measure_text("a"), uvec2(1, 7));
     }
 }
 
@@ -87,12 +104,11 @@ impl GlFont {
             chars.insert(glyph.codepoint, layer);
         }
 
-        let fallback_advance = font
+        let fallback_glyph = font
             .glyphs
             .iter()
             .find(|glyph| glyph.codepoint == '\u{FFFD}')
-            .or_else(|| font.glyphs.first())
-            .map_or(0, |glyph| u32::from(glyph.advance));
+            .or_else(|| font.glyphs.first());
         let text_metrics = TextMetrics {
             advances: Arc::new(
                 font.glyphs
@@ -100,7 +116,14 @@ impl GlFont {
                     .map(|glyph| (glyph.codepoint, u32::from(glyph.advance)))
                     .collect(),
             ),
-            fallback_advance,
+            widths: Arc::new(
+                font.glyphs
+                    .iter()
+                    .map(|glyph| (glyph.codepoint, u32::from(glyph.width)))
+                    .collect(),
+            ),
+            fallback_advance: fallback_glyph.map_or(0, |glyph| u32::from(glyph.advance)),
+            fallback_width: fallback_glyph.map_or(0, |glyph| u32::from(glyph.width)),
             line_height: u32::from(font.height),
         };
         let image = GpuImage::new_array(
