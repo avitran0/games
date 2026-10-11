@@ -23,12 +23,3 @@ pub(crate) struct Horizontal {
     pub start_y: i32,
     pub max_bottom: i32,
 }
-
-pub(crate) struct Columns {
-    pub parent: Layout,
-    pub count: usize,
-    pub index: usize,
-    pub gap: u32,
-    pub start_y: i32,
-    pub max_bottom: i32,
-}

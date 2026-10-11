@@ -76,16 +76,13 @@ impl Screen<State> for Demo {
             Page::Controls => {
                 ui.heading("Controls");
                 ui.combo_box("Screen Scaling", scaling);
-                ui.columns(2, 8, |ui, column| {
-                    if column == 0 {
-                        ui.checkbox("Enable option", enabled);
-                        ui.radio("First choice", choice, Choice::First);
-                        ui.radio("Second choice", choice, Choice::Second);
-                        ui.radio("Third choice", choice, Choice::Third);
-                    } else {
-                        ui.slider("Volume", volume, 0, 10);
-                    }
+                ui.checkbox("Enable option", enabled);
+                ui.horizontal(3, 3, |ui| {
+                    ui.radio("First", choice, Choice::First);
+                    ui.radio("Second", choice, Choice::Second);
+                    ui.radio("Third", choice, Choice::Third);
                 });
+                ui.slider("Volume", volume, 0, 10);
             }
             Page::Layout => {
                 ui.heading("Layout and scrolling");
@@ -93,10 +90,9 @@ impl Screen<State> for Demo {
                     ui.button("Left");
                     ui.button("Right");
                 });
-                ui.columns(2, 4, |ui, column| {
-                    ui.label(format!("Column {}", column + 1));
-                    ui.button(if column == 0 { "One" } else { "Two" });
-                });
+                ui.label("Elements are arranged in a simple vertical flow.");
+                ui.button("One");
+                ui.button("Two");
             }
         });
 

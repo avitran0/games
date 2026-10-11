@@ -47,7 +47,8 @@ impl Widget for Label {
             Tone::Muted => ui.style.muted_text,
             Tone::Heading => ui.style.accent,
         });
-        ui.draw_text(self.text, ui.row_rect().position, color);
+        let rect = ui.row_rect();
+        ui.draw_aligned_text(rect, &self.text, color, 0);
         let extra = if matches!(self.tone, Tone::Heading) {
             ui.style.spacing
         } else {

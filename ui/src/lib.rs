@@ -1,3 +1,4 @@
+mod alignment;
 mod core;
 mod layout;
 mod paint;
@@ -6,6 +7,7 @@ mod response;
 mod style;
 pub mod widgets;
 
+pub use alignment::Alignment;
 pub use core::Ui;
 pub use rect::Rect;
 pub use response::Response;

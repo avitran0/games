@@ -83,14 +83,15 @@ where
                 },
                 ui.style.corner_radius,
             );
-            ui.draw_text(
-                format!("{tab:?}"),
-                tab_rect.position + ivec2(ui.style.padding as i32, 2),
+            ui.draw_aligned_text(
+                tab_rect,
+                &format!("{tab:?}"),
                 if active {
                     ui.style.focused_text
                 } else {
                     ui.style.text
                 },
+                ui.style.padding,
             );
             x += width as i32
                 + if index + 1 < tabs.len() {

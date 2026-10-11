@@ -1,4 +1,4 @@
-use ui::Ui;
+use ui::{Alignment, Ui};
 
 use crate::state::State;
 
@@ -8,7 +8,9 @@ pub struct MainMenu {
 
 impl MainMenu {
     pub fn new() -> Self {
-        Self { ui: Ui::new() }
+        let mut ui = Ui::new();
+        ui.set_alignment(Alignment::Center);
+        Self { ui }
     }
 }
 

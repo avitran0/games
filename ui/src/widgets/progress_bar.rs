@@ -1,5 +1,3 @@
-use glam::ivec2;
-
 use super::Widget;
 use crate::{Rect, Response, Ui};
 
@@ -46,11 +44,7 @@ impl Widget for ProgressBar {
             ui.style.corner_radius,
         );
         if !self.label.is_empty() {
-            ui.draw_text(
-                self.label,
-                rect.position + ivec2(inset as i32 + 2, 2),
-                ui.style.widget,
-            );
+            ui.draw_aligned_text(rect, &self.label, ui.style.widget, inset + 2);
         }
         ui.advance_row();
         Response::default()

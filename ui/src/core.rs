@@ -2,20 +2,20 @@ use api::{Button as EngineButton, Color, Frame, HEIGHT, Input, WIDTH};
 use glam::{IVec2, ivec2};
 
 use crate::{
-    Rect, Response, Style,
-    layout::{Columns, Horizontal, Layout, LayoutSnapshot},
+    Alignment, Rect, Response, Style,
+    layout::{Horizontal, Layout, LayoutSnapshot},
     paint::{PaintList, inset_rect},
     widgets::{Label, Widget},
 };
 
 pub struct Ui {
     pub style: Style,
+    alignment: Alignment,
     input: Input,
     text_metrics: Option<api::TextMetrics>,
     layout: Layout,
     root_bounds: Rect,
     panels: Vec<LayoutSnapshot>,
-    columns: Vec<Columns>,
     horizontals: Vec<Horizontal>,
     paint: PaintList,
     widget_count: usize,
@@ -43,6 +43,7 @@ impl Ui {
         );
         Self {
             style,
+            alignment: Alignment::Left,
             input: Input::default(),
             text_metrics: None,
             layout: Layout {
@@ -52,7 +53,6 @@ impl Ui {
             },
             root_bounds: bounds,
             panels: Vec::new(),
-            columns: Vec::new(),
             horizontals: Vec::new(),
             paint: PaintList::default(),
             widget_count: 0,
@@ -79,7 +79,6 @@ impl Ui {
         self.widget_count = 0;
         self.paint.clear();
         self.panels.clear();
-        self.columns.clear();
         self.horizontals.clear();
         self.focused_widget = None;
         self.layout = Layout {
@@ -111,6 +110,24 @@ impl Ui {
         widget.show(self)
     }
 
+    /// Set the horizontal alignment used when drawing elements in their layout rows.
+    pub fn set_alignment(&mut self, alignment: Alignment) {
+        self.alignment = alignment;
+    }
+
+    /// Run contents with a temporary horizontal alignment, restoring the previous one after.
+    pub fn with_alignment<R>(
+        &mut self,
+        alignment: Alignment,
+        contents: impl FnOnce(&mut Self) -> R,
+    ) -> R {
+        let previous = self.alignment;
+        self.alignment = alignment;
+        let output = contents(self);
+        self.alignment = previous;
+        output
+    }
+
     pub fn add_contents<R>(&mut self, contents: impl FnOnce(&mut Self) -> R) -> R {
         contents(self)
     }
@@ -125,17 +142,6 @@ impl Ui {
         let output = contents(self);
         self.end_panel();
         output
-    }
-
-    pub fn columns(&mut self, count: usize, gap: u32, mut contents: impl FnMut(&mut Self, usize)) {
-        self.begin_columns(count, gap);
-        for index in 0..count.max(1).min(u32::MAX as usize) {
-            if index > 0 {
-                self.next_column();
-            }
-            contents(self, index);
-        }
-        self.end_columns();
     }
 
     pub fn horizontal(&mut self, count: usize, gap: u32, contents: impl FnOnce(&mut Self)) {
@@ -253,42 +259,6 @@ impl Ui {
         self.advance(pixels);
     }
 
-    fn begin_columns(&mut self, count: usize, gap: u32) {
-        let count = count.clamp(1, u32::MAX as usize);
-        let parent = self.layout;
-        self.columns.push(Columns {
-            parent,
-            count,
-            index: 0,
-            gap,
-            start_y: parent.cursor.y,
-            max_bottom: parent.cursor.y,
-        });
-        self.set_column_layout();
-    }
-
-    fn next_column(&mut self) -> bool {
-        let Some(columns) = self.columns.last_mut() else {
-            return false;
-        };
-        columns.max_bottom = columns.max_bottom.max(self.layout.cursor.y);
-        if columns.index + 1 >= columns.count {
-            return false;
-        }
-        columns.index += 1;
-        self.set_column_layout();
-        true
-    }
-
-    fn end_columns(&mut self) {
-        let Some(columns) = self.columns.pop() else {
-            return;
-        };
-        let bottom = columns.max_bottom.max(self.layout.cursor.y);
-        self.layout = columns.parent;
-        self.layout.cursor.y = bottom;
-    }
-
     fn begin_horizontal(&mut self, count: usize, gap: u32) {
         let count = count.clamp(1, u32::MAX as usize);
         let parent = self.layout;
@@ -383,30 +353,6 @@ impl Ui {
         };
     }
 
-    fn set_column_layout(&mut self) {
-        let Some(columns) = self.columns.last() else {
-            return;
-        };
-        let parent = columns.parent;
-        let gap_total = columns
-            .gap
-            .saturating_mul(u32::try_from(columns.count.saturating_sub(1)).unwrap_or(u32::MAX));
-        let available = parent.bounds.size.x.saturating_sub(gap_total);
-        let width = available / columns.count as u32;
-        let remainder = available % columns.count as u32;
-        let index = columns.index as u32;
-        let x = parent.bounds.position.x
-            + index.saturating_mul(width.saturating_add(columns.gap)) as i32;
-        let width = width + u32::from(index == columns.count as u32 - 1) * remainder;
-        let bottom = parent.bounds.position.y + parent.bounds.size.y as i32;
-        let height = bottom.saturating_sub(columns.start_y).max(0) as u32;
-        self.layout = Layout {
-            bounds: Rect::new(x, columns.start_y, width, height),
-            cursor: glam::ivec2(x, columns.start_y),
-            horizontal: false,
-        };
-    }
-
     pub(crate) fn row_rect(&self) -> Rect {
         crate::paint::row_rect(
             self.layout.cursor,
@@ -428,6 +374,18 @@ impl Ui {
     pub(crate) fn draw_text(&mut self, text: impl Into<String>, position: IVec2, color: Color) {
         self.paint
             .text(text, position, color, self.style.row_height);
+    }
+
+    pub(crate) fn draw_aligned_text(&mut self, rect: Rect, text: &str, color: Color, inset: u32) {
+        let width = self.text_width(text) as i32;
+        let left = rect.position.x + inset as i32;
+        let right = rect.position.x + rect.size.x as i32 - inset as i32;
+        let x = match self.alignment {
+            Alignment::Left => left,
+            Alignment::Center => rect.position.x + (rect.size.x as i32 - width) / 2,
+            Alignment::Right => right - width,
+        };
+        self.draw_text(text, ivec2(x, rect.position.y + 2), color);
     }
 
     pub(crate) fn text_width(&self, text: &str) -> u32 {
@@ -477,8 +435,15 @@ impl Ui {
             .unwrap_or(rect.size.x)
             .saturating_add(self.style.padding.saturating_mul(2))
             .min(rect.size.x);
+        let remaining = rect.size.x.saturating_sub(pill_width) as i32;
+        let pill_x = rect.position.x
+            + match self.alignment {
+                Alignment::Left => 0,
+                Alignment::Center => remaining / 2,
+                Alignment::Right => remaining,
+            };
         self.draw_rect(
-            Rect::new(rect.position.x, rect.position.y, pill_width, rect.size.y),
+            Rect::new(pill_x, rect.position.y, pill_width, rect.size.y),
             fill,
             self.style.corner_radius,
         );
@@ -489,7 +454,7 @@ impl Ui {
         };
         self.draw_text(
             text,
-            rect.position + ivec2(self.style.padding as i32, 2),
+            ivec2(pill_x + self.style.padding as i32, rect.position.y + 2),
             color,
         );
     }
