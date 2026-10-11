@@ -70,4 +70,4 @@ macro_rules! include_snakes {
     };
 }
 
-include_snakes!("default", "flower", "rainbow", "galaxy");
+include_snakes!("default", "flower", "rainbow", "galaxy", "dragon");
