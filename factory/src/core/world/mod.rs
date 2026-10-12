@@ -31,13 +31,31 @@ impl World {
         }
     }
 
-    fn get(&self, pos: UVec2) -> Option<TileInfo> {
+    fn locate(&self, pos: UVec2) -> Option<TileCoords> {
         if pos.x > self.size.x || pos.y > self.size.y {
             return None;
         }
 
+        let chunk = pos / 16;
+        let chunk_index = chunk.y * (self.size.x / 16) + chunk.x;
+
+        let cell = pos % 16;
+        let cell_index = cell.y * Chunk::SIDE_COUNT as u32 + cell.x;
+
+        Some(TileCoords {
+            chunk: chunk_index as usize,
+            cell: cell_index as usize,
+        })
+    }
+
+    fn get(&self, pos: UVec2) -> Option<TileInfo> {
         None
     }
+}
+
+struct TileCoords {
+    chunk: usize,
+    cell: usize,
 }
 
 pub struct TileInfo {
