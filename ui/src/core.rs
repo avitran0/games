@@ -174,31 +174,32 @@ impl Ui {
         let paint_start = self.paint.len();
         let widget_start = self.widget_count;
         let start_y = rect.position.y.saturating_sub(old_offset);
-        let scrollbar_width = self.style.scrollbar_width.min(rect.size.x);
-        let mut content_rect = rect;
-        self.layout = Layout {
-            bounds: rect,
-            cursor: glam::ivec2(rect.position.x, start_y),
-            horizontal: false,
-        };
-
         const GAP: u32 = 2;
-
-        let output = contents(self);
-        let content_height = self.layout.cursor.y.saturating_sub(start_y).max(0) as u32;
-        let max_offset = content_height.saturating_sub(rect.size.y);
-        let scrollbar_gap = if max_offset > 0 && scrollbar_width > 0 {
+        let scrollbar_width = self.style.scrollbar_width.min(rect.size.x);
+        let scrollbar_gap = if scrollbar_width > 0 {
             GAP.min(rect.size.x.saturating_sub(scrollbar_width))
         } else {
             0
         };
-        if max_offset > 0 {
-            content_rect.size.x = rect
-                .size
-                .x
-                .saturating_sub(scrollbar_width)
-                .saturating_sub(scrollbar_gap);
-        }
+        let content_rect = Rect {
+            size: glam::uvec2(
+                rect.size
+                    .x
+                    .saturating_sub(scrollbar_width)
+                    .saturating_sub(scrollbar_gap),
+                rect.size.y,
+            ),
+            ..rect
+        };
+        self.layout = Layout {
+            bounds: content_rect,
+            cursor: glam::ivec2(content_rect.position.x, start_y),
+            horizontal: false,
+        };
+
+        let output = contents(self);
+        let content_height = self.layout.cursor.y.saturating_sub(start_y).max(0) as u32;
+        let max_offset = content_height.saturating_sub(rect.size.y);
         let mut new_offset = old_offset.max(0) as u32;
         if widget_start == self.widget_count {
             if self.input.just_pressed(EngineButton::Up) {
