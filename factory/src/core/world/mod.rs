@@ -18,10 +18,13 @@ impl World {
     pub fn new(size: UVec2) -> Self {
         assert!(size.x < 512, "World width has to be 512 or less");
         assert!(size.y < 512, "World height has to be 512 or less");
-
-        let size = uvec2(
-            size.x.div_ceil(Chunk::SIDE_COUNT as u32),
-            size.y.div_ceil(Chunk::SIDE_COUNT as u32),
+        assert!(
+            size.x.is_multiple_of(16),
+            "World width has to be a multiple of 16"
+        );
+        assert!(
+            size.y.is_multiple_of(16),
+            "World height has to be a multiple of 16"
         );
 
         Self {
