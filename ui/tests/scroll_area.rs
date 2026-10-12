@@ -12,3 +12,17 @@ fn scroll_area_clamps_offset_to_content() {
     });
     assert_eq!(offset, ui.style.row_height * 3 - 20);
 }
+
+#[test]
+fn scroll_area_handles_narrow_viewports() {
+    for width in 0..=4 {
+        let mut ui = Ui::new();
+        ui.begin_frame_with_input(&api::Input::default());
+        let mut offset = 0;
+        ui.scroll_area(Rect::new(0, 0, width, 8), &mut offset, |ui| {
+            ui.label("One");
+            ui.label("Two");
+            ui.label("Three");
+        });
+    }
+}

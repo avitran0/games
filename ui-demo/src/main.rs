@@ -42,11 +42,15 @@ enum Scaling {
 
 struct Demo {
     ui: Ui,
+    scroll: u32,
 }
 
 impl Demo {
     fn new() -> Self {
-        Self { ui: Ui::new() }
+        Self {
+            ui: Ui::new(),
+            scroll: 0,
+        }
     }
 }
 
@@ -91,8 +95,13 @@ impl Screen<State> for Demo {
                     ui.button("Right");
                 });
                 ui.label("Elements are arranged in a simple vertical flow.");
-                ui.button("One");
-                ui.button("Two");
+                ui.scroll_area(ui.remaining(), &mut self.scroll, |ui| {
+                    ui.button("One");
+                    ui.button("Two");
+                    ui.button("Three");
+                    ui.button("Four");
+                    ui.button("Five");
+                });
             }
         });
 

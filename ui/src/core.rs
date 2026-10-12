@@ -67,7 +67,6 @@ impl Ui {
         self.begin_frame_inner(ctx.input, Some(ctx.assets.text_metrics()));
     }
 
-    /// Begin a frame without an asset context, for headless layout use.
     pub fn begin_frame_with_input(&mut self, input: &Input) {
         self.begin_frame_inner(input, None);
     }
@@ -106,16 +105,29 @@ impl Ui {
         };
     }
 
+    pub fn remaining(&self) -> Rect {
+        let bottom = self
+            .layout
+            .bounds
+            .position
+            .y
+            .saturating_add(self.layout.bounds.size.y as i32);
+        Rect::new(
+            self.layout.cursor.x,
+            self.layout.cursor.y,
+            self.layout.bounds.size.x,
+            bottom.saturating_sub(self.layout.cursor.y).max(0) as u32,
+        )
+    }
+
     pub fn add<W: Widget>(&mut self, widget: W) -> Response {
         widget.show(self)
     }
 
-    /// Set the horizontal alignment used when drawing elements in their layout rows.
     pub fn set_alignment(&mut self, alignment: Alignment) {
         self.alignment = alignment;
     }
 
-    /// Run contents with a temporary horizontal alignment, restoring the previous one after.
     pub fn with_alignment<R>(
         &mut self,
         alignment: Alignment,
@@ -175,8 +187,17 @@ impl Ui {
         let output = contents(self);
         let content_height = self.layout.cursor.y.saturating_sub(start_y).max(0) as u32;
         let max_offset = content_height.saturating_sub(rect.size.y);
+        let scrollbar_gap = if max_offset > 0 && scrollbar_width > 0 {
+            GAP.min(rect.size.x.saturating_sub(scrollbar_width))
+        } else {
+            0
+        };
         if max_offset > 0 {
-            content_rect.size.x = rect.size.x - scrollbar_width - GAP;
+            content_rect.size.x = rect
+                .size
+                .x
+                .saturating_sub(scrollbar_width)
+                .saturating_sub(scrollbar_gap);
         }
         let mut new_offset = old_offset.max(0) as u32;
         if widget_start == self.widget_count {
@@ -206,7 +227,7 @@ impl Ui {
         if max_offset > 0 && scrollbar_width > 0 {
             let track = Rect {
                 position: glam::ivec2(
-                    rect.position.x + content_rect.size.x as i32 + GAP as i32,
+                    rect.position.x + content_rect.size.x as i32 + scrollbar_gap as i32,
                     rect.position.y,
                 ),
                 size: glam::uvec2(scrollbar_width, rect.size.y),
@@ -440,6 +461,7 @@ impl Ui {
                 Alignment::Center => remaining / 2,
                 Alignment::Right => remaining,
             };
+        let inset = self.style.padding.min(pill_width / 2);
         self.draw_rect(
             Rect::new(pill_x, rect.position.y, pill_width, rect.size.y),
             fill,
@@ -452,7 +474,7 @@ impl Ui {
         };
         self.draw_text(
             text,
-            ivec2(pill_x + self.style.padding as i32, rect.position.y + 2),
+            ivec2(pill_x + inset as i32, rect.position.y + 2),
             color,
         );
     }
