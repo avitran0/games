@@ -6,7 +6,7 @@ impl BlockBehavior for Conveyor {
     fn update(&mut self) {}
 
     fn size(&self) -> api::glam::UVec2 {
-        api::glam::uvec2(1, 1)
+        api::glam::UVec2::splat(1)
     }
 
     fn name(&self) -> &'static str {
