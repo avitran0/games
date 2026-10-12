@@ -1,5 +1,7 @@
 use api::glam::UVec2;
 
+use crate::core::block::{conveyor::Conveyor, drill::Drill};
+
 mod conveyor;
 mod drill;
 
@@ -11,16 +13,12 @@ pub enum Rotation {
 }
 
 pub struct Block {
-    behavior: Box<dyn BlockBehavior>,
+    state: BlockState,
+    origin: UVec2,
     rotation: Rotation,
 }
 
-pub trait BlockBehavior {
-    fn update(&mut self);
-    fn size(&self) -> UVec2;
-    fn name(&self) -> &'static str;
-
-    fn can_rotate(&self) -> bool {
-        false
-    }
+pub enum BlockState {
+    Conveyor(Conveyor),
+    Drill(Drill),
 }
