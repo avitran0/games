@@ -42,6 +42,7 @@ pub(crate) struct AnimatedSpriteCmd {
 pub(crate) struct TilemapCmd {
     pub(crate) tilemap: TilemapId,
     pub(crate) position: IVec2,
+    pub(crate) scale: Vec2,
 }
 
 pub(crate) struct TextCmd {
@@ -50,6 +51,7 @@ pub(crate) struct TextCmd {
     pub(crate) position: IVec2,
     pub(crate) anchor: Anchor,
     pub(crate) color: Color,
+    pub(crate) scale: Vec2,
 }
 
 pub(crate) struct ShapeCmd {

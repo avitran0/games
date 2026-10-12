@@ -170,19 +170,19 @@ impl Renderer {
         let Some(tileset) = assets.get_sprite(tileset_id) else {
             return;
         };
-        let tile_size = tileset.size().as_ivec2();
+        let tile_size = tileset.size().as_vec2();
 
         let columns = usize::from(tilemap.size().x);
-        let origin_x = i64::from(cmd.position.x);
-        let origin_y = i64::from(cmd.position.y);
-        let tile_width = i64::from(tile_size.x);
-        let tile_height = i64::from(tile_size.y);
-        let x_range = visible_tiles(origin_x, tile_width, columns, i64::from(WIDTH));
+        let origin_x = cmd.position.x as f32;
+        let origin_y = cmd.position.y as f32;
+        let tile_width = tile_size.x * cmd.scale.x;
+        let tile_height = tile_size.y * cmd.scale.y;
+        let x_range = visible_tiles(origin_x, tile_width, columns, WIDTH as f32);
         let y_range = visible_tiles(
             origin_y,
             tile_height,
             usize::from(tilemap.size().y),
-            i64::from(HEIGHT),
+            HEIGHT as f32,
         );
         for y in y_range {
             for x in x_range.clone() {
@@ -199,8 +199,8 @@ impl Renderer {
                 self.draw_sprite_frame(
                     tileset,
                     ivec2(
-                        (origin_x + x as i64 * tile_width) as i32,
-                        (origin_y + y as i64 * tile_height) as i32,
+                        (origin_x + x as f32 * tile_width).round() as i32,
+                        (origin_y + y as f32 * tile_height).round() as i32,
                     ),
                     Anchor::TopLeft,
                     0.0,
@@ -208,7 +208,7 @@ impl Renderer {
                     &flip,
                     tile.flip_diagonal,
                     tile.id,
-                    Vec2::ONE,
+                    cmd.scale,
                 );
             }
         }
@@ -251,6 +251,7 @@ impl Renderer {
         let shader = &self.shaders.font;
         shader.bind();
         shader.set_vec2("resolution", vec2(WIDTH as f32, HEIGHT as f32));
+        shader.set_vec2("scale", cmd.scale);
         shader.set_i32("color_index", i32::from(cmd.color.index()));
 
         unsafe {
@@ -280,18 +281,9 @@ impl Renderer {
             font.height() as i32 * lines.len() as i32,
         );
 
-        let position = cmd.position;
-        let pos = match cmd.anchor {
-            Anchor::TopLeft => position,
-            Anchor::Top => ivec2(position.x - size.x / 2, position.y),
-            Anchor::TopRight => ivec2(position.x - size.x, position.y),
-            Anchor::Left => ivec2(position.x, position.y - size.y / 2),
-            Anchor::Center => ivec2(position.x - size.x / 2, position.y - size.y / 2),
-            Anchor::Right => ivec2(position.x - size.x, position.y - size.y / 2),
-            Anchor::BottomLeft => ivec2(position.x, position.y - size.y),
-            Anchor::Bottom => ivec2(position.x - size.x / 2, position.y - size.y),
-            Anchor::BottomRight => ivec2(position.x - size.x, position.y - size.y),
-        };
+        let source_size = size.as_vec2();
+        let scaled_size = source_size * cmd.scale;
+        let pos = cmd.position.as_vec2() - cmd.anchor.offset(scaled_size);
         let center_lines = matches!(cmd.anchor, Anchor::Top | Anchor::Center | Anchor::Bottom);
         let right_align = matches!(
             cmd.anchor,
@@ -300,45 +292,46 @@ impl Renderer {
 
         for (line_index, (line, line_width)) in lines.iter().zip(line_widths).enumerate() {
             let offset = if center_lines {
-                (size.x - line_width) / 2
+                (size.x - line_width) as f32 * 0.5
             } else if right_align {
-                size.x - line_width
+                (size.x - line_width) as f32
             } else {
-                0
+                0.0
             };
-            let mut line_pos = ivec2(
-                pos.x + offset,
-                pos.y + line_index as i32 * font.height() as i32,
+            let mut line_pos = vec2(
+                pos.x + offset * cmd.scale.x,
+                pos.y + line_index as f32 * font.height() as f32 * cmd.scale.y,
             );
 
             for c in line.chars() {
                 let (glyph, layer) = font.glyph(c);
                 if glyph.width != 0 {
-                    shader.set_vec2("position", line_pos.as_vec2());
+                    shader.set_vec2("position", line_pos);
                     shader.set_vec2("size", vec2(glyph.width as f32, font.height() as f32));
                     shader.set_i32("sprite_frame", layer as i32);
                     self.quad.draw();
                 }
-                line_pos.x += glyph.advance as i32;
+                line_pos.x += glyph.advance as f32 * cmd.scale.x;
             }
         }
     }
 }
 
 fn visible_tiles(
-    origin: i64,
-    tile_size: i64,
+    origin: f32,
+    tile_size: f32,
     count: usize,
-    screen_size: i64,
+    screen_size: f32,
 ) -> std::ops::Range<usize> {
-    let count = count as i64;
-    let first_visible = ((-origin).max(0) / tile_size).min(count);
-    let end = if origin >= screen_size {
-        0
-    } else {
-        ((screen_size - origin + tile_size - 1) / tile_size).min(count)
-    };
-    first_visible as usize..end.max(first_visible) as usize
+    if tile_size <= 0.0 || origin >= screen_size {
+        return 0..0;
+    }
+
+    let count = count as f32;
+    let first_visible = ((-origin).max(0.0) / tile_size).floor().min(count);
+    let end = ((screen_size - origin) / tile_size).ceil().min(count);
+    let first_visible = first_visible as usize;
+    first_visible..(end as usize).max(first_visible)
 }
 
 struct Shaders {
