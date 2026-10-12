@@ -9,6 +9,10 @@ impl BlockBehavior for Conveyor {
         api::glam::uvec2(1, 1)
     }
 
+    fn name(&self) -> &'static str {
+        "Conveyor"
+    }
+
     fn can_rotate(&self) -> bool {
         true
     }

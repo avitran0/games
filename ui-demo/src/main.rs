@@ -100,7 +100,7 @@ impl Screen<State> for Demo {
     }
 
     fn draw(&mut self, _state: &State, frame: &mut Frame) {
-        frame.rectangle(ivec2(0, 0), uvec2(WIDTH, HEIGHT), Color::Cinder);
+        frame.rectangle(ivec2(0, 0), uvec2(WIDTH, HEIGHT), self.ui.style.background);
         self.ui.paint(frame);
     }
 }

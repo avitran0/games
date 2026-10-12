@@ -27,13 +27,13 @@ pub struct Style {
 impl Default for Style {
     fn default() -> Self {
         Self {
-            background: Color::Cinder,
-            panel: Color::Cinder,
+            background: Color::Bunker,
+            panel: Color::Bunker,
             panel_border: Color::Charade,
             text: Color::Mischka,
-            focused_text: Color::Cinder,
+            focused_text: Color::Bunker,
             muted_text: Color::Chatelle,
-            widget: Color::Cinder,
+            widget: Color::Bunker,
             widget_focused: Color::Mischka,
             widget_pressed: Color::Chatelle,
             accent: Color::Mischka,
@@ -45,7 +45,7 @@ impl Default for Style {
             border_width: 1,
             corner_radius: 8,
             scrollbar_width: 3,
-            scrollbar_track: Color::Cinder,
+            scrollbar_track: Color::Bunker,
             scrollbar_thumb: Color::ShuttleGray,
         }
     }

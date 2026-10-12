@@ -59,18 +59,13 @@ pub fn show(ui: &mut Ui, selected_color: u8) -> Option<u8> {
                     selection = Some(color);
                 }
 
-                if color == 0 {
-                    let selected_label = if is_selected { "Selected · " } else { "" };
-                    response.on_hover_text(format!("{selected_label}Transparent (#00000000)"));
-                } else {
-                    let color_info = api::Color::ALL[index - 1];
-                    let [red, green, blue] = color_info.rgb();
-                    let selected_label = if is_selected { "Selected · " } else { "" };
-                    response.on_hover_text(format!(
-                        "{selected_label}{color} · {} (#{red:02X}{green:02X}{blue:02X})",
-                        color_info.name()
-                    ));
-                }
+                let color_info = api::Color::ALL[index];
+                let [red, green, blue] = color_info.rgb();
+                let selected_label = if is_selected { "Selected · " } else { "" };
+                response.on_hover_text(format!(
+                    "{selected_label}{color} · {} (#{red:02X}{green:02X}{blue:02X})",
+                    color_info.name()
+                ));
             }
         });
         if row + 1 < ROWS {

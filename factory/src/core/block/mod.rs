@@ -19,6 +19,7 @@ pub struct Block {
 pub trait BlockBehavior {
     fn update(&mut self);
     fn size(&self) -> UVec2;
+    fn name(&self) -> &'static str;
 
     fn can_rotate(&self) -> bool {
         false
