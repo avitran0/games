@@ -1,5 +1,5 @@
 use api::{
-    Anchor, Button, Flip,
+    Anchor, Button, Flip, SpriteOptions,
     glam::{IVec2, ivec2},
 };
 
@@ -203,10 +203,21 @@ impl api::Screen<State> for GameScreen {
                 }
             };
 
-            frame.sprite_rotate_flip(sprite, segment * TILE_SIZE, rotation, Anchor::Center, flip);
+            frame.sprite(
+                sprite,
+                segment * TILE_SIZE,
+                SpriteOptions::default()
+                    .rotation(rotation)
+                    .rotation_anchor(Anchor::Center)
+                    .flip(flip),
+            );
         }
 
-        frame.sprite(&self.food.0, self.food.1 * TILE_SIZE);
+        frame.sprite(
+            &self.food.0,
+            self.food.1 * TILE_SIZE,
+            SpriteOptions::default(),
+        );
     }
 }
 

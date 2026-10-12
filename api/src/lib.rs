@@ -24,7 +24,7 @@ pub use input::{Button, Input};
 pub use random::Rng;
 pub use render::{
     TextMetrics,
-    frame::{Anchor, Flip, Frame},
+    frame::{Anchor, Flip, Frame, SpriteOptions},
 };
 pub use save::{load, save};
 pub use screen::{Screen, ScreenAction, ScreenContext, error::ErrorScreen};

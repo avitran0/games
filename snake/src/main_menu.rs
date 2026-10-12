@@ -1,5 +1,5 @@
 use api::{
-    Anchor, HEIGHT, Screen, WIDTH,
+    Anchor, HEIGHT, Screen, SpriteOptions, WIDTH,
     glam::{ivec2, uvec2},
 };
 use ui::{Alignment, Rect, Ui};
@@ -62,15 +62,27 @@ impl Screen<State> for MainMenu {
     fn draw(&mut self, state: &State, frame: &mut api::Frame) {
         self.ui.paint(frame);
 
-        frame.sprite_anchor(
+        frame.sprite(
             &self.title,
             uvec2(WIDTH / 2, HEIGHT / 4).as_ivec2(),
-            Anchor::Center,
+            SpriteOptions::default().anchor(Anchor::Center),
         );
 
         let snake = &self.snakes[state.config.snake.index()];
-        frame.sprite_rotate(&snake.head, ivec2(28, 12), 90.0, Anchor::Center);
-        frame.sprite_rotate(&snake.body_angled, ivec2(12, 12), 90.0, Anchor::Center);
-        frame.sprite(&snake.tail, ivec2(12, 28));
+        frame.sprite(
+            &snake.head,
+            ivec2(28, 12),
+            SpriteOptions::default()
+                .rotation(90.0)
+                .rotation_anchor(Anchor::Center),
+        );
+        frame.sprite(
+            &snake.body_angled,
+            ivec2(12, 12),
+            SpriteOptions::default()
+                .rotation(90.0)
+                .rotation_anchor(Anchor::Center),
+        );
+        frame.sprite(&snake.tail, ivec2(12, 28), SpriteOptions::default());
     }
 }

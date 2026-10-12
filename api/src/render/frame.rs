@@ -5,6 +5,58 @@ use crate::{
     render::draw_cmd::{AnimatedSpriteCmd, DrawCmd, ShapeCmd, SpriteCmd, TextCmd, TilemapCmd},
 };
 
+#[derive(Clone, Copy, Debug)]
+pub struct SpriteOptions {
+    anchor: Anchor,
+    rotation: f32,
+    rotation_anchor: Anchor,
+    flip: Flip,
+    scale: Vec2,
+}
+
+impl Default for SpriteOptions {
+    fn default() -> Self {
+        Self {
+            anchor: Anchor::TopLeft,
+            rotation: 0.0,
+            rotation_anchor: Anchor::TopLeft,
+            flip: Flip::None,
+            scale: Vec2::ONE,
+        }
+    }
+}
+
+impl SpriteOptions {
+    pub fn anchor(mut self, anchor: Anchor) -> Self {
+        self.anchor = anchor;
+        self
+    }
+
+    pub fn rotation(mut self, rotation: f32) -> Self {
+        self.rotation = rotation;
+        self
+    }
+
+    pub fn rotation_anchor(mut self, anchor: Anchor) -> Self {
+        self.rotation_anchor = anchor;
+        self
+    }
+
+    pub fn flip(mut self, flip: Flip) -> Self {
+        self.flip = flip;
+        self
+    }
+
+    pub fn scale(mut self, scale: Vec2) -> Self {
+        self.scale = scale.max(Vec2::ZERO);
+        self
+    }
+
+    pub fn uniform_scale(self, scale: f32) -> Self {
+        self.scale(Vec2::splat(scale))
+    }
+}
+
 #[derive(Default)]
 pub struct Frame {
     draw_cmds: Vec<DrawCmd>,
@@ -127,225 +179,38 @@ impl Frame {
         }));
     }
 
-    fn add_sprite_command(
-        &mut self,
-        sprite: &Sprite,
-        position: IVec2,
-        anchor: Anchor,
-        rotation: f32,
-        rotation_anchor: Anchor,
-        flip: Flip,
-    ) {
+    pub fn sprite(&mut self, sprite: &Sprite, position: IVec2, options: SpriteOptions) {
         self.add(DrawCmd::Sprite(SpriteCmd {
             sprite: sprite.id,
             position,
-            anchor,
-            rotation: rotation.to_radians(),
-            rotation_anchor,
-            flip,
+            anchor: options.anchor,
+            rotation: options.rotation.to_radians(),
+            rotation_anchor: options.rotation_anchor,
+            flip: options.flip,
             flip_diagonal: false,
+            scale: options.scale,
         }));
     }
 
-    fn add_animated_sprite_command(
+    pub fn animated_sprite(
         &mut self,
         sprite: &AnimatedSprite,
         position: IVec2,
-        anchor: Anchor,
-        rotation: f32,
-        rotation_anchor: Anchor,
-        flip: Flip,
+        options: SpriteOptions,
     ) {
         self.add(DrawCmd::AnimatedSprite(AnimatedSpriteCmd {
             sprite: sprite.id,
             position,
-            anchor,
-            rotation: rotation.to_radians(),
-            rotation_anchor,
+            anchor: options.anchor,
+            rotation: options.rotation.to_radians(),
+            rotation_anchor: options.rotation_anchor,
             animation: sprite.animation().map(str::to_owned),
             animation_tick: sprite.animation_tick(),
             animation_divisor: sprite.animation_divisor(),
-            flip,
+            flip: options.flip,
             flip_diagonal: false,
+            scale: options.scale,
         }));
-    }
-
-    pub fn sprite(&mut self, sprite: &Sprite, position: IVec2) {
-        self.sprite_anchor(sprite, position, Anchor::TopLeft);
-    }
-
-    pub fn sprite_anchor(&mut self, sprite: &Sprite, position: IVec2, anchor: Anchor) {
-        self.add_sprite_command(sprite, position, anchor, 0.0, Anchor::TopLeft, Flip::None);
-    }
-
-    pub fn sprite_rotate(
-        &mut self,
-        sprite: &Sprite,
-        position: IVec2,
-        rotation: f32,
-        rotation_anchor: Anchor,
-    ) {
-        self.sprite_rotate_anchor(sprite, position, Anchor::TopLeft, rotation, rotation_anchor);
-    }
-
-    pub fn sprite_rotate_anchor(
-        &mut self,
-        sprite: &Sprite,
-        position: IVec2,
-        anchor: Anchor,
-        rotation: f32,
-        rotation_anchor: Anchor,
-    ) {
-        self.sprite_rotate_flip_anchor(
-            sprite,
-            position,
-            anchor,
-            rotation,
-            rotation_anchor,
-            Flip::None,
-        );
-    }
-
-    pub fn sprite_rotate_flip(
-        &mut self,
-        sprite: &Sprite,
-        position: IVec2,
-        rotation: f32,
-        rotation_anchor: Anchor,
-        flip: Flip,
-    ) {
-        self.sprite_rotate_flip_anchor(
-            sprite,
-            position,
-            Anchor::TopLeft,
-            rotation,
-            rotation_anchor,
-            flip,
-        );
-    }
-
-    pub fn sprite_rotate_flip_anchor(
-        &mut self,
-        sprite: &Sprite,
-        position: IVec2,
-        anchor: Anchor,
-        rotation: f32,
-        rotation_anchor: Anchor,
-        flip: Flip,
-    ) {
-        self.add_sprite_command(sprite, position, anchor, rotation, rotation_anchor, flip);
-    }
-
-    pub fn sprite_flip(&mut self, sprite: &Sprite, position: IVec2, flip: Flip) {
-        self.sprite_flip_anchor(sprite, position, flip, Anchor::TopLeft);
-    }
-
-    pub fn sprite_flip_anchor(
-        &mut self,
-        sprite: &Sprite,
-        position: IVec2,
-        flip: Flip,
-        anchor: Anchor,
-    ) {
-        self.add_sprite_command(sprite, position, anchor, 0.0, Anchor::TopLeft, flip);
-    }
-
-    pub fn animated_sprite(&mut self, sprite: &AnimatedSprite, position: IVec2) {
-        self.animated_sprite_anchor(sprite, position, Anchor::TopLeft);
-    }
-
-    pub fn animated_sprite_anchor(
-        &mut self,
-        sprite: &AnimatedSprite,
-        position: IVec2,
-        anchor: Anchor,
-    ) {
-        self.add_animated_sprite_command(
-            sprite,
-            position,
-            anchor,
-            0.0,
-            Anchor::TopLeft,
-            Flip::None,
-        );
-    }
-
-    pub fn animated_sprite_rotate(
-        &mut self,
-        sprite: &AnimatedSprite,
-        position: IVec2,
-        rotation: f32,
-        rotation_anchor: Anchor,
-    ) {
-        self.animated_sprite_rotate_anchor(
-            sprite,
-            position,
-            Anchor::TopLeft,
-            rotation,
-            rotation_anchor,
-        );
-    }
-
-    pub fn animated_sprite_rotate_anchor(
-        &mut self,
-        sprite: &AnimatedSprite,
-        position: IVec2,
-        anchor: Anchor,
-        rotation: f32,
-        rotation_anchor: Anchor,
-    ) {
-        self.animated_sprite_rotate_flip_anchor(
-            sprite,
-            position,
-            anchor,
-            rotation,
-            rotation_anchor,
-            Flip::None,
-        );
-    }
-
-    pub fn animated_sprite_rotate_flip(
-        &mut self,
-        sprite: &AnimatedSprite,
-        position: IVec2,
-        rotation: f32,
-        rotation_anchor: Anchor,
-        flip: Flip,
-    ) {
-        self.animated_sprite_rotate_flip_anchor(
-            sprite,
-            position,
-            Anchor::TopLeft,
-            rotation,
-            rotation_anchor,
-            flip,
-        );
-    }
-
-    pub fn animated_sprite_rotate_flip_anchor(
-        &mut self,
-        sprite: &AnimatedSprite,
-        position: IVec2,
-        anchor: Anchor,
-        rotation: f32,
-        rotation_anchor: Anchor,
-        flip: Flip,
-    ) {
-        self.add_animated_sprite_command(sprite, position, anchor, rotation, rotation_anchor, flip);
-    }
-
-    pub fn animated_sprite_flip(&mut self, sprite: &AnimatedSprite, position: IVec2, flip: Flip) {
-        self.animated_sprite_flip_anchor(sprite, position, flip, Anchor::TopLeft);
-    }
-
-    pub fn animated_sprite_flip_anchor(
-        &mut self,
-        sprite: &AnimatedSprite,
-        position: IVec2,
-        flip: Flip,
-        anchor: Anchor,
-    ) {
-        self.add_animated_sprite_command(sprite, position, anchor, 0.0, Anchor::TopLeft, flip);
     }
 
     pub fn text(&mut self, text: impl Into<String>, position: IVec2, anchor: Anchor) {
@@ -391,7 +256,7 @@ impl Frame {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Anchor {
     TopLeft,
     Top,
@@ -420,6 +285,7 @@ impl Anchor {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Flip {
     None,
     Horizontal,

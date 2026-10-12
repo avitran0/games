@@ -22,6 +22,7 @@ pub(crate) struct SpriteCmd {
     pub(crate) rotation_anchor: Anchor,
     pub(crate) flip: Flip,
     pub(crate) flip_diagonal: bool,
+    pub(crate) scale: Vec2,
 }
 
 pub(crate) struct AnimatedSpriteCmd {
@@ -35,6 +36,7 @@ pub(crate) struct AnimatedSpriteCmd {
     pub(crate) animation_divisor: u16,
     pub(crate) flip: Flip,
     pub(crate) flip_diagonal: bool,
+    pub(crate) scale: Vec2,
 }
 
 pub(crate) struct TilemapCmd {

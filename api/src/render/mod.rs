@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use glam::{ivec2, vec2};
+use glam::{Vec2, ivec2, vec2};
 use glow::HasContext;
 
 use crate::{
@@ -92,6 +92,7 @@ impl Renderer {
             &cmd.flip,
             cmd.flip_diagonal,
             0,
+            cmd.scale,
         );
     }
 
@@ -113,6 +114,7 @@ impl Renderer {
             &cmd.flip,
             cmd.flip_diagonal,
             frame,
+            cmd.scale,
         );
     }
 
@@ -127,13 +129,16 @@ impl Renderer {
         flip: &Flip,
         flip_diagonal: bool,
         frame: u32,
+        scale: Vec2,
     ) {
         let shader = &self.shaders.sprite;
-        let size = sprite.size().as_vec2();
+        let source_size = sprite.size().as_vec2();
+        let size = source_size * scale;
         shader.bind();
         shader.set_vec2("resolution", vec2(WIDTH as f32, HEIGHT as f32));
         shader.set_vec2("position", position.as_vec2() - anchor.offset(size));
-        shader.set_vec2("size", size);
+        shader.set_vec2("size", source_size);
+        shader.set_vec2("scale", scale);
         shader.set_vec2("rotation_anchor", rotation_anchor.offset(size));
         shader.set_f32("rotation", rotation);
         shader.set_vec2("flip", flip.vector());
@@ -203,6 +208,7 @@ impl Renderer {
                     &flip,
                     tile.flip_diagonal,
                     tile.id,
+                    Vec2::ONE,
                 );
             }
         }
