@@ -1,120 +1,15 @@
 use glam::{IVec2, UVec2, Vec2, vec2};
 
 use crate::{
-    AnimatedSprite, Color, Font, HEIGHT, Sprite, Tilemap, WIDTH,
+    AnimatedSprite, Camera2D, Color, Font, Sprite, Tilemap,
     render::draw_cmd::{AnimatedSpriteCmd, DrawCmd, ShapeCmd, SpriteCmd, TextCmd, TilemapCmd},
 };
 
-#[derive(Clone, Copy, Debug)]
-pub struct SpriteOptions {
-    anchor: Anchor,
-    rotation: f32,
-    rotation_anchor: Anchor,
-    flip: Flip,
-    scale: Vec2,
-}
+mod options;
+mod world;
 
-impl Default for SpriteOptions {
-    fn default() -> Self {
-        Self {
-            anchor: Anchor::TopLeft,
-            rotation: 0.0,
-            rotation_anchor: Anchor::TopLeft,
-            flip: Flip::None,
-            scale: Vec2::ONE,
-        }
-    }
-}
-
-impl SpriteOptions {
-    pub fn anchor(mut self, anchor: Anchor) -> Self {
-        self.anchor = anchor;
-        self
-    }
-
-    pub fn rotation(mut self, rotation: f32) -> Self {
-        self.rotation = rotation;
-        self
-    }
-
-    pub fn rotation_anchor(mut self, anchor: Anchor) -> Self {
-        self.rotation_anchor = anchor;
-        self
-    }
-
-    pub fn flip(mut self, flip: Flip) -> Self {
-        self.flip = flip;
-        self
-    }
-
-    pub fn scale(mut self, scale: Vec2) -> Self {
-        self.scale = scale.max(Vec2::ZERO);
-        self
-    }
-
-    pub fn uniform_scale(self, scale: f32) -> Self {
-        self.scale(Vec2::splat(scale))
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Camera2D {
-    position: Vec2,
-    zoom: f32,
-}
-
-impl Camera2D {
-    const MIN_ZOOM: f32 = 0.01;
-
-    pub fn new(position: Vec2) -> Self {
-        Self {
-            position,
-            zoom: 1.0,
-        }
-    }
-
-    pub fn position(&self) -> Vec2 {
-        self.position
-    }
-
-    pub fn set_position(&mut self, position: Vec2) {
-        self.position = position;
-    }
-
-    pub fn zoom(&self) -> f32 {
-        self.zoom
-    }
-
-    pub fn set_zoom(&mut self, zoom: f32) {
-        self.zoom = if zoom.is_finite() {
-            zoom.max(Self::MIN_ZOOM)
-        } else {
-            1.0
-        };
-    }
-
-    pub fn world_to_screen(&self, position: Vec2) -> IVec2 {
-        self.project(position).round().as_ivec2()
-    }
-
-    pub fn screen_to_world(&self, position: IVec2) -> Vec2 {
-        self.position + (position.as_vec2() - Self::screen_center()) / self.zoom
-    }
-
-    fn project(&self, position: Vec2) -> Vec2 {
-        Self::screen_center() + (position - self.position) * self.zoom
-    }
-
-    fn screen_center() -> Vec2 {
-        Vec2::new(WIDTH as f32, HEIGHT as f32) * 0.5
-    }
-}
-
-impl Default for Camera2D {
-    fn default() -> Self {
-        Self::new(Self::screen_center())
-    }
-}
+pub use options::{Anchor, Flip, ShapeOptions, SpriteOptions, TextOptions, TilemapOptions};
+pub use world::WorldFrame;
 
 #[derive(Default)]
 pub struct Frame {
@@ -144,34 +39,77 @@ impl Frame {
         }
     }
 
-    pub fn tilemap(&mut self, tilemap: &Tilemap, position: IVec2) {
+    pub fn tilemap(&mut self, tilemap: &Tilemap, position: IVec2, options: TilemapOptions) {
         self.add(DrawCmd::Tilemap(TilemapCmd {
             tilemap: tilemap.id,
             position,
-            scale: Vec2::ONE,
+            scale: options.scale,
+            opacity: options.opacity,
         }));
     }
 
     pub fn rectangle(&mut self, position: IVec2, size: UVec2, color: Color) {
-        self.shape(
+        self.rectangle_with_opacity(position, size, color, 1.0);
+    }
+
+    pub fn rectangle_with_opacity(
+        &mut self,
+        position: IVec2,
+        size: UVec2,
+        color: Color,
+        opacity: f32,
+    ) {
+        self.rectangle_with_options(
             position,
-            size.as_vec2(),
+            size,
             color,
-            0.0,
-            Color::Transparent,
-            0.0,
+            ShapeOptions::default().opacity(opacity),
         );
     }
 
+    pub fn rectangle_with_options(
+        &mut self,
+        position: IVec2,
+        size: UVec2,
+        color: Color,
+        options: ShapeOptions,
+    ) {
+        self.shape(position, size.as_vec2(), color, options);
+    }
+
     pub fn rounded_rectangle(&mut self, position: IVec2, size: UVec2, radius: u32, color: Color) {
-        self.shape(
+        self.rounded_rectangle_with_options(
             position,
-            size.as_vec2(),
+            size,
             color,
-            radius as f32,
-            Color::Transparent,
-            0.0,
+            ShapeOptions::default().radius(radius),
         );
+    }
+
+    pub fn rounded_rectangle_with_opacity(
+        &mut self,
+        position: IVec2,
+        size: UVec2,
+        radius: u32,
+        color: Color,
+        opacity: f32,
+    ) {
+        self.rounded_rectangle_with_options(
+            position,
+            size,
+            color,
+            ShapeOptions::default().radius(radius).opacity(opacity),
+        );
+    }
+
+    pub fn rounded_rectangle_with_options(
+        &mut self,
+        position: IVec2,
+        size: UVec2,
+        color: Color,
+        options: ShapeOptions,
+    ) {
+        self.shape(position, size.as_vec2(), color, options);
     }
 
     pub fn bordered_rectangle(
@@ -183,14 +121,24 @@ impl Frame {
         border_color: Color,
         border_width: u32,
     ) {
-        self.shape(
+        self.bordered_rectangle_with_options(
             position,
-            size.as_vec2(),
+            size,
             color,
-            radius as f32,
-            border_color,
-            border_width as f32,
+            ShapeOptions::default()
+                .radius(radius)
+                .border(border_color, border_width),
         );
+    }
+
+    pub fn bordered_rectangle_with_options(
+        &mut self,
+        position: IVec2,
+        size: UVec2,
+        color: Color,
+        options: ShapeOptions,
+    ) {
+        self.shape(position, size.as_vec2(), color, options);
     }
 
     pub fn rounded_rectangle_outline(
@@ -211,27 +159,24 @@ impl Frame {
         );
     }
 
-    fn shape(
-        &mut self,
-        position: IVec2,
-        size: Vec2,
-        color: Color,
-        radius: f32,
-        border_color: Color,
-        border_width: f32,
-    ) {
+    fn shape(&mut self, position: IVec2, size: Vec2, color: Color, options: ShapeOptions) {
         self.add(DrawCmd::Shape(ShapeCmd {
             position,
             size,
             rotation: 0.0,
             color,
-            radius,
-            border_color,
-            border_width,
+            radius: options.radius,
+            border_color: options.border_color,
+            border_width: options.border_width,
+            opacity: options.opacity,
         }));
     }
 
     pub fn line(&mut self, start: IVec2, end: IVec2, color: Color) {
+        self.line_with_opacity(start, end, color, 1.0);
+    }
+
+    pub fn line_with_opacity(&mut self, start: IVec2, end: IVec2, color: Color, opacity: f32) {
         let delta = (end - start).as_vec2();
         let length = delta.length();
         self.add(DrawCmd::Shape(ShapeCmd {
@@ -246,6 +191,7 @@ impl Frame {
             radius: 0.0,
             border_color: Color::Transparent,
             border_width: 0.0,
+            opacity: opacity.clamp(0.0, 1.0),
         }));
     }
 
@@ -259,6 +205,7 @@ impl Frame {
             flip: options.flip,
             flip_diagonal: false,
             scale: options.scale,
+            opacity: options.opacity,
         }));
     }
 
@@ -280,186 +227,25 @@ impl Frame {
             flip: options.flip,
             flip_diagonal: false,
             scale: options.scale,
+            opacity: options.opacity,
         }));
     }
 
     pub fn text(&mut self, text: impl Into<String>, position: IVec2, anchor: Anchor) {
-        self.push_text(None, text.into(), position, anchor, Color::Mischka, Vec2::ONE);
+        self.text_with_options(text, position, TextOptions::default().anchor(anchor));
     }
 
-    pub fn text_font(
-        &mut self,
-        font: Font,
-        text: impl Into<String>,
-        position: IVec2,
-        anchor: Anchor,
-    ) {
-        self.push_text(
-            Some(font),
-            text.into(),
-            position,
-            anchor,
-            Color::Mischka,
-            Vec2::ONE,
-        )
-    }
-
-    pub fn text_color(
+    pub fn text_with_opacity(
         &mut self,
         text: impl Into<String>,
         position: IVec2,
         anchor: Anchor,
-        color: Color,
+        opacity: f32,
     ) {
-        self.push_text(None, text.into(), position, anchor, color, Vec2::ONE);
-    }
-
-    fn push_text(
-        &mut self,
-        font: Option<Font>,
-        text: String,
-        position: IVec2,
-        anchor: Anchor,
-        color: Color,
-        scale: Vec2,
-    ) {
-        self.add(DrawCmd::Text(TextCmd {
-            font,
+        self.text_with_options(
             text,
             position,
-            anchor,
-            color,
-            scale,
-        }));
-    }
-}
-
-/// A drawing adapter that transforms world-space calls through a camera before recording them.
-pub struct WorldFrame<'frame, 'camera> {
-    frame: &'frame mut Frame,
-    camera: &'camera Camera2D,
-}
-
-impl WorldFrame<'_, '_> {
-    fn screen_position(&self, position: IVec2) -> IVec2 {
-        self.camera.world_to_screen(position.as_vec2())
-    }
-
-    pub fn tilemap(&mut self, tilemap: &Tilemap, position: IVec2) {
-        self.frame.add(DrawCmd::Tilemap(TilemapCmd {
-            tilemap: tilemap.id,
-            position: self.screen_position(position),
-            scale: Vec2::splat(self.camera.zoom),
-        }));
-    }
-
-    pub fn rectangle(&mut self, position: IVec2, size: UVec2, color: Color) {
-        self.frame.shape(
-            self.screen_position(position),
-            size.as_vec2() * self.camera.zoom,
-            color,
-            0.0,
-            Color::Transparent,
-            0.0,
-        );
-    }
-
-    pub fn rounded_rectangle(&mut self, position: IVec2, size: UVec2, radius: u32, color: Color) {
-        let zoom = self.camera.zoom;
-        self.frame.shape(
-            self.screen_position(position),
-            size.as_vec2() * zoom,
-            color,
-            radius as f32 * zoom,
-            Color::Transparent,
-            0.0,
-        );
-    }
-
-    pub fn bordered_rectangle(
-        &mut self,
-        position: IVec2,
-        size: UVec2,
-        radius: u32,
-        color: Color,
-        border_color: Color,
-        border_width: u32,
-    ) {
-        let zoom = self.camera.zoom;
-        self.frame.shape(
-            self.screen_position(position),
-            size.as_vec2() * zoom,
-            color,
-            radius as f32 * zoom,
-            border_color,
-            border_width as f32 * zoom,
-        );
-    }
-
-    pub fn rounded_rectangle_outline(
-        &mut self,
-        position: IVec2,
-        size: UVec2,
-        radius: u32,
-        border_color: Color,
-        border_width: u32,
-    ) {
-        self.bordered_rectangle(
-            position,
-            size,
-            radius,
-            Color::Transparent,
-            border_color,
-            border_width,
-        );
-    }
-
-    pub fn line(&mut self, start: IVec2, end: IVec2, color: Color) {
-        let start_world = start.as_vec2();
-        let end_world = end.as_vec2();
-        let start_screen = self.camera.project(start_world);
-        let delta = (end_world - start_world) * self.camera.zoom;
-        let length = delta.length();
-        self.frame.add(DrawCmd::Shape(ShapeCmd {
-            position: start_screen.round().as_ivec2(),
-            size: vec2(length.max(self.camera.zoom), self.camera.zoom),
-            rotation: if length == 0.0 {
-                0.0
-            } else {
-                delta.y.atan2(delta.x)
-            },
-            color,
-            radius: 0.0,
-            border_color: Color::Transparent,
-            border_width: 0.0,
-        }));
-    }
-
-    pub fn sprite(&mut self, sprite: &Sprite, position: IVec2, mut options: SpriteOptions) {
-        options.scale *= Vec2::splat(self.camera.zoom);
-        self.frame
-            .sprite(sprite, self.screen_position(position), options);
-    }
-
-    pub fn animated_sprite(
-        &mut self,
-        sprite: &AnimatedSprite,
-        position: IVec2,
-        mut options: SpriteOptions,
-    ) {
-        options.scale *= Vec2::splat(self.camera.zoom);
-        self.frame
-            .animated_sprite(sprite, self.screen_position(position), options);
-    }
-
-    pub fn text(&mut self, text: impl Into<String>, position: IVec2, anchor: Anchor) {
-        self.frame.push_text(
-            None,
-            text.into(),
-            self.screen_position(position),
-            anchor,
-            Color::Mischka,
-            Vec2::splat(self.camera.zoom),
+            TextOptions::default().anchor(anchor).opacity(opacity),
         );
     }
 
@@ -470,13 +256,28 @@ impl WorldFrame<'_, '_> {
         position: IVec2,
         anchor: Anchor,
     ) {
-        self.frame.push_text(
-            Some(font),
-            text.into(),
-            self.screen_position(position),
-            anchor,
-            Color::Mischka,
-            Vec2::splat(self.camera.zoom),
+        self.text_with_options(
+            text,
+            position,
+            TextOptions::default().font(font).anchor(anchor),
+        );
+    }
+
+    pub fn text_font_with_opacity(
+        &mut self,
+        font: Font,
+        text: impl Into<String>,
+        position: IVec2,
+        anchor: Anchor,
+        opacity: f32,
+    ) {
+        self.text_with_options(
+            text,
+            position,
+            TextOptions::default()
+                .font(font)
+                .anchor(anchor)
+                .opacity(opacity),
         );
     }
 
@@ -487,61 +288,49 @@ impl WorldFrame<'_, '_> {
         anchor: Anchor,
         color: Color,
     ) {
-        self.frame.push_text(
-            None,
-            text.into(),
-            self.screen_position(position),
-            anchor,
-            color,
-            Vec2::splat(self.camera.zoom),
+        self.text_with_options(
+            text,
+            position,
+            TextOptions::default().anchor(anchor).color(color),
         );
     }
-}
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Anchor {
-    TopLeft,
-    Top,
-    TopRight,
-    Left,
-    Center,
-    Right,
-    BottomLeft,
-    Bottom,
-    BottomRight,
-}
-
-impl Anchor {
-    pub(crate) fn offset(&self, size: Vec2) -> Vec2 {
-        match self {
-            Self::TopLeft => Vec2::ZERO,
-            Self::Top => Vec2::new(size.x * 0.5, 0.0),
-            Self::TopRight => Vec2::new(size.x, 0.0),
-            Self::Left => Vec2::new(0.0, size.y * 0.5),
-            Self::Center => size * 0.5,
-            Self::Right => Vec2::new(size.x, size.y * 0.5),
-            Self::BottomLeft => Vec2::new(0.0, size.y),
-            Self::Bottom => Vec2::new(size.x * 0.5, size.y),
-            Self::BottomRight => size,
-        }
+    pub fn text_color_with_opacity(
+        &mut self,
+        text: impl Into<String>,
+        position: IVec2,
+        anchor: Anchor,
+        color: Color,
+        opacity: f32,
+    ) {
+        self.text_with_options(
+            text,
+            position,
+            TextOptions::default()
+                .anchor(anchor)
+                .color(color)
+                .opacity(opacity),
+        );
     }
-}
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Flip {
-    None,
-    Horizontal,
-    Vertical,
-    Both,
-}
+    pub fn text_with_options(
+        &mut self,
+        text: impl Into<String>,
+        position: IVec2,
+        options: TextOptions,
+    ) {
+        self.push_text(text.into(), position, options);
+    }
 
-impl Flip {
-    pub(crate) fn vector(&self) -> Vec2 {
-        match self {
-            Self::None => Vec2::NEG_ONE,
-            Self::Horizontal => Vec2::X + Vec2::NEG_Y,
-            Self::Vertical => Vec2::NEG_X + Vec2::Y,
-            Self::Both => Vec2::ONE,
-        }
+    fn push_text(&mut self, text: String, position: IVec2, options: TextOptions) {
+        self.add(DrawCmd::Text(TextCmd {
+            font: options.font,
+            text,
+            position,
+            anchor: options.anchor,
+            color: options.color,
+            scale: options.scale,
+            opacity: options.opacity,
+        }));
     }
 }

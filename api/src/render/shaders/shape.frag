@@ -7,6 +7,7 @@ uniform int border_color_index;
 uniform float border_width;
 uniform float radius;
 uniform vec2 size;
+uniform float opacity;
 in vec2 shape_uv;
 
 layout(location = 0) out vec4 color;
@@ -29,4 +30,5 @@ void main() {
         discard;
     }
     color = texelFetch(palette_texture, ivec2(selected_color - 1, 0), 0);
+    color.a *= opacity;
 }

@@ -36,6 +36,19 @@ pub(crate) struct Renderer {
     palette: GlPalette,
 }
 
+struct SpriteFrameDraw<'a> {
+    sprite: &'a GlSprite,
+    position: glam::IVec2,
+    anchor: Anchor,
+    rotation: f32,
+    rotation_anchor: Anchor,
+    flip: Flip,
+    flip_diagonal: bool,
+    frame: u32,
+    scale: Vec2,
+    opacity: f32,
+}
+
 impl Renderer {
     pub(crate) fn new(gl: Rc<glow::Context>) -> Result<Self, String> {
         let framebuffer = Framebuffer::new(gl.clone())?;
@@ -54,6 +67,11 @@ impl Renderer {
 
     pub(crate) fn begin_frame(&self) {
         self.framebuffer.bind();
+        unsafe {
+            self.gl.enable(glow::BLEND);
+            self.gl
+                .blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
+        }
         self.framebuffer.clear();
     }
 
@@ -83,17 +101,18 @@ impl Renderer {
         let Some(sprite) = assets.get_sprite(cmd.sprite) else {
             return;
         };
-        self.draw_sprite_frame(
+        self.draw_sprite_frame(SpriteFrameDraw {
             sprite,
-            cmd.position,
-            cmd.anchor,
-            cmd.rotation,
-            cmd.rotation_anchor,
-            &cmd.flip,
-            cmd.flip_diagonal,
-            0,
-            cmd.scale,
-        );
+            position: cmd.position,
+            anchor: cmd.anchor,
+            rotation: cmd.rotation,
+            rotation_anchor: cmd.rotation_anchor,
+            flip: cmd.flip,
+            flip_diagonal: cmd.flip_diagonal,
+            frame: 0,
+            scale: cmd.scale,
+            opacity: cmd.opacity,
+        });
     }
 
     fn draw_animated_sprite(&self, assets: &Assets, cmd: &AnimatedSpriteCmd) {
@@ -105,32 +124,33 @@ impl Renderer {
             cmd.animation_tick,
             cmd.animation_divisor,
         );
-        self.draw_sprite_frame(
+        self.draw_sprite_frame(SpriteFrameDraw {
             sprite,
-            cmd.position,
-            cmd.anchor,
-            cmd.rotation,
-            cmd.rotation_anchor,
-            &cmd.flip,
-            cmd.flip_diagonal,
+            position: cmd.position,
+            anchor: cmd.anchor,
+            rotation: cmd.rotation,
+            rotation_anchor: cmd.rotation_anchor,
+            flip: cmd.flip,
+            flip_diagonal: cmd.flip_diagonal,
             frame,
-            cmd.scale,
-        );
+            scale: cmd.scale,
+            opacity: cmd.opacity,
+        });
     }
 
-    #[allow(clippy::too_many_arguments)]
-    fn draw_sprite_frame(
-        &self,
-        sprite: &GlSprite,
-        position: glam::IVec2,
-        anchor: Anchor,
-        rotation: f32,
-        rotation_anchor: Anchor,
-        flip: &Flip,
-        flip_diagonal: bool,
-        frame: u32,
-        scale: Vec2,
-    ) {
+    fn draw_sprite_frame(&self, draw: SpriteFrameDraw<'_>) {
+        let SpriteFrameDraw {
+            sprite,
+            position,
+            anchor,
+            rotation,
+            rotation_anchor,
+            flip,
+            flip_diagonal,
+            frame,
+            scale,
+            opacity,
+        } = draw;
         let shader = &self.shaders.sprite;
         let size = (sprite.size().as_vec2() * scale).round();
         shader.bind();
@@ -144,6 +164,7 @@ impl Renderer {
         shader.set_f32("rotation", rotation);
         shader.set_vec2("flip", flip.vector());
         shader.set_i32("flip_diagonal", i32::from(flip_diagonal));
+        shader.set_f32("opacity", opacity);
 
         unsafe {
             self.gl.active_texture(glow::TEXTURE0);
@@ -197,20 +218,21 @@ impl Renderer {
                     (false, true) => Flip::Vertical,
                     (true, true) => Flip::Both,
                 };
-                self.draw_sprite_frame(
-                    tileset,
-                    ivec2(
+                self.draw_sprite_frame(SpriteFrameDraw {
+                    sprite: tileset,
+                    position: ivec2(
                         (origin_x + x as f32 * tile_width).round() as i32,
                         (origin_y + y as f32 * tile_height).round() as i32,
                     ),
-                    Anchor::TopLeft,
-                    0.0,
-                    Anchor::TopLeft,
-                    &flip,
-                    tile.flip_diagonal,
-                    tile.id,
-                    cmd.scale,
-                );
+                    anchor: Anchor::TopLeft,
+                    rotation: 0.0,
+                    rotation_anchor: Anchor::TopLeft,
+                    flip,
+                    flip_diagonal: tile.flip_diagonal,
+                    frame: tile.id,
+                    scale: cmd.scale,
+                    opacity: cmd.opacity,
+                });
             }
         }
     }
@@ -238,6 +260,7 @@ impl Renderer {
         shader.set_f32("radius", cmd.radius.min(size.x.min(size.y) * 0.5).round());
         shader.set_i32("border_color_index", i32::from(cmd.border_color.index()));
         shader.set_f32("border_width", cmd.border_width.round());
+        shader.set_f32("opacity", cmd.opacity);
 
         unsafe {
             self.gl.active_texture(glow::TEXTURE0);
@@ -256,6 +279,7 @@ impl Renderer {
         shader.bind();
         shader.set_vec2("resolution", vec2(WIDTH as f32, HEIGHT as f32));
         shader.set_i32("color_index", i32::from(cmd.color.index()));
+        shader.set_f32("opacity", cmd.opacity);
 
         unsafe {
             self.gl.active_texture(glow::TEXTURE0);

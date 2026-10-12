@@ -47,8 +47,8 @@ where
         *self.selected = options[next_index];
         let changed = old != *self.selected;
 
-        ui.draw_interactive(rect, &self.label, false, response);
-        ui.draw_right_aligned_text(rect, &format!("{:?}", self.selected), ui.style.text);
+        let text = format!("{}: {:?}", self.label, *self.selected);
+        ui.draw_interactive(rect, &text, false, response);
         ui.advance_row();
         response.changed = changed;
         response

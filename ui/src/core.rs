@@ -388,17 +388,15 @@ impl Ui {
         self.draw_text(text, ivec2(x, rect.position.y + 2), color);
     }
 
+    pub(crate) fn draw_centered_text(&mut self, rect: Rect, text: &str, color: Color) {
+        let x = rect.position.x + (rect.size.x as i32 - self.text_width(text) as i32) / 2;
+        self.draw_text(text, ivec2(x, rect.position.y + 2), color);
+    }
+
     pub(crate) fn text_width(&self, text: &str) -> u32 {
         self.text_metrics
             .as_ref()
             .map_or(0, |metrics| metrics.measure_text(text).x)
-    }
-
-    pub(crate) fn draw_right_aligned_text(&mut self, rect: Rect, text: &str, color: Color) {
-        let x = rect.position.x + rect.size.x as i32
-            - self.style.padding as i32
-            - self.text_width(text) as i32;
-        self.draw_text(text, ivec2(x, rect.position.y + 2), color);
     }
 
     pub(crate) fn draw_rect(&mut self, rect: Rect, color: Color, radius: u32) {

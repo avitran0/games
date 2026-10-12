@@ -7,6 +7,7 @@ uniform sampler2D palette_texture;
 uniform int color_index;
 uniform int sprite_frame;
 uniform vec2 size;
+uniform float opacity;
 
 in vec2 uv;
 
@@ -32,4 +33,5 @@ void main() {
     );
 
     color = pal_color;
+    color.a *= opacity;
 }

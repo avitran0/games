@@ -181,7 +181,11 @@ impl api::Screen<State> for GameScreen {
     }
 
     fn draw(&mut self, state: &State, frame: &mut api::Frame) {
-        frame.tilemap(&self.sprites.background, ivec2(0, 0));
+        frame.tilemap(
+            &self.sprites.background,
+            ivec2(0, 0),
+            api::TilemapOptions::default(),
+        );
 
         for (index, &segment) in self.snake.iter().enumerate() {
             let snake = &self.sprites.snakes[state.config.snake.index()];

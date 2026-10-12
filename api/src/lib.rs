@@ -1,4 +1,5 @@
 mod assets;
+mod camera;
 mod context;
 pub mod formats;
 mod glyphs;
@@ -14,6 +15,7 @@ mod tween;
 use std::time::{Duration, Instant};
 
 pub use assets::{Assets, TilemapSetError};
+pub use camera::Camera2D;
 use context::Context;
 pub use formats::Tileset;
 pub use formats::color::Color;
@@ -24,7 +26,9 @@ pub use input::{Button, Input};
 pub use random::Rng;
 pub use render::{
     TextMetrics,
-    frame::{Anchor, Camera2D, Flip, Frame, SpriteOptions, WorldFrame},
+    frame::{
+        Anchor, Flip, Frame, ShapeOptions, SpriteOptions, TextOptions, TilemapOptions, WorldFrame,
+    },
 };
 pub use save::{load, save};
 pub use screen::{Screen, ScreenAction, ScreenContext, error::ErrorScreen};

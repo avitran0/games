@@ -1,5 +1,5 @@
 use api::{
-    Color, Frame, HEIGHT, Screen, ScreenAction, ScreenContext, WIDTH,
+    Frame, HEIGHT, Screen, ScreenAction, ScreenContext, WIDTH,
     glam::{ivec2, uvec2},
 };
 use ui::{EnumIter, Ui};

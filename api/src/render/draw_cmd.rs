@@ -23,6 +23,7 @@ pub(crate) struct SpriteCmd {
     pub(crate) flip: Flip,
     pub(crate) flip_diagonal: bool,
     pub(crate) scale: Vec2,
+    pub(crate) opacity: f32,
 }
 
 pub(crate) struct AnimatedSpriteCmd {
@@ -37,12 +38,14 @@ pub(crate) struct AnimatedSpriteCmd {
     pub(crate) flip: Flip,
     pub(crate) flip_diagonal: bool,
     pub(crate) scale: Vec2,
+    pub(crate) opacity: f32,
 }
 
 pub(crate) struct TilemapCmd {
     pub(crate) tilemap: TilemapId,
     pub(crate) position: IVec2,
     pub(crate) scale: Vec2,
+    pub(crate) opacity: f32,
 }
 
 pub(crate) struct TextCmd {
@@ -52,6 +55,7 @@ pub(crate) struct TextCmd {
     pub(crate) anchor: Anchor,
     pub(crate) color: Color,
     pub(crate) scale: Vec2,
+    pub(crate) opacity: f32,
 }
 
 pub(crate) struct ShapeCmd {
@@ -62,4 +66,5 @@ pub(crate) struct ShapeCmd {
     pub(crate) radius: f32,
     pub(crate) border_color: Color,
     pub(crate) border_width: f32,
+    pub(crate) opacity: f32,
 }

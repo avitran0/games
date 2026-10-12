@@ -58,20 +58,25 @@ where
         } else {
             0
         };
-        let gap = 2;
-        let count = tabs.len() as u32;
-        let gaps_width = gap * count.saturating_sub(1);
-        let tabs_width = rect
-            .size
-            .x
-            .saturating_sub(side_width.saturating_mul(2))
-            .saturating_sub(gaps_width);
-        let base_width = tabs_width / count;
-        let remainder = tabs_width % count;
-        let mut x = rect.position.x + side_width as i32;
+        let gap = 2u32;
+        let labels: Vec<String> = tabs.iter().map(|tab| format!("{tab:?}")).collect();
+        let tab_widths: Vec<u32> = labels
+            .iter()
+            .map(|label| {
+                ui.text_width(label)
+                    .saturating_add(ui.style.padding.saturating_mul(2))
+            })
+            .collect();
+        let tabs_width = tab_widths
+            .iter()
+            .copied()
+            .fold(0u32, u32::saturating_add)
+            .saturating_add(gap.saturating_mul(tabs.len().saturating_sub(1) as u32));
+        let bar_width = tabs_width.saturating_add(side_width.saturating_mul(2));
+        let bar_x = rect.position.x + (rect.size.x as i32 - bar_width as i32) / 2;
+        let mut x = bar_x + side_width as i32;
 
-        for (index, tab) in tabs.iter().enumerate() {
-            let width = base_width + u32::from(index + 1 == tabs.len()) * remainder;
+        for (index, (label, width)) in labels.iter().zip(tab_widths).enumerate() {
             let active = index == selected_index;
             let tab_rect = Rect::new(x, rect.position.y, width, rect.size.y);
             ui.draw_rect(
@@ -83,15 +88,14 @@ where
                 },
                 ui.style.corner_radius,
             );
-            ui.draw_aligned_text(
+            ui.draw_centered_text(
                 tab_rect,
-                &format!("{tab:?}"),
+                label,
                 if active {
                     ui.style.focused_text
                 } else {
                     ui.style.text
                 },
-                ui.style.padding,
             );
             x += width as i32
                 + if index + 1 < tabs.len() {
@@ -102,11 +106,11 @@ where
         }
 
         if tabs.len() > 1 {
-            ui.draw_text(BTN_L, rect.position + ivec2(2, 2), ui.style.text);
+            ui.draw_text(BTN_L, ivec2(bar_x + 2, rect.position.y + 2), ui.style.text);
             ui.draw_text(
                 BTN_R,
                 ivec2(
-                    rect.position.x + rect.size.x as i32 - side_width as i32 + 4,
+                    bar_x + bar_width as i32 - side_width as i32 + 4,
                     rect.position.y + 2,
                 ),
                 ui.style.text,
