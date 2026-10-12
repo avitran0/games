@@ -132,14 +132,15 @@ impl Renderer {
         scale: Vec2,
     ) {
         let shader = &self.shaders.sprite;
-        let source_size = sprite.size().as_vec2();
-        let size = source_size * scale;
+        let size = (sprite.size().as_vec2() * scale).round();
         shader.bind();
         shader.set_vec2("resolution", vec2(WIDTH as f32, HEIGHT as f32));
-        shader.set_vec2("position", position.as_vec2() - anchor.offset(size));
-        shader.set_vec2("size", source_size);
-        shader.set_vec2("scale", scale);
-        shader.set_vec2("rotation_anchor", rotation_anchor.offset(size));
+        shader.set_vec2(
+            "position",
+            (position.as_vec2() - anchor.offset(size)).round(),
+        );
+        shader.set_vec2("size", size);
+        shader.set_vec2("rotation_anchor", rotation_anchor.offset(size).round());
         shader.set_f32("rotation", rotation);
         shader.set_vec2("flip", flip.vector());
         shader.set_i32("flip_diagonal", i32::from(flip_diagonal));
@@ -215,11 +216,14 @@ impl Renderer {
     }
 
     fn draw_shape(&self, cmd: &ShapeCmd) {
-        if (cmd.color == crate::Color::Transparent
-            && (cmd.border_color == crate::Color::Transparent || cmd.border_width <= 0.0))
-            || cmd.size.x <= 0.0
-            || cmd.size.y <= 0.0
+        if cmd.color == crate::Color::Transparent
+            && (cmd.border_color == crate::Color::Transparent || cmd.border_width <= 0.0)
         {
+            return;
+        }
+
+        let size = cmd.size.round();
+        if size.x <= 0.0 || size.y <= 0.0 {
             return;
         }
 
@@ -227,13 +231,13 @@ impl Renderer {
         shader.bind();
         shader.set_vec2("resolution", vec2(WIDTH as f32, HEIGHT as f32));
         shader.set_vec2("position", cmd.position.as_vec2());
-        shader.set_vec2("size", cmd.size);
+        shader.set_vec2("size", size);
         shader.set_vec2("rotation_anchor", vec2(0.0, 0.0));
         shader.set_f32("rotation", cmd.rotation);
         shader.set_i32("color_index", i32::from(cmd.color.index()));
-        shader.set_f32("radius", cmd.radius.min(cmd.size.x.min(cmd.size.y) * 0.5));
+        shader.set_f32("radius", cmd.radius.min(size.x.min(size.y) * 0.5).round());
         shader.set_i32("border_color_index", i32::from(cmd.border_color.index()));
-        shader.set_f32("border_width", cmd.border_width);
+        shader.set_f32("border_width", cmd.border_width.round());
 
         unsafe {
             self.gl.active_texture(glow::TEXTURE0);
@@ -251,7 +255,6 @@ impl Renderer {
         let shader = &self.shaders.font;
         shader.bind();
         shader.set_vec2("resolution", vec2(WIDTH as f32, HEIGHT as f32));
-        shader.set_vec2("scale", cmd.scale);
         shader.set_i32("color_index", i32::from(cmd.color.index()));
 
         unsafe {
@@ -282,8 +285,8 @@ impl Renderer {
         );
 
         let source_size = size.as_vec2();
-        let scaled_size = source_size * cmd.scale;
-        let pos = cmd.position.as_vec2() - cmd.anchor.offset(scaled_size);
+        let scaled_size = (source_size * cmd.scale).round();
+        let pos = (cmd.position.as_vec2() - cmd.anchor.offset(scaled_size)).round();
         let center_lines = matches!(cmd.anchor, Anchor::Top | Anchor::Center | Anchor::Bottom);
         let right_align = matches!(
             cmd.anchor,
@@ -298,20 +301,20 @@ impl Renderer {
             } else {
                 0.0
             };
-            let mut line_pos = vec2(
-                pos.x + offset * cmd.scale.x,
-                pos.y + line_index as f32 * font.height() as f32 * cmd.scale.y,
-            );
+            let line_y = (pos.y + line_index as f32 * font.height() as f32 * cmd.scale.y).round();
+            let mut line_x = pos.x + offset * cmd.scale.x;
 
             for c in line.chars() {
                 let (glyph, layer) = font.glyph(c);
                 if glyph.width != 0 {
-                    shader.set_vec2("position", line_pos);
-                    shader.set_vec2("size", vec2(glyph.width as f32, font.height() as f32));
+                    let glyph_size =
+                        (vec2(glyph.width as f32, font.height() as f32) * cmd.scale).round();
+                    shader.set_vec2("position", vec2(line_x.round(), line_y));
+                    shader.set_vec2("size", glyph_size);
                     shader.set_i32("sprite_frame", layer as i32);
                     self.quad.draw();
                 }
-                line_pos.x += glyph.advance as f32 * cmd.scale.x;
+                line_x += glyph.advance as f32 * cmd.scale.x;
             }
         }
     }

@@ -3,7 +3,6 @@ precision highp float;
 
 uniform vec2 position;
 uniform vec2 size;
-uniform vec2 scale;
 uniform float rotation;
 uniform vec2 rotation_anchor;
 uniform vec2 resolution;
@@ -15,15 +14,16 @@ layout(location = 0) in vec2 vertex;
 out vec2 uv;
 
 void main() {
-    vec2 local = vertex * size * scale;
+    vec2 local = vertex * size;
 
     mat2 rotation_matrix = mat2(
         cos(rotation), sin(rotation),
         -sin(rotation), cos(rotation)
     );
 
-    vec2 pixel_position = position + rotation_anchor
-        + rotation_matrix * (local - rotation_anchor);
+    vec2 pixel_position = round(
+        position + rotation_anchor + rotation_matrix * (local - rotation_anchor)
+    );
 
     vec2 ndc = vec2(
         pixel_position.x / resolution.x * 2.0 - 1.0,

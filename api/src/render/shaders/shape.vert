@@ -17,8 +17,9 @@ void main() {
         cos(rotation), sin(rotation),
         -sin(rotation), cos(rotation)
     );
-    vec2 pixel_position = position + rotation_anchor
-        + rotation_matrix * (local - rotation_anchor);
+    vec2 pixel_position = round(
+        position + rotation_anchor + rotation_matrix * (local - rotation_anchor)
+    );
     vec2 ndc = vec2(
         pixel_position.x / resolution.x * 2.0 - 1.0,
         1.0 - pixel_position.y / resolution.y * 2.0
