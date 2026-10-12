@@ -86,4 +86,5 @@ define_snakes!(
     Rainbow => "rainbow",
     Galaxy => "galaxy",
     Dragon => "dragon",
+    Rainbow2 => "rainbow2",
 );

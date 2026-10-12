@@ -284,7 +284,7 @@ impl Frame {
     }
 
     pub fn text(&mut self, text: impl Into<String>, position: IVec2, anchor: Anchor) {
-        self.push_text(None, text.into(), position, anchor, Color::White, Vec2::ONE);
+        self.push_text(None, text.into(), position, anchor, Color::Mischka, Vec2::ONE);
     }
 
     pub fn text_font(
@@ -299,7 +299,7 @@ impl Frame {
             text.into(),
             position,
             anchor,
-            Color::White,
+            Color::Mischka,
             Vec2::ONE,
         )
     }
@@ -458,7 +458,7 @@ impl WorldFrame<'_, '_> {
             text.into(),
             self.screen_position(position),
             anchor,
-            Color::White,
+            Color::Mischka,
             Vec2::splat(self.camera.zoom),
         );
     }
@@ -475,7 +475,7 @@ impl WorldFrame<'_, '_> {
             text.into(),
             self.screen_position(position),
             anchor,
-            Color::White,
+            Color::Mischka,
             Vec2::splat(self.camera.zoom),
         );
     }
