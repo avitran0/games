@@ -1,0 +1,41 @@
+name: linux-arm64
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    env:
+      CARGO_PROFILE_RELEASE_LTO: "false"
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "8"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install SDL3 build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake ninja-build pkg-config \
+            libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
+            libasound2-dev libudev-dev libusb-1.0-0-dev libdbus-1-dev \
+            libwayland-dev libwayland-bin wayland-protocols \
+            libxkbcommon-dev libdecor-0-dev
+
+      - name: Build default members
+        run: cargo build --locked --release --target aarch64-unknown-linux-gnu
+
+      - name: Package default-member binaries
+        run: python3 .github/scripts/package-default-binaries.py target/aarch64-unknown-linux-gnu/release dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: games-linux-arm64
+          path: dist/
+          if-no-files-found: error

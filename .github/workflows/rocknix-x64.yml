@@ -1,4 +1,4 @@
-name: Games
+name: rocknix-x64
 
 on:
   push:
@@ -30,8 +30,8 @@ jobs:
 
       - name: Build games and PXS converter
         run: |
-          cargo build --release --target aarch64-unknown-linux-gnu
-          cargo build -p pxs-to-png --release --target aarch64-unknown-linux-gnu
+          cargo build --locked --release --target aarch64-unknown-linux-gnu
+          cargo build --locked -p pxs-to-png --release --target aarch64-unknown-linux-gnu
 
       - name: Stage Ports layout
         run: |
@@ -42,6 +42,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: games-aarch64
+          name: games-rocknix-arm64
           path: dist/
           if-no-files-found: error

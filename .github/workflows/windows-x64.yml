@@ -1,0 +1,37 @@
+name: windows-x64
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    env:
+      CARGO_PROFILE_RELEASE_LTO: "false"
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "8"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Build default members
+        run: cargo build --locked --release --target x86_64-pc-windows-msvc
+
+      - name: Package default-member binaries
+        run: python .github/scripts/package-default-binaries.py target/x86_64-pc-windows-msvc/release dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: games-windows-x64
+          path: dist/
+          if-no-files-found: error

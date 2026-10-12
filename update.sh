@@ -58,13 +58,13 @@ github_curl() {
 }
 
 log "Fetching latest successful workflow run"
-github_curl -fsSL "$API/actions/workflows/games.yml/runs?branch=main&status=success&per_page=1" \
+github_curl -fsSL "$API/actions/workflows/rocknix-x64.yml/runs?branch=main&status=success&per_page=1" \
     -o "$TMP_DIR/runs.json"
 RUN_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["workflow_runs"][0]["id"])' "$TMP_DIR/runs.json")
 
 log "Fetching artifact metadata for workflow run $RUN_ID"
 github_curl -fsSL "$API/actions/runs/$RUN_ID/artifacts" -o "$TMP_DIR/artifacts.json"
-ARTIFACT_ID=$(python3 -c 'import json,sys; print(next(a["id"] for a in json.load(open(sys.argv[1]))["artifacts"] if a["name"] == "games-aarch64" and not a["expired"]))' "$TMP_DIR/artifacts.json")
+ARTIFACT_ID=$(python3 -c 'import json,sys; print(next(a["id"] for a in json.load(open(sys.argv[1]))["artifacts"] if a["name"] == "games-rocknix-arm64" and not a["expired"]))' "$TMP_DIR/artifacts.json")
 
 log "Downloading and extracting artifact $ARTIFACT_ID"
 github_curl -fLsS "$API/actions/artifacts/$ARTIFACT_ID/zip" -o "$TMP_DIR/build.zip" || {
