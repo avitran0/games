@@ -1,12 +1,14 @@
 use std::num::NonZeroU32;
 
-use api::glam::{UVec2, uvec2};
+use api::glam::UVec2;
 
 use crate::core::world::{arena::BlockArena, chunk::Chunk, terrain::TerrainCell};
 
 mod arena;
 mod chunk;
-mod terrain;
+pub mod command;
+pub mod terrain;
+pub mod view;
 
 pub struct World {
     size: UVec2,
