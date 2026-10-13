@@ -9,3 +9,14 @@ pub enum BlockSize {
     /// 4x4
     Quad,
 }
+
+impl BlockSize {
+    pub const fn cells(self) -> u32 {
+        match self {
+            Self::Single => 1,
+            Self::Double => 2,
+            Self::Triple => 3,
+            Self::Quad => 4,
+        }
+    }
+}
