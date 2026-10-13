@@ -1,13 +1,18 @@
+mod cursor;
+
 use api::{
     Assets, Camera2D, Frame, ScreenAction, Tilemap, Tileset,
     glam::{IVec2, uvec2},
 };
 
-use crate::core::world::World;
+use crate::core::{block::Rotation, block_kind::BlockKind, world::World};
+
+use self::cursor::CursorRenderer;
 
 pub struct WorldRenderer {
     terrain_tileset: Tileset,
     terrain_map: Tilemap,
+    cursor: CursorRenderer,
 }
 
 impl WorldRenderer {
@@ -29,9 +34,11 @@ impl WorldRenderer {
             }
         }
 
+        let cursor = CursorRenderer::new(assets)?;
         Ok(Self {
             terrain_tileset,
             terrain_map,
+            cursor,
         })
     }
 
@@ -39,7 +46,22 @@ impl WorldRenderer {
         self.terrain_tileset.tile_size().as_uvec2()
     }
 
-    pub fn draw(&self, camera: &Camera2D, frame: &mut Frame) {
+    pub fn draw(
+        &self,
+        camera: &Camera2D,
+        frame: &mut Frame,
+        cursor_position: api::glam::UVec2,
+        selected_block: BlockKind,
+        rotation: Rotation,
+    ) {
         frame.world(camera).tilemap(&self.terrain_map, IVec2::ZERO);
+        self.cursor.draw(
+            camera,
+            frame,
+            self.tile_size(),
+            cursor_position,
+            selected_block,
+            rotation,
+        );
     }
 }

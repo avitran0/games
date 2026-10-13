@@ -3,12 +3,13 @@ use api::{
     glam::{uvec2, vec2},
 };
 
-use crate::{core::world::World, rendering::WorldRenderer, state::State};
+use crate::{core::world::World, rendering::WorldRenderer, screen::cursor::Cursor, state::State};
 
 pub struct GameScreen {
     world: World,
     renderer: WorldRenderer,
     camera: Camera2D,
+    cursor: Cursor,
 }
 
 impl GameScreen {
@@ -23,6 +24,7 @@ impl GameScreen {
         ));
 
         Ok(Self {
+            cursor: Cursor::new(world_size),
             world,
             renderer,
             camera,
@@ -31,11 +33,18 @@ impl GameScreen {
 }
 
 impl api::Screen<State> for GameScreen {
-    fn update(&mut self, _ctx: &mut api::ScreenContext<'_, State>) -> ScreenAction<State> {
+    fn update(&mut self, ctx: &mut api::ScreenContext<'_, State>) -> ScreenAction<State> {
+        self.cursor.update(ctx.input, &mut self.world);
         ScreenAction::None
     }
 
     fn draw(&mut self, _state: &State, frame: &mut api::Frame) {
-        self.renderer.draw(&self.camera, frame);
+        self.renderer.draw(
+            &self.camera,
+            frame,
+            self.cursor.position(),
+            self.cursor.selected_block(),
+            self.cursor.rotation(),
+        );
     }
 }
