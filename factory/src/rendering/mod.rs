@@ -76,12 +76,13 @@ impl WorldRenderer {
         world: &World,
         sprites: &SpriteStore,
         selected_block: Option<BlockKind>,
+        tick: usize,
     ) {
         if let Some(block) = selected_block {
             self.preview_sprites
                 .entry(block)
                 .or_insert_with(|| sprites.block(block))
-                .tick();
+                .set_tick(tick as u16);
         }
 
         for (id, block) in world.blocks() {
@@ -89,7 +90,7 @@ impl WorldRenderer {
                 .block_sprites
                 .entry(id)
                 .or_insert_with(|| sprites.block(block.kind()));
-            sprite.tick();
+            sprite.set_tick(tick as u16);
         }
 
         self.block_sprites.retain(|id, _| world.contains_block(*id));
@@ -103,6 +104,7 @@ impl WorldRenderer {
         cursor_position: api::glam::UVec2,
         selected_block: Option<BlockKind>,
         rotation: Rotation,
+        tick: usize,
     ) {
         frame.world(camera).tilemap(&self.terrain_map, IVec2::ZERO);
 
@@ -141,9 +143,29 @@ impl WorldRenderer {
             if let Some(stack) = block.items()
                 && stack.item() == Item::IronOre
             {
+                let item_center = block
+                    .item_progress(tick)
+                    .map(|progress| {
+                        let output_direction = block.rotation().direction();
+                        let input_direction =
+                            block.item_input_direction().unwrap_or(-output_direction);
+                        let half_span = if output_direction.x == 0 {
+                            tile_size.y / 2
+                        } else {
+                            tile_size.x / 2
+                        };
+                        let input = center - input_direction * half_span;
+                        let output = center + output_direction * half_span;
+                        input
+                            .as_vec2()
+                            .lerp(output.as_vec2(), progress)
+                            .round()
+                            .as_ivec2()
+                    })
+                    .unwrap_or(center);
                 frame.world(camera).sprite(
                     &self.iron_ore,
-                    center,
+                    item_center,
                     SpriteOptions::default()
                         .anchor(Anchor::Center)
                         .uniform_scale(0.65),

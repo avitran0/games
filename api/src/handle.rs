@@ -49,6 +49,10 @@ impl AnimatedSprite {
         self.tick = self.tick.wrapping_add(1);
     }
 
+    pub fn set_tick(&mut self, tick: u16) {
+        self.tick = tick;
+    }
+
     pub fn set_animation(&mut self, name: impl Into<String>) {
         self.animation = Some(name.into());
         self.tick = 0;

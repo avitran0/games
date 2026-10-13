@@ -1,4 +1,4 @@
-use api::glam::UVec2;
+use api::glam::{IVec2, UVec2};
 
 use crate::core::{
     block_kind::BlockKind,
@@ -19,12 +19,25 @@ mod state;
 use behavior::BlockBehavior;
 use state::BlockState;
 
+pub const CONVEYOR_TRAVEL_TICKS: usize = 24;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Rotation {
     Up,
     Right,
     Down,
     Left,
+}
+
+impl Rotation {
+    pub fn direction(self) -> IVec2 {
+        match self {
+            Self::Up => IVec2::NEG_Y,
+            Self::Right => IVec2::X,
+            Self::Down => IVec2::Y,
+            Self::Left => IVec2::NEG_X,
+        }
+    }
 }
 
 pub struct Block {
@@ -90,23 +103,31 @@ impl Block {
         self.state.items()
     }
 
-    pub(crate) fn output_item(&self) -> Option<Item> {
-        self.state.output_item()
+    pub(crate) fn output_item(&self, tick: usize) -> Option<Item> {
+        self.state.output_item(tick)
+    }
+
+    pub(crate) fn item_progress(&self, tick: usize) -> Option<f32> {
+        self.state.item_progress(tick)
+    }
+
+    pub(crate) fn item_input_direction(&self) -> Option<IVec2> {
+        self.state.item_input_direction()
     }
 
     pub(crate) fn can_accept_item(&self, item: Item) -> bool {
         self.state.can_accept(item)
     }
 
-    pub(crate) fn accept_item(&mut self, item: Item) -> bool {
-        self.state.accept(item)
+    pub(crate) fn accept_item(&mut self, item: Item, tick: usize, input_direction: IVec2) -> bool {
+        self.state.accept(item, tick, input_direction)
     }
 
     pub(crate) fn take_item(&mut self) -> Option<Item> {
         self.state.take()
     }
 
-    pub(crate) fn tick(&mut self, ore: Option<OreKind>) {
-        self.state.tick(ore);
+    pub(crate) fn tick(&mut self, ore: Option<OreKind>, tick: usize) {
+        self.state.tick(ore, tick);
     }
 }

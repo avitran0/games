@@ -1,3 +1,5 @@
+use api::glam::IVec2;
+
 use crate::core::{
     block::behavior::BlockBehavior,
     item::{Item, ItemStack},
@@ -22,7 +24,7 @@ impl Drill {
 }
 
 impl BlockBehavior for Drill {
-    fn tick(&mut self, ore: Option<OreKind>) {
+    fn tick(&mut self, ore: Option<OreKind>, _tick: usize) {
         if self
             .output
             .is_some_and(|stack| stack.count() >= Self::OUTPUT_CAPACITY)
@@ -60,7 +62,7 @@ impl BlockBehavior for Drill {
         false
     }
 
-    fn accept(&mut self, _item: Item) -> bool {
+    fn accept(&mut self, _item: Item, _tick: usize, _input_direction: IVec2) -> bool {
         false
     }
 

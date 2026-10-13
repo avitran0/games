@@ -122,28 +122,28 @@ impl World {
         Ok(id)
     }
 
-    pub(crate) fn tick(&mut self) {
+    pub(crate) fn tick(&mut self, tick: usize) {
         let drill_ores = self
             .blocks
             .iter()
             .map(|(_, block)| self.ore_under(block))
             .collect::<Vec<_>>();
         for ((_, block), ore) in self.blocks.iter_mut().zip(drill_ores) {
-            block.tick(ore);
+            block.tick(ore, tick);
         }
 
         let transfers = self
             .blocks
             .iter()
             .filter_map(|(from, block)| {
-                let item = block.output_item()?;
+                let item = block.output_item(tick)?;
                 let target = block.output_position()?;
                 let to = self.block_id_at(target)?;
-                Some((from, to, item))
+                Some((from, to, item, block.rotation().direction()))
             })
             .collect::<Vec<_>>();
 
-        for (from, to, item) in transfers {
+        for (from, to, item, input_direction) in transfers {
             if !self
                 .blocks
                 .get(to)
@@ -157,9 +157,9 @@ impl World {
             let accepted = self
                 .blocks
                 .get_mut(to)
-                .is_some_and(|target| target.accept_item(item));
+                .is_some_and(|target| target.accept_item(item, tick, input_direction));
             if !accepted && let Some(source) = self.blocks.get_mut(from) {
-                let restored = source.accept_item(item);
+                let restored = source.accept_item(item, tick, input_direction);
                 debug_assert!(restored);
             }
         }
@@ -279,7 +279,7 @@ mod tests {
 
     use super::{BlockId, PlaceBlockError, World, WorldCreateError};
 
-    const DRILL_EXTRACTION_TICKS: u16 = 120;
+    const DRILL_EXTRACTION_TICKS: usize = 120;
     const DRILL_STACK_CAPACITY: u8 = 10;
 
     fn held_item(world: &World, id: BlockId) -> Option<Item> {
@@ -374,7 +374,7 @@ mod tests {
     }
 
     #[test]
-    fn drills_mine_iron_and_conveyors_move_items_one_block_per_tick() {
+    fn drills_mine_iron_and_conveyors_move_items_after_the_travel_time() {
         let mut world = World::new(uvec2(32, 32)).unwrap();
         let drill = world
             .place_block(BlockKind::Drill, uvec2(16, 16), Rotation::Up)
@@ -386,15 +386,30 @@ mod tests {
             .place_block(BlockKind::Conveyor, uvec2(16, 14), Rotation::Up)
             .unwrap();
 
-        for _ in 0..DRILL_EXTRACTION_TICKS {
-            world.tick();
+        for tick in 0..DRILL_EXTRACTION_TICKS {
+            world.tick(tick);
         }
 
         assert_eq!(held_item(&world, drill), None);
         assert_eq!(held_item(&world, first_conveyor), Some(Item::IronOre));
         assert_eq!(held_item(&world, second_conveyor), None);
+        assert_eq!(
+            world
+                .blocks()
+                .find(|(id, _)| *id == first_conveyor)
+                .unwrap()
+                .1
+                .item_progress(132),
+            Some(0.5)
+        );
 
-        world.tick();
+        for tick in DRILL_EXTRACTION_TICKS..144 {
+            world.tick(tick);
+        }
+        assert_eq!(held_item(&world, first_conveyor), Some(Item::IronOre));
+        assert_eq!(held_item(&world, second_conveyor), None);
+
+        world.tick(144);
         assert_eq!(held_item(&world, first_conveyor), None);
         assert_eq!(held_item(&world, second_conveyor), Some(Item::IronOre));
     }
@@ -406,8 +421,9 @@ mod tests {
             .place_block(BlockKind::Drill, uvec2(16, 16), Rotation::Up)
             .unwrap();
 
-        for _ in 0..DRILL_EXTRACTION_TICKS * (DRILL_STACK_CAPACITY as u16 + 2) {
-            world.tick();
+        let ticks = DRILL_EXTRACTION_TICKS * (DRILL_STACK_CAPACITY as usize + 2);
+        for tick in 0..ticks {
+            world.tick(tick);
         }
         assert_eq!(held_item(&world, drill), Some(Item::IronOre));
         assert_eq!(held_count(&world, drill), DRILL_STACK_CAPACITY);
@@ -415,7 +431,7 @@ mod tests {
         let conveyor = world
             .place_block(BlockKind::Conveyor, uvec2(16, 15), Rotation::Up)
             .unwrap();
-        world.tick();
+        world.tick(ticks);
         assert_eq!(held_count(&world, drill), DRILL_STACK_CAPACITY - 1);
         assert_eq!(held_item(&world, conveyor), Some(Item::IronOre));
         assert_eq!(held_count(&world, conveyor), 1);
@@ -427,8 +443,8 @@ mod tests {
         let drill = world
             .place_block(BlockKind::Drill, uvec2(1, 1), Rotation::Up)
             .unwrap();
-        for _ in 0..DRILL_EXTRACTION_TICKS * 2 {
-            world.tick();
+        for tick in 0..DRILL_EXTRACTION_TICKS * 2 {
+            world.tick(tick);
         }
         assert_eq!(held_item(&world, drill), None);
     }

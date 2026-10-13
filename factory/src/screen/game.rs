@@ -9,6 +9,7 @@ use crate::{
     screen::{
         block_selection::BlockSelectionScreen,
         cursor::{Cursor, CursorEvent},
+        pause::PauseScreen,
     },
     state::State,
 };
@@ -21,6 +22,7 @@ pub struct GameScreen {
     camera: Camera2D,
     camera_tween: Tween<Vec2>,
     cursor: Cursor,
+    simulation_tick: usize,
 }
 
 impl GameScreen {
@@ -52,6 +54,7 @@ impl GameScreen {
             renderer,
             camera,
             camera_tween,
+            simulation_tick: 0,
         })
     }
 }
@@ -79,6 +82,10 @@ fn cursor_center(position: UVec2, tile_size: UVec2, picked_block: Option<BlockKi
 
 impl api::Screen<State> for GameScreen {
     fn update(&mut self, ctx: &mut api::ScreenContext<'_, State>) -> ScreenAction<State> {
+        if ctx.input.just_pressed(Button::Start) {
+            return ScreenAction::Push(Box::new(PauseScreen::new()));
+        }
+
         if ctx.input.just_pressed(Button::B) && ctx.state.picked_block.is_some() {
             ctx.state.picked_block = None;
             self.update_camera(None);
@@ -94,6 +101,7 @@ impl api::Screen<State> for GameScreen {
             return ScreenAction::Quit;
         };
 
+        self.simulation_tick = self.simulation_tick.wrapping_add(1);
         match self
             .cursor
             .update(ctx.input, &mut self.world, ctx.state.picked_block)
@@ -104,10 +112,14 @@ impl api::Screen<State> for GameScreen {
             }
             None => {}
         }
-        self.world.tick();
+        self.world.tick(self.simulation_tick);
         self.update_camera(ctx.state.picked_block);
-        self.renderer
-            .update(&self.world, sprites, ctx.state.picked_block);
+        self.renderer.update(
+            &self.world,
+            sprites,
+            ctx.state.picked_block,
+            self.simulation_tick,
+        );
         ScreenAction::None
     }
 
@@ -119,6 +131,7 @@ impl api::Screen<State> for GameScreen {
             self.cursor.position(),
             state.picked_block,
             self.cursor.rotation(),
+            self.simulation_tick,
         );
     }
 }
