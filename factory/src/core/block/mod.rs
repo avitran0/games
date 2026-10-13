@@ -1,17 +1,23 @@
 use api::glam::UVec2;
 
 use crate::core::{
-    block::{conveyor::Conveyor, drill::Drill},
     block_kind::BlockKind,
+    item::{Item, ItemStack},
+    world::terrain::OreKind,
 };
 
 pub use category::BlockCategory;
 pub use size::BlockSize;
 
+mod behavior;
 mod category;
 mod conveyor;
 mod drill;
 mod size;
+mod state;
+
+use behavior::BlockBehavior;
+use state::BlockState;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Rotation {
@@ -54,28 +60,53 @@ impl Block {
         self.kind.size().cells()
     }
 
-    pub(crate) fn tick(&mut self) {
-        self.state.tick();
-    }
-}
-
-enum BlockState {
-    Conveyor(Conveyor),
-    Drill(Drill),
-}
-
-impl BlockState {
-    fn new(kind: BlockKind) -> Self {
-        match kind {
-            BlockKind::Conveyor => Self::Conveyor(Conveyor::new()),
-            BlockKind::Drill => Self::Drill(Drill::new()),
+    pub(crate) fn output_position(&self) -> Option<UVec2> {
+        let side = self.footprint_cells();
+        match self.rotation {
+            Rotation::Up => self
+                .origin
+                .y
+                .checked_sub(1)
+                .map(|y| UVec2::new(self.origin.x, y)),
+            Rotation::Right => self
+                .origin
+                .x
+                .checked_add(side)
+                .map(|x| UVec2::new(x, self.origin.y)),
+            Rotation::Down => self
+                .origin
+                .y
+                .checked_add(side)
+                .map(|y| UVec2::new(self.origin.x, y)),
+            Rotation::Left => self
+                .origin
+                .x
+                .checked_sub(1)
+                .map(|x| UVec2::new(x, self.origin.y)),
         }
     }
 
-    fn tick(&mut self) {
-        match self {
-            Self::Conveyor(conveyor) => conveyor.tick(),
-            Self::Drill(drill) => drill.tick(),
-        }
+    pub(crate) fn items(&self) -> Option<ItemStack> {
+        self.state.items()
+    }
+
+    pub(crate) fn output_item(&self) -> Option<Item> {
+        self.state.output_item()
+    }
+
+    pub(crate) fn can_accept_item(&self, item: Item) -> bool {
+        self.state.can_accept(item)
+    }
+
+    pub(crate) fn accept_item(&mut self, item: Item) -> bool {
+        self.state.accept(item)
+    }
+
+    pub(crate) fn take_item(&mut self) -> Option<Item> {
+        self.state.take()
+    }
+
+    pub(crate) fn tick(&mut self, ore: Option<OreKind>) {
+        self.state.tick(ore);
     }
 }

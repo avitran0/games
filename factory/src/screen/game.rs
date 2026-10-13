@@ -1,6 +1,6 @@
 use api::{
-    Anchor, Button, Camera2D, Color, HEIGHT, Interpolation, ScreenAction, Tween, WIDTH,
-    glam::{UVec2, Vec2, ivec2, uvec2},
+    Button, Camera2D, Interpolation, ScreenAction, Tween,
+    glam::{UVec2, Vec2, uvec2},
 };
 
 use crate::{
@@ -14,7 +14,6 @@ use crate::{
 };
 
 const CAMERA_TWEEN_TICKS: usize = 18;
-const FEEDBACK_DURATION_TICKS: usize = 120 * 2;
 
 pub struct GameScreen {
     world: World,
@@ -22,7 +21,6 @@ pub struct GameScreen {
     camera: Camera2D,
     camera_tween: Tween<Vec2>,
     cursor: Cursor,
-    feedback: Option<(String, usize)>,
 }
 
 impl GameScreen {
@@ -54,7 +52,6 @@ impl GameScreen {
             renderer,
             camera,
             camera_tween,
-            feedback: None,
         })
     }
 }
@@ -97,22 +94,13 @@ impl api::Screen<State> for GameScreen {
             return ScreenAction::Quit;
         };
 
-        self.tick_feedback();
         match self
             .cursor
             .update(ctx.input, &mut self.world, ctx.state.picked_block)
         {
-            Some(CursorEvent::Placed) => self.feedback = None,
+            Some(CursorEvent::Placed) => {}
             Some(CursorEvent::PlacementFailed(error)) => {
-                let message = match error {
-                    crate::core::world::PlaceBlockError::OutOfBounds { .. } => {
-                        "Can't place block outside the world"
-                    }
-                    crate::core::world::PlaceBlockError::Occupied { .. } => {
-                        "That space is occupied"
-                    }
-                };
-                self.feedback = Some((message.to_owned(), FEEDBACK_DURATION_TICKS));
+                api::warn!("block placement failed: {error:?}");
             }
             None => {}
         }
@@ -132,22 +120,5 @@ impl api::Screen<State> for GameScreen {
             state.picked_block,
             self.cursor.rotation(),
         );
-        if let Some((message, _)) = &self.feedback {
-            frame.text_color(
-                message.clone(),
-                ivec2(WIDTH as i32 / 2, HEIGHT as i32 - 4),
-                Anchor::Bottom,
-                Color::Mischka,
-            );
-        }
-    }
-}
-
-impl GameScreen {
-    fn tick_feedback(&mut self) {
-        self.feedback = self.feedback.take().and_then(|(message, ticks)| {
-            let remaining = ticks.saturating_sub(1);
-            (remaining > 0).then_some((message, remaining))
-        });
     }
 }

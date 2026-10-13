@@ -1,0 +1,58 @@
+use crate::core::{
+    block_kind::BlockKind,
+    item::{Item, ItemStack},
+    world::terrain::OreKind,
+};
+
+use super::{behavior::BlockBehavior, conveyor::Conveyor, drill::Drill};
+
+pub(super) enum BlockState {
+    Conveyor(Conveyor),
+    Drill(Drill),
+}
+
+impl BlockState {
+    pub(super) fn new(kind: BlockKind) -> Self {
+        match kind {
+            BlockKind::Conveyor => Self::Conveyor(Conveyor::new()),
+            BlockKind::Drill => Self::Drill(Drill::new()),
+        }
+    }
+}
+
+impl BlockBehavior for BlockState {
+    fn tick(&mut self, ore: Option<OreKind>) {
+        match self {
+            Self::Conveyor(block) => block.tick(ore),
+            Self::Drill(block) => block.tick(ore),
+        }
+    }
+
+    fn items(&self) -> Option<ItemStack> {
+        match self {
+            Self::Conveyor(block) => block.items(),
+            Self::Drill(block) => block.items(),
+        }
+    }
+
+    fn can_accept(&self, item: Item) -> bool {
+        match self {
+            Self::Conveyor(block) => block.can_accept(item),
+            Self::Drill(block) => block.can_accept(item),
+        }
+    }
+
+    fn accept(&mut self, item: Item) -> bool {
+        match self {
+            Self::Conveyor(block) => block.accept(item),
+            Self::Drill(block) => block.accept(item),
+        }
+    }
+
+    fn take(&mut self) -> Option<Item> {
+        match self {
+            Self::Conveyor(block) => block.take(),
+            Self::Drill(block) => block.take(),
+        }
+    }
+}

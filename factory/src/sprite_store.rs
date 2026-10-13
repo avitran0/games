@@ -8,6 +8,7 @@ const BLOCK_ANIMATION_DIVISOR: u16 = 8;
 
 pub struct SpriteStore {
     blocks: HashMap<BlockKind, AnimatedSprite>,
+    pub iron_ore: Sprite,
     pub cursor: CursorSprites,
 }
 
@@ -27,6 +28,7 @@ impl SpriteStore {
 
         Ok(Self {
             blocks,
+            iron_ore: assets.load_sprite(include_bytes!("assets/item/iron.pxs"))?,
             cursor: CursorSprites {
                 single: assets.load_sprite(include_bytes!("assets/cursor/single.pxs"))?,
                 double: assets.load_sprite(include_bytes!("assets/cursor/double.pxs"))?,

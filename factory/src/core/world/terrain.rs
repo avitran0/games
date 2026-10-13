@@ -1,14 +1,10 @@
 #[derive(Clone, Copy, Default)]
 pub struct TerrainCell {
     pub ground: GroundKind,
-    #[expect(
-        dead_code,
-        reason = "ore placement is reserved for future world generation"
-    )]
     pub ore: Option<OreKind>,
 }
 
-#[expect(dead_code, reason = "additional terrain types await world generation")]
+#[expect(dead_code, reason = "additional terrain types await future biomes")]
 #[derive(Clone, Copy, Default)]
 pub enum GroundKind {
     #[default]
@@ -27,13 +23,20 @@ impl GroundKind {
     }
 }
 
-#[expect(
-    dead_code,
-    reason = "ore types will be used by terrain generation and drills"
-)]
-#[derive(Clone, Copy)]
+#[expect(dead_code, reason = "additional ores are reserved for future deposits")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OreKind {
     Iron,
     Coal,
     Titanium,
+}
+
+impl OreKind {
+    pub fn item(self) -> crate::core::item::Item {
+        match self {
+            Self::Iron => crate::core::item::Item::IronOre,
+            Self::Coal => crate::core::item::Item::Coal,
+            Self::Titanium => crate::core::item::Item::TitaniumOre,
+        }
+    }
 }

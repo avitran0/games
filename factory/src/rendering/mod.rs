@@ -3,14 +3,16 @@ mod cursor;
 use std::collections::HashMap;
 
 use api::{
-    Anchor, AnimatedSprite, Assets, Camera2D, Frame, ScreenAction, SpriteOptions, Tilemap, Tileset,
+    Anchor, AnimatedSprite, Assets, Camera2D, Frame, ScreenAction, Sprite, SpriteOptions, Tilemap,
+    Tileset,
     glam::{IVec2, uvec2},
 };
 
 use crate::core::{
     block::Rotation,
     block_kind::BlockKind,
-    world::{BlockId, World},
+    item::Item,
+    world::{BlockId, World, terrain::OreKind},
 };
 use crate::sprite_store::SpriteStore;
 
@@ -19,6 +21,8 @@ use self::cursor::CursorRenderer;
 pub struct WorldRenderer {
     terrain_tileset: Tileset,
     terrain_map: Tilemap,
+    iron_ore: Sprite,
+    ore_cells: Vec<api::glam::UVec2>,
     block_sprites: HashMap<BlockId, AnimatedSprite>,
     preview_sprites: HashMap<BlockKind, AnimatedSprite>,
     cursor: CursorRenderer,
@@ -35,12 +39,16 @@ impl WorldRenderer {
             .create_tilemap(world.size(), &terrain_tileset)
             .map_err(|error| ScreenAction::Push(Box::new(api::ErrorScreen::new(error))))?;
 
+        let mut ore_cells = Vec::new();
         for y in 0..world.size().y {
             for x in 0..world.size().x {
                 let Some(terrain) = world.terrain_at(uvec2(x, y)) else {
                     continue;
                 };
                 let tile_id = terrain.ground.tile_id() + 1;
+                if terrain.ore == Some(OreKind::Iron) {
+                    ore_cells.push(uvec2(x, y));
+                }
                 assets
                     .set_tile(&terrain_map, uvec2(x, y), tile_id)
                     .map_err(|error| ScreenAction::Push(Box::new(api::ErrorScreen::new(error))))?;
@@ -51,6 +59,8 @@ impl WorldRenderer {
         Ok(Self {
             terrain_tileset,
             terrain_map,
+            iron_ore: sprites.iron_ore,
+            ore_cells,
             block_sprites: HashMap::new(),
             preview_sprites: HashMap::new(),
             cursor,
@@ -97,6 +107,17 @@ impl WorldRenderer {
         frame.world(camera).tilemap(&self.terrain_map, IVec2::ZERO);
 
         let tile_size = self.tile_size().as_ivec2();
+        for ore in &self.ore_cells {
+            let center = ore.as_ivec2() * tile_size + tile_size / 2;
+            frame.world(camera).sprite(
+                &self.iron_ore,
+                center,
+                SpriteOptions::default()
+                    .anchor(Anchor::Center)
+                    .uniform_scale(0.65)
+                    .opacity(0.85),
+            );
+        }
         for (id, block) in world.blocks() {
             let Some(sprite) = self.block_sprites.get(&id) else {
                 continue;
@@ -117,6 +138,17 @@ impl WorldRenderer {
                     .rotation(angle)
                     .rotation_anchor(Anchor::Center),
             );
+            if let Some(stack) = block.items()
+                && stack.item() == Item::IronOre
+            {
+                frame.world(camera).sprite(
+                    &self.iron_ore,
+                    center,
+                    SpriteOptions::default()
+                        .anchor(Anchor::Center)
+                        .uniform_scale(0.65),
+                );
+            }
         }
 
         if let Some(selected_block) = selected_block {

@@ -38,11 +38,13 @@ impl World {
         }
 
         let chunk_count = (size.x / chunk_side * size.y / chunk_side) as usize;
-        Ok(Self {
+        let mut world = Self {
             size,
             chunks: vec![Chunk::default(); chunk_count],
             blocks: BlockArena::default(),
-        })
+        };
+        world.generate_starting_ore();
+        Ok(world)
     }
 
     fn locate(&self, pos: UVec2) -> Option<TileCoords> {
@@ -121,8 +123,84 @@ impl World {
     }
 
     pub(crate) fn tick(&mut self) {
-        for (_, block) in self.blocks.iter_mut() {
-            block.tick();
+        let drill_ores = self
+            .blocks
+            .iter()
+            .map(|(_, block)| self.ore_under(block))
+            .collect::<Vec<_>>();
+        for ((_, block), ore) in self.blocks.iter_mut().zip(drill_ores) {
+            block.tick(ore);
+        }
+
+        let transfers = self
+            .blocks
+            .iter()
+            .filter_map(|(from, block)| {
+                let item = block.output_item()?;
+                let target = block.output_position()?;
+                let to = self.block_id_at(target)?;
+                Some((from, to, item))
+            })
+            .collect::<Vec<_>>();
+
+        for (from, to, item) in transfers {
+            if !self
+                .blocks
+                .get(to)
+                .is_some_and(|block| block.can_accept_item(item))
+            {
+                continue;
+            }
+            let Some(item) = self.blocks.get_mut(from).and_then(Block::take_item) else {
+                continue;
+            };
+            let accepted = self
+                .blocks
+                .get_mut(to)
+                .is_some_and(|target| target.accept_item(item));
+            if !accepted && let Some(source) = self.blocks.get_mut(from) {
+                let restored = source.accept_item(item);
+                debug_assert!(restored);
+            }
+        }
+    }
+
+    fn ore_under(&self, block: &Block) -> Option<terrain::OreKind> {
+        let origin = block.origin();
+        let side = block.footprint_cells();
+        for y in 0..side {
+            for x in 0..side {
+                if let Some(ore) = self
+                    .terrain_at(UVec2::new(origin.x + x, origin.y + y))
+                    .and_then(|cell| cell.ore)
+                {
+                    return Some(ore);
+                }
+            }
+        }
+        None
+    }
+
+    fn generate_starting_ore(&mut self) {
+        const RADIUS: u32 = 4;
+        let center = self.size / 2;
+        let min_x = center.x.saturating_sub(RADIUS);
+        let min_y = center.y.saturating_sub(RADIUS);
+        let max_x = (center.x + RADIUS).min(self.size.x - 1);
+        let max_y = (center.y + RADIUS).min(self.size.y - 1);
+
+        for y in min_y..=max_y {
+            for x in min_x..=max_x {
+                let dx = x.abs_diff(center.x);
+                let dy = y.abs_diff(center.y);
+                if dx * dx + dy * dy > RADIUS * RADIUS {
+                    continue;
+                }
+                if let Some(coords) = self.locate(UVec2::new(x, y)) {
+                    self.chunks[coords.chunk].terrain[coords.cell].ore =
+                        Some(terrain::OreKind::Iron);
+                }
+            }
         }
     }
 
@@ -197,9 +275,31 @@ pub struct BlockId {
 mod tests {
     use api::glam::uvec2;
 
-    use crate::core::{block::Rotation, block_kind::BlockKind};
+    use crate::core::{block::Rotation, block_kind::BlockKind, item::Item};
 
-    use super::{PlaceBlockError, World, WorldCreateError};
+    use super::{BlockId, PlaceBlockError, World, WorldCreateError};
+
+    const DRILL_EXTRACTION_TICKS: u16 = 120;
+    const DRILL_STACK_CAPACITY: u8 = 10;
+
+    fn held_item(world: &World, id: BlockId) -> Option<Item> {
+        world.blocks().find_map(|(block_id, block)| {
+            (block_id == id)
+                .then(|| block.items().map(|stack| stack.item()))
+                .flatten()
+        })
+    }
+
+    fn held_count(world: &World, id: BlockId) -> u8 {
+        world
+            .blocks()
+            .find_map(|(block_id, block)| {
+                (block_id == id)
+                    .then(|| block.items().map(|stack| stack.count()))
+                    .flatten()
+            })
+            .unwrap_or(0)
+    }
 
     #[test]
     fn world_creation_validates_dimensions_without_panicking() {
@@ -271,6 +371,66 @@ mod tests {
         assert_ne!(first, second);
         assert!(!world.contains_block(first));
         assert!(world.contains_block(second));
+    }
+
+    #[test]
+    fn drills_mine_iron_and_conveyors_move_items_one_block_per_tick() {
+        let mut world = World::new(uvec2(32, 32)).unwrap();
+        let drill = world
+            .place_block(BlockKind::Drill, uvec2(16, 16), Rotation::Up)
+            .unwrap();
+        let first_conveyor = world
+            .place_block(BlockKind::Conveyor, uvec2(16, 15), Rotation::Up)
+            .unwrap();
+        let second_conveyor = world
+            .place_block(BlockKind::Conveyor, uvec2(16, 14), Rotation::Up)
+            .unwrap();
+
+        for _ in 0..DRILL_EXTRACTION_TICKS {
+            world.tick();
+        }
+
+        assert_eq!(held_item(&world, drill), None);
+        assert_eq!(held_item(&world, first_conveyor), Some(Item::IronOre));
+        assert_eq!(held_item(&world, second_conveyor), None);
+
+        world.tick();
+        assert_eq!(held_item(&world, first_conveyor), None);
+        assert_eq!(held_item(&world, second_conveyor), Some(Item::IronOre));
+    }
+
+    #[test]
+    fn drill_holds_output_until_a_conveyor_is_connected() {
+        let mut world = World::new(uvec2(32, 32)).unwrap();
+        let drill = world
+            .place_block(BlockKind::Drill, uvec2(16, 16), Rotation::Up)
+            .unwrap();
+
+        for _ in 0..DRILL_EXTRACTION_TICKS * (DRILL_STACK_CAPACITY as u16 + 2) {
+            world.tick();
+        }
+        assert_eq!(held_item(&world, drill), Some(Item::IronOre));
+        assert_eq!(held_count(&world, drill), DRILL_STACK_CAPACITY);
+
+        let conveyor = world
+            .place_block(BlockKind::Conveyor, uvec2(16, 15), Rotation::Up)
+            .unwrap();
+        world.tick();
+        assert_eq!(held_count(&world, drill), DRILL_STACK_CAPACITY - 1);
+        assert_eq!(held_item(&world, conveyor), Some(Item::IronOre));
+        assert_eq!(held_count(&world, conveyor), 1);
+    }
+
+    #[test]
+    fn drills_do_not_mine_without_an_ore_deposit() {
+        let mut world = World::new(uvec2(32, 32)).unwrap();
+        let drill = world
+            .place_block(BlockKind::Drill, uvec2(1, 1), Rotation::Up)
+            .unwrap();
+        for _ in 0..DRILL_EXTRACTION_TICKS * 2 {
+            world.tick();
+        }
+        assert_eq!(held_item(&world, drill), None);
     }
 
     #[test]

@@ -41,6 +41,14 @@ impl BlockArena {
         slot.block.as_ref()
     }
 
+    pub fn get_mut(&mut self, id: BlockId) -> Option<&mut Block> {
+        let slot = self.slots.get_mut(id.index as usize)?;
+        if slot.generation != id.generation {
+            return None;
+        }
+        slot.block.as_mut()
+    }
+
     pub fn remove(&mut self, id: BlockId) -> Option<Block> {
         let slot = self.slots.get_mut(id.index as usize)?;
         if slot.generation != id.generation {
