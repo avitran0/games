@@ -1,13 +1,12 @@
 use strum::EnumIter;
 
-use crate::core::block_kind::BlockKind;
+use crate::simulation::block_kind::BlockKind;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, EnumIter)]
 pub enum BlockCategory {
     Logistics,
     Extraction,
     Production,
-    Power,
     Core,
 }
 
@@ -17,7 +16,6 @@ impl BlockCategory {
             Self::Logistics => "Logistics",
             Self::Extraction => "Extraction",
             Self::Production => "Production",
-            Self::Power => "Power",
             Self::Core => "Core",
         }
     }

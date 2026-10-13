@@ -2,7 +2,7 @@ use api::{Button, ScreenAction};
 use ui::{Alignment, Rect, Ui};
 
 use crate::{
-    core::{block::BlockCategory, block_kind::BlockKind},
+    simulation::{block::BlockCategory, block_kind::BlockKind},
     state::State,
 };
 

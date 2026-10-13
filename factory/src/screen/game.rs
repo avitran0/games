@@ -4,13 +4,10 @@ use api::{
 };
 
 use crate::{
-    core::{block_kind::BlockKind, world::World},
     rendering::{CursorView, WorldRenderer},
-    screen::{
-        block_selection::BlockSelectionScreen,
-        cursor::{Cursor, CursorEvent},
-        pause::PauseScreen,
-    },
+    screen::{block_selection::BlockSelectionScreen, cursor::Cursor, pause::PauseScreen},
+    simulation::{block::Rotation, block_kind::BlockKind, world::World},
+    sprite_store::SpriteStore,
     state::State,
 };
 
@@ -22,17 +19,17 @@ pub struct GameScreen {
     camera: Camera2D,
     camera_tween: Tween<Vec2>,
     cursor: Cursor,
-    simulation_tick: usize,
+    placement_feedback: Option<(String, usize)>,
 }
 
 impl GameScreen {
     pub fn new(ctx: &mut api::ScreenContext<'_, State>) -> Result<Self, ScreenAction<State>> {
-        let sprites = ctx.state.sprites.as_ref().ok_or_else(|| {
-            ScreenAction::Push(Box::new(api::ErrorScreen::new(std::io::Error::other(
-                "sprite store was not initialized before starting the game",
-            ))))
-        })?;
-        let world = World::new(uvec2(128, 128))
+        let sprites = SpriteStore::load(ctx.assets)?;
+        let mut world = World::new(uvec2(128, 128))
+            .map_err(|error| ScreenAction::Push(Box::new(api::ErrorScreen::new(error))))?;
+        let core_origin = world.size() / 2 - UVec2::splat(2);
+        world
+            .place_block(BlockKind::Core, core_origin, Rotation::Up)
             .map_err(|error| ScreenAction::Push(Box::new(api::ErrorScreen::new(error))))?;
         let renderer = WorldRenderer::new(ctx.assets, &world, sprites)?;
         let world_size = world.size();
@@ -54,12 +51,10 @@ impl GameScreen {
             renderer,
             camera,
             camera_tween,
-            simulation_tick: 0,
+            placement_feedback: None,
         })
     }
-}
 
-impl GameScreen {
     fn update_camera(&mut self, picked_block: Option<BlockKind>) {
         let target = cursor_center(
             self.cursor.position(),
@@ -88,7 +83,10 @@ impl api::Screen<State> for GameScreen {
 
         if ctx.input.just_pressed(Button::B) && ctx.state.picked_block.is_some() {
             ctx.state.picked_block = None;
+            self.world.tick();
             self.update_camera(None);
+            let tick = self.world.tick_count().saturating_sub(1);
+            self.renderer.update(&self.world, None, tick);
             return ScreenAction::None;
         }
 
@@ -96,30 +94,25 @@ impl api::Screen<State> for GameScreen {
             return ScreenAction::Push(Box::new(BlockSelectionScreen::new(ctx)));
         }
 
-        let Some(sprites) = ctx.state.sprites.as_ref() else {
-            api::error!("sprite store is missing during gameplay");
-            return ScreenAction::Quit;
-        };
-
-        self.simulation_tick = self.simulation_tick.wrapping_add(1);
-        match self
+        if let Some((_, ticks)) = &mut self.placement_feedback {
+            *ticks = ticks.saturating_sub(1);
+            if *ticks == 0 {
+                self.placement_feedback = None;
+            }
+        }
+        if let Some(result) = self
             .cursor
             .update(ctx.input, &mut self.world, ctx.state.picked_block)
         {
-            Some(CursorEvent::Placed) => {}
-            Some(CursorEvent::PlacementFailed(error)) => {
-                api::warn!("block placement failed: {error:?}");
-            }
-            None => {}
+            self.placement_feedback = result
+                .err()
+                .map(|error| (error.to_string(), api::FPS as usize));
         }
-        self.world.tick(self.simulation_tick);
+        self.world.tick();
         self.update_camera(ctx.state.picked_block);
-        self.renderer.update(
-            &self.world,
-            sprites,
-            ctx.state.picked_block,
-            self.simulation_tick,
-        );
+        let tick = self.world.tick_count().saturating_sub(1);
+        self.renderer
+            .update(&self.world, ctx.state.picked_block, tick);
         ScreenAction::None
     }
 
@@ -133,7 +126,7 @@ impl api::Screen<State> for GameScreen {
                 selected_block: state.picked_block,
                 rotation: self.cursor.rotation(),
             },
-            self.simulation_tick,
+            self.world.tick_count().saturating_sub(1),
         );
 
         frame.rectangle(
@@ -142,9 +135,17 @@ impl api::Screen<State> for GameScreen {
             api::Color::Cinder,
         );
         frame.text(
-            format!("PWR {}", self.world.power()),
+            format!(
+                "Iron {}  Plates {}",
+                self.world.stockpile(crate::simulation::item::Item::IronOre),
+                self.world
+                    .stockpile(crate::simulation::item::Item::IronPlate)
+            ),
             api::glam::IVec2::new(5, 3),
             api::Anchor::TopLeft,
         );
+        if let Some((message, _)) = &self.placement_feedback {
+            frame.text(message, api::glam::IVec2::new(5, 14), api::Anchor::TopLeft);
+        }
     }
 }

@@ -1,4 +1,4 @@
-use crate::core::world::{BlockId, terrain::TerrainCell};
+use crate::simulation::world::{BlockId, terrain::TerrainCell};
 
 #[derive(Clone)]
 pub struct Chunk {

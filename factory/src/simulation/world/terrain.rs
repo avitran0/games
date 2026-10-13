@@ -1,3 +1,5 @@
+use crate::simulation::item::Item;
+
 #[derive(Clone, Copy, Default)]
 pub struct TerrainCell {
     pub ground: GroundKind,
@@ -22,7 +24,8 @@ impl GroundKind {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[repr(usize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, strum::EnumIter, strum::EnumCount)]
 pub enum OreKind {
     Iron,
     Coal,
@@ -30,11 +33,15 @@ pub enum OreKind {
 }
 
 impl OreKind {
-    pub fn item(self) -> crate::core::item::Item {
+    pub const fn index(self) -> usize {
+        self as usize
+    }
+
+    pub fn item(self) -> Item {
         match self {
-            Self::Iron => crate::core::item::Item::IronOre,
-            Self::Coal => crate::core::item::Item::Coal,
-            Self::Titanium => crate::core::item::Item::TitaniumOre,
+            Self::Iron => Item::IronOre,
+            Self::Coal => Item::Coal,
+            Self::Titanium => Item::TitaniumOre,
         }
     }
 }

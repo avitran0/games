@@ -1,9 +1,8 @@
 use api::glam::IVec2;
 
-use crate::core::{
-    block::behavior::BlockBehavior,
+use crate::simulation::{
+    block::behavior::{BlockBehavior, TickContext},
     item::{Item, ItemStack},
-    world::terrain::OreKind,
 };
 
 use super::CONVEYOR_TRAVEL_TICKS;
@@ -29,14 +28,12 @@ impl Conveyor {
         let start_tick = self.start_tick?;
         self.items?;
         let elapsed = tick.saturating_sub(start_tick);
-        Some((elapsed as f32 / CONVEYOR_TRAVEL_TICKS as f32).min(0.95))
+        Some((elapsed as f32 / CONVEYOR_TRAVEL_TICKS as f32).min(1.0))
     }
 }
 
 impl BlockBehavior for Conveyor {
-    fn tick(&mut self, _ore: Option<OreKind>, _tick: usize, _powered: bool) -> bool {
-        false
-    }
+    fn tick(&mut self, _context: &TickContext) {}
 
     fn items(&self) -> Option<ItemStack> {
         self.items
@@ -44,7 +41,7 @@ impl BlockBehavior for Conveyor {
 
     fn can_accept(&self, item: Item) -> bool {
         self.items
-            .is_none_or(|mut stack| stack.try_add(item, Self::CAPACITY))
+            .is_none_or(|stack| stack.can_add(item, Self::CAPACITY))
     }
 
     fn accept(&mut self, item: Item, tick: usize, input_direction: IVec2) -> bool {
@@ -52,19 +49,14 @@ impl BlockBehavior for Conveyor {
             Some(stack) => stack.try_add(item, Self::CAPACITY),
             None => {
                 self.items = Some(ItemStack::single(item));
-                let remainder = tick % CONVEYOR_TRAVEL_TICKS;
-                self.start_tick = Some(if remainder == 0 {
-                    tick
-                } else {
-                    tick + CONVEYOR_TRAVEL_TICKS - remainder
-                });
+                self.start_tick = Some(tick);
                 self.input_direction = Some(input_direction);
                 true
             }
         }
     }
 
-    fn take(&mut self) -> Option<Item> {
+    fn take(&mut self, _tick: usize) -> Option<Item> {
         let (remaining, item) = self.items.take()?.take_one();
         self.items = remaining;
         if self.items.is_none() {
@@ -88,5 +80,26 @@ impl BlockBehavior for Conveyor {
 
     fn item_input_direction(&self) -> Option<IVec2> {
         self.input_direction
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use api::glam::IVec2;
+
+    use crate::simulation::{block::behavior::BlockBehavior, item::Item};
+
+    use super::{CONVEYOR_TRAVEL_TICKS, Conveyor};
+
+    #[test]
+    fn conveyor_travel_time_starts_at_acceptance_without_global_phase_rounding() {
+        let mut conveyor = Conveyor::new();
+        assert!(conveyor.accept(Item::IronOre, 145, IVec2::NEG_Y));
+        assert_eq!(conveyor.output_item(145 + CONVEYOR_TRAVEL_TICKS - 1), None);
+        assert_eq!(
+            conveyor.output_item(145 + CONVEYOR_TRAVEL_TICKS),
+            Some(Item::IronOre)
+        );
+        assert_eq!(conveyor.item_progress(157), Some(0.5));
     }
 }

@@ -1,7 +1,7 @@
 use api::glam::IVec2;
 
-use crate::core::{
-    block::behavior::BlockBehavior,
+use crate::simulation::{
+    block::behavior::{BlockBehavior, TickContext},
     item::{Item, ItemStack},
     world::terrain::OreKind,
 };
@@ -9,36 +9,38 @@ use crate::core::{
 pub struct Drill {
     output: Option<ItemStack>,
     progress: u16,
+    ore: Option<OreKind>,
 }
 
 impl Drill {
     pub const OUTPUT_CAPACITY: u8 = 10;
     pub const EXTRACTION_PERIOD_TICKS: u16 = 120;
 
-    pub(super) fn new() -> Self {
+    pub(super) fn new(ore: Option<OreKind>) -> Self {
         Self {
             output: None,
             progress: 0,
+            ore,
         }
     }
 }
 
 impl BlockBehavior for Drill {
-    fn tick(&mut self, ore: Option<OreKind>, _tick: usize, _powered: bool) -> bool {
+    fn tick(&mut self, _context: &TickContext) {
         if self
             .output
             .is_some_and(|stack| stack.count() >= Self::OUTPUT_CAPACITY)
         {
-            return false;
+            return;
         }
 
-        let Some(ore) = ore else {
+        let Some(ore) = self.ore else {
             self.progress = 0;
-            return false;
+            return;
         };
         let item = ore.item();
         if self.output.is_some_and(|stack| stack.item() != item) {
-            return false;
+            return;
         }
 
         self.progress += 1;
@@ -52,7 +54,6 @@ impl BlockBehavior for Drill {
             }
             self.progress = 0;
         }
-        false
     }
 
     fn items(&self) -> Option<ItemStack> {
@@ -67,7 +68,7 @@ impl BlockBehavior for Drill {
         false
     }
 
-    fn take(&mut self) -> Option<Item> {
+    fn take(&mut self, _tick: usize) -> Option<Item> {
         let (remaining, item) = self.output.take()?.take_one();
         self.output = remaining;
         Some(item)

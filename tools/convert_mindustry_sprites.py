@@ -43,6 +43,26 @@ def converted_pixels(image, size):
     return bytes(indices)
 
 
+def composite_layer(canvas, layer, position=(0, 0), opacity=1.0):
+    """Composite a complete Mindustry sprite layer at its aligned position."""
+    x, y = position
+    if (
+        x < 0
+        or y < 0
+        or x + layer.width > canvas.width
+        or y + layer.height > canvas.height
+    ):
+        raise ValueError(
+            f"layer {layer.size} at {position} does not fit canvas {canvas.size}"
+        )
+    if opacity != 1.0:
+        layer = layer.copy()
+        layer.putalpha(
+            layer.getchannel("A").point(lambda value: round(value * opacity))
+        )
+    canvas.alpha_composite(layer, dest=position)
+
+
 def write_animated(name, frames):
     width, height = frames[0].size
     if width != height or width % 8 or not 8 <= width <= 96:
@@ -85,22 +105,20 @@ drill_rotor = load("blocks/drills/mechanical-drill-rotator.png")
 drill_frames = []
 for angle in (0, 90, 180, 270):
     frame = drill_base.copy()
-    frame.alpha_composite(drill_rotor.rotate(angle, resample=Image.Resampling.NEAREST))
+    composite_layer(
+        frame, drill_rotor.rotate(angle, resample=Image.Resampling.NEAREST)
+    )
     drill_frames.append(frame.resize((32, 32), Image.Resampling.NEAREST))
 write_animated("drill", drill_frames)
 
 smelter_base = load("blocks/production/silicon-smelter.png")
 smelter_top = load("blocks/production/silicon-smelter-top.png")
-write_animated(
-    "smelter",
-    [
-        Image.alpha_composite(
-            smelter_base,
-            ImageEnhance.Brightness(smelter_top).enhance(level),
-        ).resize((32, 32), Image.Resampling.NEAREST)
-        for level in (0.78, 0.96, 1.14, 0.96)
-    ],
-)
+smelter_frames = []
+for level in (0.78, 0.96, 1.14, 0.96):
+    frame = smelter_base.copy()
+    composite_layer(frame, ImageEnhance.Brightness(smelter_top).enhance(level))
+    smelter_frames.append(frame.resize((32, 32), Image.Resampling.NEAREST))
+write_animated("smelter", smelter_frames)
 
 solar = load("blocks/power/solar-panel.png").resize((16, 16), Image.Resampling.NEAREST)
 write_animated(
@@ -117,14 +135,18 @@ write_animated(
 core_base = load("blocks/storage/core-shard.png")
 thruster1 = load("blocks/storage/core-shard-thruster1.png")
 thruster2 = load("blocks/storage/core-shard-thruster2.png")
+# The 3-tile core and 4-tile-wide thruster layers have different atlas sizes.
+# Center both on the 4x4 game-block canvas rather than compositing at (0, 0),
+# which clips the exhausts entirely off the core sprite.
+core_canvas_size = (128, 128)
+core_position = ((128 - core_base.width) // 2, (128 - core_base.height) // 2)
+thruster_position = ((128 - thruster1.width) // 2, (128 - thruster1.height) // 2)
 core_frames = []
 for first, second in ((0.8, 0.3), (0.3, 0.8), (0.0, 1.0), (0.3, 0.8)):
-    frame = core_base.copy()
-    for layer, alpha in ((thruster1, first), (thruster2, second)):
-        if alpha:
-            layer = layer.copy()
-            layer.putalpha(layer.getchannel("A").point(lambda value: round(value * alpha)))
-            frame.alpha_composite(layer)
+    frame = Image.new("RGBA", core_canvas_size)
+    composite_layer(frame, core_base, core_position)
+    composite_layer(frame, thruster1, thruster_position, first)
+    composite_layer(frame, thruster2, thruster_position, second)
     core_frames.append(frame.resize((64, 64), Image.Resampling.NEAREST))
 write_animated("core", core_frames)
 

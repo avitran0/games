@@ -1,4 +1,7 @@
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+use strum::{EnumCount, EnumIter, IntoEnumIterator};
+
+#[repr(usize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumIter, EnumCount)]
 pub enum Item {
     IronOre,
     IronPlate,
@@ -7,15 +10,14 @@ pub enum Item {
 }
 
 impl Item {
-    pub const COUNT: usize = 4;
+    pub const COUNT: usize = <Self as EnumCount>::COUNT;
 
     pub const fn index(self) -> usize {
-        match self {
-            Self::IronOre => 0,
-            Self::IronPlate => 1,
-            Self::Coal => 2,
-            Self::TitaniumOre => 3,
-        }
+        self as usize
+    }
+
+    pub fn iter() -> impl Iterator<Item = Self> {
+        <Self as IntoEnumIterator>::iter()
     }
 }
 
@@ -38,8 +40,12 @@ impl ItemStack {
         self.count
     }
 
+    pub fn can_add(self, item: Item, capacity: u8) -> bool {
+        self.item == item && self.count < capacity
+    }
+
     pub fn try_add(&mut self, item: Item, capacity: u8) -> bool {
-        if self.item != item || self.count >= capacity {
+        if !self.can_add(item, capacity) {
             return false;
         }
         self.count += 1;

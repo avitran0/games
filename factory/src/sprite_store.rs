@@ -1,23 +1,23 @@
 use std::collections::HashMap;
 
+use strum::IntoEnumIterator;
+
 use api::{AnimatedSprite, Assets, ScreenAction, Sprite};
 
 use crate::{
-    core::{block_kind::BlockKind, world::terrain::OreKind},
+    simulation::{block_kind::BlockKind, item::Item, world::terrain::OreKind},
     state::State,
 };
 
 const BLOCK_ANIMATION_DIVISOR: u16 = 7;
 const CONVEYOR_VARIANT_COUNT: usize = 5;
+const ORE_VARIANT_COUNT: usize = 3;
 
 pub struct SpriteStore {
     blocks: HashMap<BlockKind, AnimatedSprite>,
     conveyor_variants: [AnimatedSprite; CONVEYOR_VARIANT_COUNT],
-    ore_textures: HashMap<OreKind, [Sprite; 3]>,
-    pub iron_ore: Sprite,
-    pub iron_plate: Sprite,
-    pub coal: Sprite,
-    pub titanium: Sprite,
+    ore_textures: [[Sprite; ORE_VARIANT_COUNT]; <OreKind as strum::EnumCount>::COUNT],
+    items: [Sprite; Item::COUNT],
     pub cursor: CursorSprites,
 }
 
@@ -44,41 +44,28 @@ impl SpriteStore {
             assets.load_animated_sprite(conveyor_asset(4))?,
         ];
 
-        let ore_textures = HashMap::from([
-            (
-                OreKind::Iron,
-                [
-                    assets.load_sprite(include_bytes!("assets/ores/iron-0.pxs"))?,
-                    assets.load_sprite(include_bytes!("assets/ores/iron-1.pxs"))?,
-                    assets.load_sprite(include_bytes!("assets/ores/iron-2.pxs"))?,
-                ],
-            ),
-            (
-                OreKind::Coal,
-                [
-                    assets.load_sprite(include_bytes!("assets/ores/coal-0.pxs"))?,
-                    assets.load_sprite(include_bytes!("assets/ores/coal-1.pxs"))?,
-                    assets.load_sprite(include_bytes!("assets/ores/coal-2.pxs"))?,
-                ],
-            ),
-            (
-                OreKind::Titanium,
-                [
-                    assets.load_sprite(include_bytes!("assets/ores/titanium-0.pxs"))?,
-                    assets.load_sprite(include_bytes!("assets/ores/titanium-1.pxs"))?,
-                    assets.load_sprite(include_bytes!("assets/ores/titanium-2.pxs"))?,
-                ],
-            ),
-        ]);
+        let ore_textures = OreKind::iter()
+            .map(|ore| {
+                Ok([
+                    assets.load_sprite(ore_asset(ore, 0))?,
+                    assets.load_sprite(ore_asset(ore, 1))?,
+                    assets.load_sprite(ore_asset(ore, 2))?,
+                ])
+            })
+            .collect::<Result<Vec<_>, ScreenAction<State>>>()?
+            .try_into()
+            .unwrap_or_else(|_| unreachable!("ore enum count and iterator must agree"));
+        let items = Item::iter()
+            .map(|item| assets.load_sprite(item_asset(item)))
+            .collect::<Result<Vec<_>, _>>()?
+            .try_into()
+            .unwrap_or_else(|_| unreachable!("item enum count and iterator must agree"));
 
         Ok(Self {
             blocks,
             conveyor_variants,
             ore_textures,
-            iron_ore: assets.load_sprite(include_bytes!("assets/item/iron.pxs"))?,
-            iron_plate: assets.load_sprite(include_bytes!("assets/item/iron_plate.pxs"))?,
-            coal: assets.load_sprite(include_bytes!("assets/item/coal.pxs"))?,
-            titanium: assets.load_sprite(include_bytes!("assets/item/titanium.pxs"))?,
+            items,
             cursor: CursorSprites {
                 single: assets.load_sprite(include_bytes!("assets/cursor/single.pxs"))?,
                 double: assets.load_sprite(include_bytes!("assets/cursor/double.pxs"))?,
@@ -111,17 +98,11 @@ impl SpriteStore {
     }
 
     pub fn ore_texture(&self, ore: OreKind, variant: usize) -> &Sprite {
-        &self.ore_textures[&ore][variant % 3]
+        &self.ore_textures[ore.index()][variant % ORE_VARIANT_COUNT]
     }
 
-    pub fn item(&self, item: crate::core::item::Item) -> &Sprite {
-        use crate::core::item::Item;
-        match item {
-            Item::IronOre => &self.iron_ore,
-            Item::IronPlate => &self.iron_plate,
-            Item::Coal => &self.coal,
-            Item::TitaniumOre => &self.titanium,
-        }
+    pub fn item(&self, item: Item) -> &Sprite {
+        &self.items[item.index()]
     }
 }
 
@@ -141,16 +122,42 @@ fn block_asset(kind: BlockKind) -> &'static [u8] {
         BlockKind::Drill => include_bytes!("assets/blocks/drill.pxa"),
         BlockKind::Storage => include_bytes!("assets/blocks/storage.pxa"),
         BlockKind::Smelter => include_bytes!("assets/blocks/smelter.pxa"),
-        BlockKind::SolarPanel => include_bytes!("assets/blocks/solar_panel.pxa"),
         BlockKind::Core => include_bytes!("assets/blocks/core.pxa"),
+    }
+}
+
+fn item_asset(item: Item) -> &'static [u8] {
+    match item {
+        Item::IronOre => include_bytes!("assets/item/iron.pxs"),
+        Item::IronPlate => include_bytes!("assets/item/iron_plate.pxs"),
+        Item::Coal => include_bytes!("assets/item/coal.pxs"),
+        Item::TitaniumOre => include_bytes!("assets/item/titanium.pxs"),
+    }
+}
+
+fn ore_asset(ore: OreKind, variant: usize) -> &'static [u8] {
+    match (ore, variant) {
+        (OreKind::Iron, 0) => include_bytes!("assets/ores/iron-0.pxs"),
+        (OreKind::Iron, 1) => include_bytes!("assets/ores/iron-1.pxs"),
+        (OreKind::Iron, _) => include_bytes!("assets/ores/iron-2.pxs"),
+        (OreKind::Coal, 0) => include_bytes!("assets/ores/coal-0.pxs"),
+        (OreKind::Coal, 1) => include_bytes!("assets/ores/coal-1.pxs"),
+        (OreKind::Coal, _) => include_bytes!("assets/ores/coal-2.pxs"),
+        (OreKind::Titanium, 0) => include_bytes!("assets/ores/titanium-0.pxs"),
+        (OreKind::Titanium, 1) => include_bytes!("assets/ores/titanium-1.pxs"),
+        (OreKind::Titanium, _) => include_bytes!("assets/ores/titanium-2.pxs"),
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{BlockKind, CONVEYOR_VARIANT_COUNT, block_asset, conveyor_asset};
+    use super::{
+        BlockKind, CONVEYOR_VARIANT_COUNT, block_asset, conveyor_asset, item_asset, ore_asset,
+    };
+    use crate::simulation::{item::Item, world::terrain::OreKind};
     use api::glam::uvec2;
     use formats::{AnimatedSpriteDocument, SpriteDocument, TilesetDocument};
+    use strum::IntoEnumIterator;
 
     #[test]
     fn mindustry_derived_assets_decode_at_sixteen_pixels_per_tile() {
@@ -169,23 +176,17 @@ mod tests {
             assert_eq!(sprite.frames.len(), 4);
         }
 
-        for asset in [
-            include_bytes!("assets/item/iron.pxs").as_slice(),
-            include_bytes!("assets/item/iron_plate.pxs").as_slice(),
-            include_bytes!("assets/item/coal.pxs").as_slice(),
-            include_bytes!("assets/item/titanium.pxs").as_slice(),
-            include_bytes!("assets/ores/iron-0.pxs").as_slice(),
-            include_bytes!("assets/ores/iron-1.pxs").as_slice(),
-            include_bytes!("assets/ores/iron-2.pxs").as_slice(),
-            include_bytes!("assets/ores/coal-0.pxs").as_slice(),
-            include_bytes!("assets/ores/coal-1.pxs").as_slice(),
-            include_bytes!("assets/ores/coal-2.pxs").as_slice(),
-            include_bytes!("assets/ores/titanium-0.pxs").as_slice(),
-            include_bytes!("assets/ores/titanium-1.pxs").as_slice(),
-            include_bytes!("assets/ores/titanium-2.pxs").as_slice(),
-        ] {
-            let sprite = SpriteDocument::decode(asset).expect("item sprite should decode");
+        for item in Item::iter() {
+            let sprite =
+                SpriteDocument::decode(item_asset(item)).expect("item sprite should decode");
             assert_eq!(sprite.size, uvec2(16, 16));
+        }
+        for ore in OreKind::iter() {
+            for variant in 0..3 {
+                let sprite = SpriteDocument::decode(ore_asset(ore, variant))
+                    .expect("ore sprite should decode");
+                assert_eq!(sprite.size, uvec2(16, 16));
+            }
         }
 
         let terrain = TilesetDocument::decode(include_bytes!("assets/terrain.pxt"))
@@ -193,13 +194,12 @@ mod tests {
         assert_eq!(terrain.tile_size, uvec2(16, 16));
         assert_eq!(terrain.tiles.len(), 3);
 
-        for (name, size) in [("single", 16), ("double", 32), ("triple", 48), ("quad", 64)] {
-            let bytes = match name {
-                "single" => include_bytes!("assets/cursor/single.pxs").as_slice(),
-                "double" => include_bytes!("assets/cursor/double.pxs").as_slice(),
-                "triple" => include_bytes!("assets/cursor/triple.pxs").as_slice(),
-                _ => include_bytes!("assets/cursor/quad.pxs").as_slice(),
-            };
+        for (bytes, size) in [
+            (include_bytes!("assets/cursor/single.pxs").as_slice(), 16),
+            (include_bytes!("assets/cursor/double.pxs").as_slice(), 32),
+            (include_bytes!("assets/cursor/triple.pxs").as_slice(), 48),
+            (include_bytes!("assets/cursor/quad.pxs").as_slice(), 64),
+        ] {
             let sprite = SpriteDocument::decode(bytes).expect("cursor sprite should decode");
             assert_eq!(sprite.size, uvec2(size, size));
         }

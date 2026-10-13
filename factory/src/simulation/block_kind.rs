@@ -1,6 +1,6 @@
 use strum::{EnumIter, IntoEnumIterator};
 
-use crate::core::block::{BlockCategory, BlockSize};
+use crate::simulation::block::{BlockCategory, BlockSize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumIter)]
 pub enum BlockKind {
@@ -8,7 +8,6 @@ pub enum BlockKind {
     Storage,
     Drill,
     Smelter,
-    SolarPanel,
     Core,
 }
 
@@ -23,7 +22,6 @@ impl BlockKind {
             Self::Storage => ("Storage", BlockCategory::Logistics, BlockSize::Double),
             Self::Drill => ("Drill", BlockCategory::Extraction, BlockSize::Double),
             Self::Smelter => ("Smelter", BlockCategory::Production, BlockSize::Double),
-            Self::SolarPanel => ("Solar panel", BlockCategory::Power, BlockSize::Single),
             Self::Core => ("Core", BlockCategory::Core, BlockSize::Quad),
         };
         BlockDefinition {

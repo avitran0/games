@@ -3,15 +3,14 @@ mod cursor;
 use std::collections::HashMap;
 
 use api::{
-    Anchor, AnimatedSprite, Assets, Camera2D, Flip, Frame, ScreenAction, Sprite, SpriteOptions,
-    Tilemap, Tileset,
-    glam::{IVec2, uvec2},
+    Anchor, AnimatedSprite, Assets, Camera2D, Flip, Frame, HEIGHT, ScreenAction, SpriteOptions,
+    Tilemap, Tileset, WIDTH,
+    glam::{IVec2, UVec2, uvec2},
 };
 
-use crate::core::{
+use crate::simulation::{
     block::Rotation,
     block_kind::BlockKind,
-    item::Item,
     world::{BlockId, World, terrain::OreKind},
 };
 use crate::sprite_store::SpriteStore;
@@ -20,6 +19,7 @@ use self::cursor::CursorRenderer;
 
 const ITEM_RENDER_SCALE: f32 = 0.5;
 
+#[derive(Clone, Copy)]
 pub struct CursorView {
     pub position: api::glam::UVec2,
     pub selected_block: Option<BlockKind>,
@@ -27,14 +27,8 @@ pub struct CursorView {
 }
 
 fn sprite_angle(kind: BlockKind, rotation: Rotation) -> f32 {
-    let angle = match rotation {
-        Rotation::Up => 0.0,
-        Rotation::Right => 90.0,
-        Rotation::Down => 180.0,
-        Rotation::Left => 270.0,
-    };
     // Mindustry conveyor textures point right in their zero-rotation frame.
-    angle
+    rotation.angle()
         + if kind == BlockKind::Conveyor {
             -90.0
         } else {
@@ -42,15 +36,63 @@ fn sprite_angle(kind: BlockKind, rotation: Rotation) -> f32 {
         }
 }
 
+fn intersects_view(
+    position: IVec2,
+    size: IVec2,
+    min: api::glam::Vec2,
+    max: api::glam::Vec2,
+) -> bool {
+    let position = position.as_vec2();
+    let end = position + size.as_vec2();
+    end.x >= min.x && position.x <= max.x && end.y >= min.y && position.y <= max.y
+}
+
+fn conveyor_appearance(connections: [bool; 4], rotation: Rotation) -> (usize, bool) {
+    let rotation = match rotation {
+        Rotation::Right => 0,
+        Rotation::Up => 1,
+        Rotation::Left => 2,
+        Rotation::Down => 3,
+    };
+    let left = connections[(rotation + 3) % 4];
+    let back = connections[(rotation + 2) % 4];
+    let right = connections[(rotation + 1) % 4];
+    let blend_case = if back && left && right {
+        0
+    } else if left && right {
+        1
+    } else if left && back {
+        2
+    } else if right && back {
+        3
+    } else if left {
+        4
+    } else if right {
+        5
+    } else {
+        -1
+    };
+    match blend_case {
+        0 => (3, false),
+        1 => (4, false),
+        2 => (2, true),
+        3 => (2, false),
+        4 => (1, true),
+        5 => (1, false),
+        _ => (0, false),
+    }
+}
+
 pub struct WorldRenderer {
     terrain_tileset: Tileset,
     terrain_map: Tilemap,
-    item_sprites: HashMap<Item, Sprite>,
-    ore_textures: HashMap<OreKind, [Sprite; 3]>,
-    ore_cells: Vec<(api::glam::UVec2, OreKind, usize)>,
+    sprites: SpriteStore,
+    ore_cells: Vec<(UVec2, OreKind, usize)>,
     block_sprites: HashMap<BlockId, AnimatedSprite>,
     conveyor_flips: HashMap<BlockId, bool>,
     preview_sprites: HashMap<BlockKind, AnimatedSprite>,
+    draw_order: Vec<BlockId>,
+    layout_revision: u64,
     cursor: CursorRenderer,
 }
 
@@ -58,7 +100,7 @@ impl WorldRenderer {
     pub fn new<State>(
         assets: &mut Assets,
         world: &World,
-        sprites: &SpriteStore,
+        sprites: SpriteStore,
     ) -> Result<Self, ScreenAction<State>> {
         let terrain_tileset = assets.load_tileset(include_bytes!("../assets/terrain.pxt"))?;
         let terrain_map = assets
@@ -82,38 +124,17 @@ impl WorldRenderer {
             }
         }
 
-        let cursor = CursorRenderer::new(sprites);
         Ok(Self {
             terrain_tileset,
             terrain_map,
-            ore_textures: HashMap::from([
-                (
-                    OreKind::Iron,
-                    std::array::from_fn(|variant| *sprites.ore_texture(OreKind::Iron, variant)),
-                ),
-                (
-                    OreKind::Coal,
-                    std::array::from_fn(|variant| *sprites.ore_texture(OreKind::Coal, variant)),
-                ),
-                (
-                    OreKind::Titanium,
-                    std::array::from_fn(|variant| *sprites.ore_texture(OreKind::Titanium, variant)),
-                ),
-            ]),
-            item_sprites: [
-                Item::IronOre,
-                Item::IronPlate,
-                Item::Coal,
-                Item::TitaniumOre,
-            ]
-            .into_iter()
-            .map(|item| (item, *sprites.item(item)))
-            .collect(),
+            sprites,
             ore_cells,
             block_sprites: HashMap::new(),
             conveyor_flips: HashMap::new(),
             preview_sprites: HashMap::new(),
-            cursor,
+            draw_order: Vec::new(),
+            layout_revision: u64::MAX,
+            cursor: CursorRenderer::new(),
         })
     }
 
@@ -121,36 +142,45 @@ impl WorldRenderer {
         self.terrain_tileset.tile_size().as_uvec2()
     }
 
-    pub fn update(
-        &mut self,
-        world: &World,
-        sprites: &SpriteStore,
-        selected_block: Option<BlockKind>,
-        tick: usize,
-    ) {
-        if let Some(block) = selected_block {
+    pub fn update(&mut self, world: &World, selected_block: Option<BlockKind>, tick: usize) {
+        if let Some(kind) = selected_block {
             self.preview_sprites
-                .entry(block)
-                .or_insert_with(|| sprites.block(block))
+                .entry(kind)
+                .or_insert_with(|| self.sprites.block(kind))
                 .set_tick(tick as u16);
         }
 
-        for (id, block) in world.blocks() {
-            let mut sprite = if block.kind() == BlockKind::Conveyor {
-                let (variant, flip_y) = world.conveyor_appearance(id);
-                self.conveyor_flips.insert(id, flip_y);
-                sprites.conveyor_variant(variant)
-            } else {
-                self.conveyor_flips.remove(&id);
-                sprites.block(block.kind())
-            };
-            sprite.set_tick(tick as u16);
-            self.block_sprites.insert(id, sprite);
+        if self.layout_revision != world.layout_revision() {
+            self.layout_revision = world.layout_revision();
+            self.draw_order = world.blocks().map(|(id, _)| id).collect();
+            self.draw_order.sort_by_key(|id| {
+                world
+                    .block(*id)
+                    .map(|block| (block.origin().y, block.origin().x))
+            });
+            self.block_sprites.retain(|id, _| world.contains_block(*id));
+            self.conveyor_flips
+                .retain(|id, _| world.contains_block(*id));
+
+            for (id, block) in world.blocks() {
+                if block.kind() == BlockKind::Conveyor {
+                    let (variant, flip) =
+                        conveyor_appearance(world.conveyor_connections(id), block.rotation());
+                    self.conveyor_flips.insert(id, flip);
+                    self.block_sprites
+                        .insert(id, self.sprites.conveyor_variant(variant));
+                } else {
+                    self.conveyor_flips.remove(&id);
+                    self.block_sprites
+                        .entry(id)
+                        .or_insert_with(|| self.sprites.block(block.kind()));
+                }
+            }
         }
 
-        self.block_sprites.retain(|id, _| world.contains_block(*id));
-        self.conveyor_flips
-            .retain(|id, _| world.contains_block(*id));
+        for sprite in self.block_sprites.values_mut() {
+            sprite.set_tick(tick as u16);
+        }
     }
 
     pub fn draw(
@@ -164,25 +194,38 @@ impl WorldRenderer {
         frame.world(camera).tilemap(&self.terrain_map, IVec2::ZERO);
 
         let tile_size = self.tile_size().as_ivec2();
+        let screen_a = camera.screen_to_world(IVec2::ZERO);
+        let screen_b = camera.screen_to_world(IVec2::new(WIDTH as i32, HEIGHT as i32));
+        let visible_min = screen_a.min(screen_b);
+        let visible_max = screen_a.max(screen_b);
         for (position, ore, variant) in &self.ore_cells {
             let center = position.as_ivec2() * tile_size + tile_size / 2;
-            let texture = self.ore_textures[ore][*variant];
+            let center_f = center.as_vec2();
+            if center_f.cmplt(visible_min).any() || center_f.cmpgt(visible_max).any() {
+                continue;
+            }
+            let texture = self.sprites.ore_texture(*ore, *variant);
             frame.world(camera).sprite(
-                &texture,
+                texture,
                 center,
                 SpriteOptions::default()
                     .anchor(Anchor::Center)
                     .opacity(0.95),
             );
         }
-        let mut blocks = world.blocks().collect::<Vec<_>>();
-        blocks.sort_by_key(|(_, block)| (block.origin().y, block.origin().x));
-        for (id, block) in &blocks {
+        for id in &self.draw_order {
+            let Some(block) = world.block(*id) else {
+                continue;
+            };
             let Some(sprite) = self.block_sprites.get(id) else {
                 continue;
             };
             let block_size = tile_size * block.footprint_cells() as i32;
-            let center = block.origin().as_ivec2() * tile_size + block_size / 2;
+            let origin = block.origin().as_ivec2() * tile_size;
+            if !intersects_view(origin, block_size, visible_min, visible_max) {
+                continue;
+            }
+            let center = origin + block_size / 2;
             let angle = sprite_angle(block.kind(), block.rotation());
             let options = SpriteOptions::default()
                 .anchor(Anchor::Center)
@@ -197,10 +240,17 @@ impl WorldRenderer {
         }
 
         // Draw moving item icons above every belt so neighboring sprites cannot cover them.
-        for (_, block) in blocks {
+        for id in &self.draw_order {
+            let Some(block) = world.block(*id) else {
+                continue;
+            };
             if let Some(stack) = block.items() {
                 let block_size = tile_size * block.footprint_cells() as i32;
-                let center = block.origin().as_ivec2() * tile_size + block_size / 2;
+                let origin = block.origin().as_ivec2() * tile_size;
+                if !intersects_view(origin, block_size, visible_min, visible_max) {
+                    continue;
+                }
+                let center = origin + block_size / 2;
                 let item_center = block
                     .item_progress(tick)
                     .map(|progress| {
@@ -222,7 +272,7 @@ impl WorldRenderer {
                     })
                     .unwrap_or(center);
                 frame.world(camera).sprite(
-                    &self.item_sprites[&stack.item()],
+                    self.sprites.item(stack.item()),
                     item_center,
                     SpriteOptions::default()
                         .anchor(Anchor::Center)
@@ -257,17 +307,28 @@ impl WorldRenderer {
             camera,
             frame,
             self.tile_size(),
-            cursor_position,
-            selected_block,
-            rotation,
+            CursorView {
+                position: cursor_position,
+                selected_block,
+                rotation,
+            },
+            &self.sprites,
         );
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::sprite_angle;
-    use crate::core::{block::Rotation, block_kind::BlockKind};
+    use super::{conveyor_appearance, sprite_angle};
+    use crate::simulation::{block::Rotation, block_kind::BlockKind};
+
+    #[test]
+    fn conveyor_blend_atlas_transform_matches_world_connections() {
+        assert_eq!(
+            conveyor_appearance([true, false, false, true], Rotation::Right),
+            (1, true)
+        );
+    }
 
     #[test]
     fn mindustry_conveyor_texture_rotates_to_the_simulated_output() {

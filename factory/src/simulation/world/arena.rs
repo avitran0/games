@@ -1,6 +1,6 @@
 use std::num::NonZeroU32;
 
-use crate::core::{block::Block, world::BlockId};
+use crate::simulation::{block::Block, world::BlockId};
 
 struct Slot {
     generation: NonZeroU32,

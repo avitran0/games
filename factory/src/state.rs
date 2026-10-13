@@ -1,7 +1,6 @@
-use crate::{core::block_kind::BlockKind, sprite_store::SpriteStore};
+use crate::simulation::block_kind::BlockKind;
 
 #[derive(Default)]
 pub struct State {
     pub picked_block: Option<BlockKind>,
-    pub sprites: Option<SpriteStore>,
 }

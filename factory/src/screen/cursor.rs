@@ -3,7 +3,7 @@ use api::{
     glam::{IVec2, UVec2},
 };
 
-use crate::core::{
+use crate::simulation::{
     block::Rotation,
     block_kind::BlockKind,
     world::{PlaceBlockError, World},
@@ -11,11 +11,6 @@ use crate::core::{
 
 const INITIAL_MOVE_REPEAT_DELAY: usize = 20;
 const MOVE_REPEAT_INTERVAL: usize = 10;
-
-pub enum CursorEvent {
-    Placed,
-    PlacementFailed(PlaceBlockError),
-}
 
 pub struct Cursor {
     position: UVec2,
@@ -39,14 +34,9 @@ impl Cursor {
         input: &Input,
         world: &mut World,
         picked_block: Option<BlockKind>,
-    ) -> Option<CursorEvent> {
+    ) -> Option<Result<(), PlaceBlockError>> {
         if input.just_pressed(Button::X) {
-            self.rotation = match self.rotation {
-                Rotation::Up => Rotation::Right,
-                Rotation::Right => Rotation::Down,
-                Rotation::Down => Rotation::Left,
-                Rotation::Left => Rotation::Up,
-            };
+            self.rotation = self.rotation.clockwise();
         }
 
         let movement = self.movement(input);
@@ -59,10 +49,9 @@ impl Cursor {
         if input.just_pressed(Button::A) {
             if let Some(block) = picked_block {
                 return Some(
-                    match world.place_block(block, self.position, self.rotation) {
-                        Ok(_) => CursorEvent::Placed,
-                        Err(error) => CursorEvent::PlacementFailed(error),
-                    },
+                    world
+                        .place_block(block, self.position, self.rotation)
+                        .map(|_| ()),
                 );
             }
         } else if input.just_pressed(Button::B) {

@@ -1,9 +1,8 @@
 use api::glam::IVec2;
 
-use crate::core::{
-    block::behavior::BlockBehavior,
+use crate::simulation::{
+    block::behavior::{BlockBehavior, TickContext},
     item::{Item, ItemStack},
-    world::terrain::OreKind,
 };
 
 const SMELT_TICKS: usize = 90;
@@ -24,17 +23,16 @@ impl Smelter {
 }
 
 impl BlockBehavior for Smelter {
-    fn tick(&mut self, _ore: Option<OreKind>, tick: usize, powered: bool) -> bool {
+    fn tick(&mut self, context: &TickContext) {
         let Some((Item::IronOre, start_tick)) = self.input else {
-            return false;
+            return;
         };
-        if tick.saturating_sub(start_tick) < SMELT_TICKS
+        if context.tick.saturating_sub(start_tick) < SMELT_TICKS
             || self
                 .output
                 .is_some_and(|stack| stack.count() >= OUTPUT_CAPACITY)
-            || !powered
         {
-            return false;
+            return;
         }
         match &mut self.output {
             Some(stack) => {
@@ -43,7 +41,6 @@ impl BlockBehavior for Smelter {
             None => self.output = Some(ItemStack::single(Item::IronPlate)),
         }
         self.input = None;
-        true
     }
 
     fn output_item(&self, _tick: usize) -> Option<Item> {
@@ -71,7 +68,7 @@ impl BlockBehavior for Smelter {
         true
     }
 
-    fn take(&mut self) -> Option<Item> {
+    fn take(&mut self, _tick: usize) -> Option<Item> {
         let (remaining, item) = self.output.take()?.take_one();
         self.output = remaining;
         Some(item)

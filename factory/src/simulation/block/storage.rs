@@ -1,9 +1,8 @@
 use api::glam::IVec2;
 
-use crate::core::{
-    block::behavior::BlockBehavior,
+use crate::simulation::{
+    block::behavior::{BlockBehavior, TickContext},
     item::{Item, ItemStack},
-    world::terrain::OreKind,
 };
 
 const STORAGE_CAPACITY: u8 = 20;
@@ -24,9 +23,7 @@ impl Storage {
 }
 
 impl BlockBehavior for Storage {
-    fn tick(&mut self, _ore: Option<OreKind>, _tick: usize, _powered: bool) -> bool {
-        false
-    }
+    fn tick(&mut self, _context: &TickContext) {}
 
     fn items(&self) -> Option<ItemStack> {
         self.items
@@ -34,7 +31,7 @@ impl BlockBehavior for Storage {
 
     fn can_accept(&self, item: Item) -> bool {
         self.items
-            .is_none_or(|mut stack| stack.try_add(item, STORAGE_CAPACITY))
+            .is_none_or(|stack| stack.can_add(item, STORAGE_CAPACITY))
     }
 
     fn accept(&mut self, item: Item, tick: usize, _input_direction: IVec2) -> bool {
@@ -51,12 +48,10 @@ impl BlockBehavior for Storage {
         accepted
     }
 
-    fn take(&mut self) -> Option<Item> {
+    fn take(&mut self, tick: usize) -> Option<Item> {
         let (remaining, item) = self.items.take()?.take_one();
         self.items = remaining;
-        if self.items.is_none() {
-            self.next_output_tick = None;
-        }
+        self.next_output_tick = self.items.map(|_| tick.saturating_add(OUTPUT_INTERVAL));
         Some(item)
     }
 
@@ -64,5 +59,31 @@ impl BlockBehavior for Storage {
         (self.next_output_tick? <= tick)
             .then(|| self.items.map(ItemStack::item))
             .flatten()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use api::glam::IVec2;
+
+    use crate::simulation::{block::behavior::BlockBehavior, item::Item};
+
+    use super::{OUTPUT_INTERVAL, Storage};
+
+    #[test]
+    fn storage_waits_the_output_interval_between_items() {
+        let mut storage = Storage::new();
+        assert!(storage.accept(Item::IronOre, 0, IVec2::ZERO));
+        assert!(storage.accept(Item::IronOre, 0, IVec2::ZERO));
+        assert_eq!(storage.output_item(OUTPUT_INTERVAL - 1), None);
+        assert_eq!(storage.output_item(OUTPUT_INTERVAL), Some(Item::IronOre));
+        assert_eq!(storage.take(OUTPUT_INTERVAL), Some(Item::IronOre));
+        assert_eq!(storage.output_item(OUTPUT_INTERVAL * 2 - 1), None);
+        assert_eq!(
+            storage.output_item(OUTPUT_INTERVAL * 2),
+            Some(Item::IronOre)
+        );
+        assert_eq!(storage.take(OUTPUT_INTERVAL * 2), Some(Item::IronOre));
+        assert_eq!(storage.output_item(OUTPUT_INTERVAL * 3), None);
     }
 }

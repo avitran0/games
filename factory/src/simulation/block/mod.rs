@@ -1,12 +1,14 @@
 use api::glam::{IVec2, UVec2};
 
-use crate::core::{
+use crate::simulation::{
     block_kind::BlockKind,
     item::{Item, ItemStack},
     world::terrain::OreKind,
 };
 
 pub use category::BlockCategory;
+#[allow(unused_imports)]
+pub use drill::Drill;
 pub use size::BlockSize;
 
 mod behavior;
@@ -18,7 +20,7 @@ mod smelter;
 mod state;
 mod storage;
 
-use behavior::BlockBehavior;
+use behavior::TickContext;
 use state::BlockState;
 
 pub const CONVEYOR_TRAVEL_TICKS: usize = 24;
@@ -32,6 +34,24 @@ pub enum Rotation {
 }
 
 impl Rotation {
+    pub const fn clockwise(self) -> Self {
+        match self {
+            Self::Up => Self::Right,
+            Self::Right => Self::Down,
+            Self::Down => Self::Left,
+            Self::Left => Self::Up,
+        }
+    }
+
+    pub const fn angle(self) -> f32 {
+        match self {
+            Self::Up => 0.0,
+            Self::Right => 90.0,
+            Self::Down => 180.0,
+            Self::Left => 270.0,
+        }
+    }
+
     pub fn direction(self) -> IVec2 {
         match self {
             Self::Up => IVec2::NEG_Y,
@@ -50,10 +70,15 @@ pub struct Block {
 }
 
 impl Block {
-    pub(crate) fn new(kind: BlockKind, origin: UVec2, rotation: Rotation) -> Self {
+    pub(crate) fn new(
+        kind: BlockKind,
+        origin: UVec2,
+        rotation: Rotation,
+        ore: Option<OreKind>,
+    ) -> Self {
         Self {
             kind,
-            state: BlockState::new(kind),
+            state: BlockState::new(kind, ore),
             origin,
             rotation,
         }
@@ -123,11 +148,12 @@ impl Block {
         self.state.accept(item, tick, input_direction)
     }
 
-    pub(crate) fn take_item(&mut self) -> Option<Item> {
-        self.state.take()
+    pub(crate) fn take_item(&mut self, tick: usize) -> Option<Item> {
+        self.state.take(tick)
     }
 
-    pub(crate) fn tick(&mut self, ore: Option<OreKind>, tick: usize, powered: bool) -> bool {
-        self.state.tick(ore, tick, powered)
+    pub(crate) fn tick(&mut self, tick: usize) {
+        let context = TickContext { tick };
+        self.state.tick(&context)
     }
 }

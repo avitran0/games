@@ -1,8 +1,12 @@
-use std::{fmt, num::NonZeroU32};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+    num::NonZeroU32,
+};
 
 use api::glam::UVec2;
 
-use crate::core::{
+use crate::simulation::{
     block::{Block, Rotation},
     block_kind::BlockKind,
     item::Item,
@@ -18,8 +22,9 @@ pub struct World {
     chunks: Vec<Chunk>,
     blocks: BlockArena,
     seed: u64,
-    power: u32,
     stockpile: [u32; Item::COUNT],
+    tick_count: usize,
+    layout_revision: u64,
 }
 
 impl World {
@@ -51,8 +56,9 @@ impl World {
             chunks: vec![Chunk::default(); chunk_count],
             blocks: BlockArena::default(),
             seed,
-            power: 0,
             stockpile: [0; Item::COUNT],
+            tick_count: 0,
+            layout_revision: 0,
         };
         world.generate_terrain();
         Ok(world)
@@ -80,8 +86,17 @@ impl World {
         self.size
     }
 
-    pub fn power(&self) -> u32 {
-        self.power
+    pub fn stockpile(&self, item: Item) -> u32 {
+        self.stockpile[item.index()]
+    }
+
+    /// Number of simulation steps that have completed.
+    pub fn tick_count(&self) -> usize {
+        self.tick_count
+    }
+
+    pub(crate) fn layout_revision(&self) -> u64 {
+        self.layout_revision
     }
 
     pub fn terrain_at(&self, pos: UVec2) -> Option<TerrainCell> {
@@ -94,13 +109,14 @@ impl World {
         self.chunks[coords.chunk].blocks[coords.cell]
     }
 
-    pub(crate) fn conveyor_appearance(&self, id: BlockId) -> (usize, bool) {
+    /// Connection flags in world order: right, up, left, down.
+    pub(crate) fn conveyor_connections(&self, id: BlockId) -> [bool; 4] {
         let Some(block) = self
             .blocks
             .get(id)
             .filter(|block| block.kind() == BlockKind::Conveyor)
         else {
-            return (0, false);
+            return [false; 4];
         };
         let origin = block.origin();
         // Mindustry's local directions are right/up/left/down in world coordinates.
@@ -110,7 +126,7 @@ impl World {
             api::glam::IVec2::NEG_X,
             api::glam::IVec2::Y,
         ];
-        let connections = directions.map(|direction| {
+        directions.map(|direction| {
             let neighbor = origin.as_ivec2() + direction;
             if neighbor.min_element() < 0 {
                 return false;
@@ -132,47 +148,15 @@ impl World {
             );
             (block.output_position() == Some(neighbor) && neighbor_accepts_items)
                 || (neighbor_outputs_items && neighbor_block.output_position() == Some(origin))
-        });
-
-        let rotation = match block.rotation() {
-            Rotation::Right => 0,
-            Rotation::Up => 1,
-            Rotation::Left => 2,
-            Rotation::Down => 3,
-        };
-        let left = connections[(rotation + 3) % 4];
-        let back = connections[(rotation + 2) % 4];
-        let right = connections[(rotation + 1) % 4];
-        let blend_case = if back && left && right {
-            0
-        } else if left && right {
-            1
-        } else if left && back {
-            2
-        } else if right && back {
-            3
-        } else if left {
-            4
-        } else if right {
-            5
-        } else {
-            -1
-        };
-
-        // Match Mindustry's atlas transforms, including its mirrored curve pieces.
-        match blend_case {
-            0 => (3, false),
-            1 => (4, false),
-            2 => (2, true),
-            3 => (2, false),
-            4 => (1, true),
-            5 => (1, false),
-            _ => (0, false),
-        }
+        })
     }
 
     pub fn blocks(&self) -> impl Iterator<Item = (BlockId, &Block)> {
         self.blocks.iter()
+    }
+
+    pub(crate) fn block(&self, id: BlockId) -> Option<&Block> {
+        self.blocks.get(id)
     }
 
     pub(crate) fn contains_block(&self, id: BlockId) -> bool {
@@ -185,6 +169,14 @@ impl World {
         origin: UVec2,
         rotation: Rotation,
     ) -> Result<BlockId, PlaceBlockError> {
+        if kind == BlockKind::Core
+            && self
+                .blocks
+                .iter()
+                .any(|(_, block)| block.kind() == BlockKind::Core)
+        {
+            return Err(PlaceBlockError::CoreAlreadyPlaced);
+        }
         let side = kind.size().cells();
         let mut cells = Vec::with_capacity((side * side) as usize);
 
@@ -213,36 +205,24 @@ impl World {
             }
         }
 
-        let id = self.blocks.insert(Block::new(kind, origin, rotation));
+        let ore = (kind == BlockKind::Drill)
+            .then(|| self.ore_under_footprint(origin, side))
+            .flatten();
+        let id = self.blocks.insert(Block::new(kind, origin, rotation, ore));
         for coords in cells {
             self.chunks[coords.chunk].blocks[coords.cell] = Some(id);
         }
+        self.layout_revision = self.layout_revision.wrapping_add(1);
         Ok(id)
     }
 
-    pub(crate) fn tick(&mut self, tick: usize) {
-        if tick.is_multiple_of(120) {
-            let panels = self
-                .blocks
-                .iter()
-                .filter(|(_, block)| block.kind() == BlockKind::SolarPanel)
-                .count() as u32;
-            self.power = self.power.saturating_add(panels).min(9_999);
+    pub(crate) fn tick(&mut self) {
+        let tick = self.tick_count;
+        for (_, block) in self.blocks.iter_mut() {
+            block.tick(tick);
         }
 
-        let drill_ores = self
-            .blocks
-            .iter()
-            .map(|(_, block)| self.ore_under(block))
-            .collect::<Vec<_>>();
-        let available_power = &mut self.power;
-        for ((_, block), ore) in self.blocks.iter_mut().zip(drill_ores) {
-            if block.tick(ore, tick, *available_power > 0) {
-                *available_power -= 1;
-            }
-        }
-
-        let transfers = self
+        let mut transfers = self
             .blocks
             .iter()
             .filter_map(|(from, block)| {
@@ -252,6 +232,23 @@ impl World {
                 Some((from, to, item, block.output_direction()))
             })
             .collect::<Vec<_>>();
+        let transfer_targets = transfers
+            .iter()
+            .map(|(from, to, _, _)| (*from, *to))
+            .collect::<HashMap<_, _>>();
+        transfers.sort_by_key(|(from, _, _, _)| {
+            let mut current = *from;
+            let mut seen = HashSet::new();
+            let mut depth = 0;
+            while seen.insert(current) {
+                let Some(&next) = transfer_targets.get(&current) else {
+                    break;
+                };
+                depth += 1;
+                current = next;
+            }
+            depth
+        });
 
         for (from, to, item, input_direction) in transfers {
             if !self
@@ -261,7 +258,11 @@ impl World {
             {
                 continue;
             }
-            let Some(item) = self.blocks.get_mut(from).and_then(Block::take_item) else {
+            let Some(item) = self
+                .blocks
+                .get_mut(from)
+                .and_then(|block| block.take_item(tick))
+            else {
                 continue;
             };
             let accepted = self
@@ -282,11 +283,10 @@ impl World {
                 debug_assert!(restored);
             }
         }
+        self.tick_count = self.tick_count.wrapping_add(1);
     }
 
-    fn ore_under(&self, block: &Block) -> Option<terrain::OreKind> {
-        let origin = block.origin();
-        let side = block.footprint_cells();
+    fn ore_under_footprint(&self, origin: UVec2, side: u32) -> Option<terrain::OreKind> {
         for y in 0..side {
             for x in 0..side {
                 if let Some(ore) = self
@@ -409,6 +409,7 @@ impl World {
             }
         }
 
+        self.layout_revision = self.layout_revision.wrapping_add(1);
         Some(removed)
     }
 }
@@ -447,10 +448,30 @@ impl std::error::Error for WorldCreateError {}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum PlaceBlockError {
+    CoreAlreadyPlaced,
     OutOfBounds { position: UVec2 },
     Occupied { position: UVec2 },
     Impassable { position: UVec2 },
 }
+
+impl fmt::Display for PlaceBlockError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::CoreAlreadyPlaced => write!(f, "a core is already placed"),
+            Self::OutOfBounds { position } => {
+                write!(f, "out of bounds at ({}, {})", position.x, position.y)
+            }
+            Self::Occupied { position } => {
+                write!(f, "occupied at ({}, {})", position.x, position.y)
+            }
+            Self::Impassable { position } => {
+                write!(f, "impassable terrain at ({}, {})", position.x, position.y)
+            }
+        }
+    }
+}
+
+impl std::error::Error for PlaceBlockError {}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct BlockId {
@@ -462,12 +483,16 @@ pub struct BlockId {
 mod tests {
     use api::glam::uvec2;
 
-    use crate::core::{block::Rotation, block_kind::BlockKind, item::Item};
+    use crate::simulation::{
+        block::{CONVEYOR_TRAVEL_TICKS, Drill, Rotation},
+        block_kind::BlockKind,
+        item::Item,
+    };
 
     use super::{BlockId, PlaceBlockError, World, WorldCreateError, terrain};
 
-    const DRILL_EXTRACTION_TICKS: usize = 120;
-    const DRILL_STACK_CAPACITY: u8 = 10;
+    const DRILL_EXTRACTION_TICKS: usize = Drill::EXTRACTION_PERIOD_TICKS as usize;
+    const DRILL_STACK_CAPACITY: u8 = Drill::OUTPUT_CAPACITY;
 
     fn held_item(world: &World, id: BlockId) -> Option<Item> {
         world.blocks().find_map(|(block_id, block)| {
@@ -544,7 +569,7 @@ mod tests {
     }
 
     #[test]
-    fn solar_power_runs_smelters_and_makes_iron_plates() {
+    fn smelters_craft_iron_plates() {
         let mut world = World::new(uvec2(32, 32)).unwrap();
         world
             .place_block(BlockKind::Core, uvec2(16, 7), Rotation::Up)
@@ -564,14 +589,29 @@ mod tests {
         world
             .place_block(BlockKind::Drill, uvec2(16, 16), Rotation::Up)
             .unwrap();
-        world
-            .place_block(BlockKind::SolarPanel, uvec2(20, 16), Rotation::Up)
-            .unwrap();
-
-        for tick in 0..2_000 {
-            world.tick(tick);
+        for _ in 0..2_000 {
+            world.tick();
         }
         assert!(world.stockpile[Item::IronPlate.index()] > 0);
+    }
+
+    #[test]
+    fn worlds_allow_at_most_one_core_at_a_time() {
+        let mut world = World::new(uvec2(32, 32)).unwrap();
+        let first = world
+            .place_block(BlockKind::Core, uvec2(2, 2), Rotation::Up)
+            .unwrap();
+        assert_eq!(
+            world.place_block(BlockKind::Core, uvec2(8, 2), Rotation::Up),
+            Err(PlaceBlockError::CoreAlreadyPlaced)
+        );
+        world.remove_block_at(uvec2(3, 3)).unwrap();
+        assert!(
+            world
+                .place_block(BlockKind::Core, uvec2(8, 2), Rotation::Up)
+                .is_ok()
+        );
+        assert!(!world.contains_block(first));
     }
 
     #[test]
@@ -630,6 +670,38 @@ mod tests {
     }
 
     #[test]
+    fn full_downstream_belts_are_drained_before_upstream_transfers_are_resolved() {
+        let mut world = World::new(uvec2(32, 32)).unwrap();
+        let upstream = world
+            .place_block(BlockKind::Conveyor, uvec2(10, 12), Rotation::Up)
+            .unwrap();
+        let full_middle = world
+            .place_block(BlockKind::Conveyor, uvec2(10, 11), Rotation::Up)
+            .unwrap();
+        let downstream = world
+            .place_block(BlockKind::Conveyor, uvec2(10, 10), Rotation::Up)
+            .unwrap();
+        world.blocks.get_mut(upstream).unwrap().accept_item(
+            Item::IronOre,
+            0,
+            api::glam::IVec2::NEG_Y,
+        );
+        world.blocks.get_mut(full_middle).unwrap().accept_item(
+            Item::IronOre,
+            0,
+            api::glam::IVec2::NEG_Y,
+        );
+
+        for _ in 0..=CONVEYOR_TRAVEL_TICKS {
+            world.tick();
+        }
+
+        assert_eq!(held_item(&world, upstream), None);
+        assert_eq!(held_item(&world, full_middle), Some(Item::IronOre));
+        assert_eq!(held_item(&world, downstream), Some(Item::IronOre));
+    }
+
+    #[test]
     fn drills_mine_iron_and_conveyors_move_items_after_the_travel_time() {
         let mut world = World::new(uvec2(32, 32)).unwrap();
         let drill = world
@@ -642,8 +714,8 @@ mod tests {
             .place_block(BlockKind::Conveyor, uvec2(16, 14), Rotation::Up)
             .unwrap();
 
-        for tick in 0..DRILL_EXTRACTION_TICKS {
-            world.tick(tick);
+        for _ in 0..DRILL_EXTRACTION_TICKS {
+            world.tick();
         }
 
         assert_eq!(held_item(&world, drill), None);
@@ -656,16 +728,16 @@ mod tests {
                 .unwrap()
                 .1
                 .item_progress(132),
-            Some(0.5)
+            Some(13.0 / 24.0)
         );
 
-        for tick in DRILL_EXTRACTION_TICKS..144 {
-            world.tick(tick);
+        for _ in DRILL_EXTRACTION_TICKS..143 {
+            world.tick();
         }
         assert_eq!(held_item(&world, first_conveyor), Some(Item::IronOre));
         assert_eq!(held_item(&world, second_conveyor), None);
 
-        world.tick(144);
+        world.tick();
         assert_eq!(held_item(&world, first_conveyor), None);
         assert_eq!(held_item(&world, second_conveyor), Some(Item::IronOre));
     }
@@ -689,11 +761,17 @@ mod tests {
             .place_block(BlockKind::Drill, uvec2(16, 16), Rotation::Up)
             .unwrap();
 
-        assert_eq!(world.conveyor_appearance(elbow), (1, true));
-        for tick in 0..200 {
-            world.tick(tick);
+        assert_eq!(
+            world.conveyor_connections(elbow),
+            [true, false, false, true]
+        );
+        for _ in 0..200 {
+            world.tick();
         }
-        assert_eq!(world.conveyor_appearance(elbow), (1, true));
+        assert_eq!(
+            world.conveyor_connections(elbow),
+            [true, false, false, true]
+        );
         assert_eq!(held_item(&world, turned_belt), Some(Item::IronOre));
     }
 
@@ -705,8 +783,8 @@ mod tests {
             .unwrap();
 
         let ticks = DRILL_EXTRACTION_TICKS * (DRILL_STACK_CAPACITY as usize + 2);
-        for tick in 0..ticks {
-            world.tick(tick);
+        for _ in 0..ticks {
+            world.tick();
         }
         assert_eq!(held_item(&world, drill), Some(Item::IronOre));
         assert_eq!(held_count(&world, drill), DRILL_STACK_CAPACITY);
@@ -714,7 +792,7 @@ mod tests {
         let conveyor = world
             .place_block(BlockKind::Conveyor, uvec2(16, 15), Rotation::Up)
             .unwrap();
-        world.tick(ticks);
+        world.tick();
         assert_eq!(held_count(&world, drill), DRILL_STACK_CAPACITY - 1);
         assert_eq!(held_item(&world, conveyor), Some(Item::IronOre));
         assert_eq!(held_count(&world, conveyor), 1);
@@ -737,8 +815,8 @@ mod tests {
         let drill = world
             .place_block(BlockKind::Drill, position, Rotation::Up)
             .unwrap();
-        for tick in 0..DRILL_EXTRACTION_TICKS * 2 {
-            world.tick(tick);
+        for _ in 0..DRILL_EXTRACTION_TICKS * 2 {
+            world.tick();
         }
         assert_eq!(held_item(&world, drill), None);
     }
