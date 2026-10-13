@@ -17,17 +17,7 @@ fn integer_fill_width(numerator: u64, denominator: u64, width: u32) -> u32 {
     if denominator == 0 {
         return width;
     }
-    let mut remainder = 0_u64;
-    let mut filled = 0_u32;
-    for _ in 0..width {
-        if numerator >= denominator - remainder {
-            remainder -= denominator - numerator;
-            filled += 1;
-        } else {
-            remainder += numerator;
-        }
-    }
-    filled
+    ((u128::from(numerator) * u128::from(width)) / u128::from(denominator)) as u32
 }
 
 macro_rules! impl_signed_slider {
@@ -176,5 +166,24 @@ impl Ui {
         max: T,
     ) -> Response {
         self.add(Slider::new(label, value, min, max))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::integer_fill_width;
+
+    #[test]
+    fn integer_fill_width_uses_flooring() {
+        assert_eq!(integer_fill_width(0, 3, 10), 0);
+        assert_eq!(integer_fill_width(1, 3, 10), 3);
+        assert_eq!(integer_fill_width(2, 3, 10), 6);
+        assert_eq!(integer_fill_width(1, 2, 1), 0);
+    }
+
+    #[test]
+    fn integer_fill_width_handles_full_precision_and_empty_ranges() {
+        assert_eq!(integer_fill_width(0, 0, 100), 100);
+        assert_eq!(integer_fill_width(u64::MAX, u64::MAX, u32::MAX), u32::MAX);
     }
 }

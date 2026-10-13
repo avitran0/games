@@ -7,7 +7,6 @@ pub(crate) enum PaintCmd {
     Rect {
         rect: Rect,
         fill: Color,
-        border: Option<(Color, u32)>,
         radius: u32,
     },
     Text {
@@ -49,28 +48,7 @@ impl PaintList {
     }
 
     pub fn rect(&mut self, rect: Rect, fill: Color, radius: u32) {
-        self.0.push(PaintCmd::Rect {
-            rect,
-            fill,
-            border: None,
-            radius,
-        });
-    }
-
-    pub fn bordered_rect(
-        &mut self,
-        rect: Rect,
-        fill: Color,
-        border: Color,
-        width: u32,
-        radius: u32,
-    ) {
-        self.0.push(PaintCmd::Rect {
-            rect,
-            fill,
-            border: Some((border, width)),
-            radius,
-        });
+        self.0.push(PaintCmd::Rect { rect, fill, radius });
     }
 
     pub fn text(
@@ -99,12 +77,7 @@ impl PaintList {
 
 fn draw_command(frame: &mut Frame, command: &PaintCmd, clip: Option<Rect>, offset: IVec2) {
     match command {
-        PaintCmd::Rect {
-            rect,
-            fill,
-            border,
-            radius,
-        } => {
+        PaintCmd::Rect { rect, fill, radius } => {
             let mut rect = translated(*rect, offset);
             if let Some(clip) = clip {
                 let Some(clipped) = intersection(rect, clip) else {
@@ -112,19 +85,10 @@ fn draw_command(frame: &mut Frame, command: &PaintCmd, clip: Option<Rect>, offse
                 };
                 rect = clipped;
             }
-            match border {
-                Some((color, width)) => frame.bordered_rectangle(
-                    rect.position,
-                    rect.size,
-                    *radius,
-                    *fill,
-                    *color,
-                    *width,
-                ),
-                None if *radius > 0 => {
-                    frame.rounded_rectangle(rect.position, rect.size, *radius, *fill)
-                }
-                None => frame.rectangle(rect.position, rect.size, *fill),
+            if *radius > 0 {
+                frame.rounded_rectangle(rect.position, rect.size, *radius, *fill);
+            } else {
+                frame.rectangle(rect.position, rect.size, *fill);
             }
         }
         PaintCmd::Text {

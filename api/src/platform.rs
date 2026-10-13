@@ -8,7 +8,7 @@ use sdl3::{
     video::{GLContext, GLProfile, SwapInterval, Window},
 };
 use thiserror::Error;
-use utils::Level;
+use utils::log::Level;
 
 use crate::{HEIGHT, WIDTH, debug, info, warn};
 

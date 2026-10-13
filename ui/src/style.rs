@@ -29,7 +29,7 @@ impl Default for Style {
         Self {
             background: Color::Bunker,
             panel: Color::Bunker,
-            panel_border: Color::Charade,
+            panel_border: Color::ShuttleGray,
             text: Color::Mischka,
             focused_text: Color::Bunker,
             muted_text: Color::Chatelle,

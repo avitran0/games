@@ -77,7 +77,6 @@ impl Screen<State> for Demo {
                     *click_count = click_count.saturating_add(1);
                 }
                 ui.label(format!("Button activations: {click_count}"));
-                ui.progress_bar(*click_count as f32 / 10.0, "Progress");
             }
             Page::Controls => {
                 ui.heading("Controls");

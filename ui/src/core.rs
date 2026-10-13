@@ -1,5 +1,5 @@
 use api::{Button as EngineButton, Color, Frame, HEIGHT, Input, WIDTH};
-use glam::{IVec2, ivec2};
+use glam::{IVec2, ivec2, uvec2};
 
 use crate::{
     Alignment, Rect, Response, Style,
@@ -252,23 +252,6 @@ impl Ui {
         output
     }
 
-    pub(crate) fn horizontal_scroll<R>(
-        &mut self,
-        viewport: Rect,
-        offset_x: u32,
-        contents: impl FnOnce(&mut Self) -> R,
-    ) -> R {
-        let paint_start = self.paint.len();
-        let output = contents(self);
-        let commands = self.paint.take_from(paint_start);
-        self.paint.scroll(
-            viewport,
-            ivec2(offset_x.min(i32::MAX as u32) as i32, 0),
-            commands,
-        );
-        output
-    }
-
     pub fn background(&mut self, rect: Rect, color: Color) {
         self.paint.rect(rect, color, 0);
     }
@@ -412,9 +395,11 @@ impl Ui {
 
     pub(crate) fn draw_text(&mut self, text: impl Into<String>, position: IVec2, color: Color) {
         let text = text.into();
-        let width = self.text_width(&text);
-        self.paint
-            .text(text, position, color, self.style.row_height, width);
+        let size = self.text_metrics.as_ref().map_or(
+            uvec2(0, self.style.row_height.saturating_sub(2)),
+            |metrics| metrics.measure_text(&text),
+        );
+        self.paint.text(text, position, color, size.y, size.x);
     }
 
     pub(crate) fn draw_aligned_text(&mut self, rect: Rect, text: &str, color: Color, inset: u32) {
@@ -442,17 +427,6 @@ impl Ui {
 
     pub(crate) fn draw_rect(&mut self, rect: Rect, color: Color, radius: u32) {
         self.paint.rect(rect, color, radius);
-    }
-
-    pub(crate) fn draw_bordered_rect(
-        &mut self,
-        rect: Rect,
-        fill: Color,
-        border: Color,
-        width: u32,
-        radius: u32,
-    ) {
-        self.paint.bordered_rect(rect, fill, border, width, radius);
     }
 
     pub(crate) fn draw_interactive(
