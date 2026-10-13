@@ -103,7 +103,9 @@ for variant in range(5):
 drill_base = load("blocks/drills/mechanical-drill.png")
 drill_rotor = load("blocks/drills/mechanical-drill-rotator.png")
 drill_frames = []
-for angle in (0, 90, 180, 270):
+# The four rotor lobes are symmetric at quarter-turns; 45-degree steps make
+# the spinning layer visibly move instead of looking like the static base.
+for angle in range(0, 360, 45):
     frame = drill_base.copy()
     composite_layer(
         frame, drill_rotor.rotate(angle, resample=Image.Resampling.NEAREST)

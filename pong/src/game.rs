@@ -21,5 +21,17 @@ impl api::Screen<State> for GameScreen {
         api::ScreenAction::None
     }
 
-    fn draw(&mut self, _state: &State, _frame: &mut api::Frame) {}
+    fn draw(&mut self, _state: &State, frame: &mut api::Frame) {
+        let center_y = api::HEIGHT as i32 / 2;
+        frame.sprite(
+            &self.paddle,
+            api::glam::ivec2(16, center_y),
+            api::SpriteOptions::default().anchor(api::Anchor::Center),
+        );
+        frame.sprite(
+            &self.ball,
+            api::glam::ivec2(api::WIDTH as i32 / 2, center_y),
+            api::SpriteOptions::default().anchor(api::Anchor::Center),
+        );
+    }
 }

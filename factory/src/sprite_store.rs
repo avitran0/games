@@ -160,6 +160,14 @@ mod tests {
     use strum::IntoEnumIterator;
 
     #[test]
+    fn drill_sprite_contains_a_visibly_rotating_top_layer() {
+        let drill = AnimatedSpriteDocument::decode(block_asset(BlockKind::Drill))
+            .expect("drill animation should decode");
+        assert_eq!(drill.frames.len(), 8);
+        assert!(drill.frames.windows(2).all(|pair| pair[0] != pair[1]));
+    }
+
+    #[test]
     fn mindustry_derived_assets_decode_at_sixteen_pixels_per_tile() {
         for kind in BlockKind::iter().filter(|kind| *kind != BlockKind::Conveyor) {
             let sprite = AnimatedSpriteDocument::decode(block_asset(kind))

@@ -15,6 +15,7 @@ use crate::simulation::{
 
 mod arena;
 mod chunk;
+mod generation;
 pub mod terrain;
 
 pub struct World {
@@ -60,7 +61,7 @@ impl World {
             tick_count: 0,
             layout_revision: 0,
         };
-        world.generate_terrain();
+        generation::generate(&mut world);
         Ok(world)
     }
 
@@ -300,96 +301,6 @@ impl World {
         None
     }
 
-    fn generate_terrain(&mut self) {
-        use terrain::{GroundKind, OreKind};
-        let mut rng = api::Rng::seeded(self.seed ^ 0x9E37_79B9_7F4A_7C15);
-        let center = self.size / 2;
-
-        // Start with solid ground, then stamp irregular sandbars and shallow pools.
-        for chunk in &mut self.chunks {
-            for cell in &mut chunk.terrain {
-                cell.ground = GroundKind::Stone;
-            }
-        }
-        for _ in 0..(self.size.x * self.size.y / 300) {
-            let origin = UVec2::new(
-                rng.get_u32_range(0..self.size.x),
-                rng.get_u32_range(0..self.size.y),
-            );
-            let radius = rng.get_u32_range(2..7);
-            let ground = if rng.get_u8_range(0..5) == 0 {
-                GroundKind::Water
-            } else {
-                GroundKind::Sand
-            };
-            for y in origin.y.saturating_sub(radius)..=(origin.y + radius).min(self.size.y - 1) {
-                for x in origin.x.saturating_sub(radius)..=(origin.x + radius).min(self.size.x - 1)
-                {
-                    let dx = x.abs_diff(origin.x) as i64;
-                    let dy = y.abs_diff(origin.y) as i64;
-                    let edge_noise = i64::from(rng.get_u8_range(0..4)) - 1;
-                    let distance = dx * dx + dy * dy;
-                    let position = UVec2::new(x, y);
-                    let spawn_distance = position
-                        .x
-                        .abs_diff(center.x)
-                        .max(position.y.abs_diff(center.y));
-                    if distance <= (radius * radius) as i64 + edge_noise
-                        && spawn_distance > 12
-                        && let Some(coords) = self.locate(position)
-                    {
-                        self.chunks[coords.chunk].terrain[coords.cell].ground = ground;
-                    }
-                }
-            }
-        }
-
-        for y in center.y.saturating_sub(4)..=(center.y + 4).min(self.size.y - 1) {
-            for x in center.x.saturating_sub(4)..=(center.x + 4).min(self.size.x - 1) {
-                let dx = x.abs_diff(center.x) as i32;
-                let dy = y.abs_diff(center.y) as i32;
-                if dx * dx + dy * dy <= 16 {
-                    self.set_ore(UVec2::new(x, y), OreKind::Iron);
-                }
-            }
-        }
-
-        for _ in 0..(self.size.x * self.size.y / 180) {
-            let origin = UVec2::new(
-                rng.get_u32_range(0..self.size.x),
-                rng.get_u32_range(0..self.size.y),
-            );
-            let radius = rng.get_u32_range(2..5);
-            let ore = match rng.get_u8_range(0..10) {
-                0..=5 => OreKind::Iron,
-                6..=8 => OreKind::Coal,
-                _ => OreKind::Titanium,
-            };
-            for y in origin.y.saturating_sub(radius)..=(origin.y + radius).min(self.size.y - 1) {
-                for x in origin.x.saturating_sub(radius)..=(origin.x + radius).min(self.size.x - 1)
-                {
-                    let dx = x.abs_diff(origin.x) as i64;
-                    let dy = y.abs_diff(origin.y) as i64;
-                    if dx * dx + dy * dy <= (radius * radius) as i64
-                        && (UVec2::new(x, y).as_ivec2() - center.as_ivec2()).length_squared() > 100
-                    {
-                        self.set_ore(UVec2::new(x, y), ore);
-                    }
-                }
-            }
-        }
-    }
-
-    fn set_ore(&mut self, position: UVec2, ore: terrain::OreKind) {
-        let Some(coords) = self.locate(position) else {
-            return;
-        };
-        let cell = &mut self.chunks[coords.chunk].terrain[coords.cell];
-        if !matches!(cell.ground, terrain::GroundKind::Water) {
-            cell.ore = Some(ore);
-        }
-    }
-
     pub fn remove_block_at(&mut self, pos: UVec2) -> Option<Block> {
         let id = self.block_id_at(pos)?;
         let block = self.blocks.get(id)?;
@@ -597,18 +508,19 @@ mod tests {
 
     #[test]
     fn worlds_allow_at_most_one_core_at_a_time() {
-        let mut world = World::new(uvec2(32, 32)).unwrap();
+        // Use the protected spawn area so procedural water cannot make placement fail.
+        let mut world = World::generate(uvec2(32, 32), 0).unwrap();
         let first = world
-            .place_block(BlockKind::Core, uvec2(2, 2), Rotation::Up)
+            .place_block(BlockKind::Core, uvec2(12, 12), Rotation::Up)
             .unwrap();
         assert_eq!(
-            world.place_block(BlockKind::Core, uvec2(8, 2), Rotation::Up),
+            world.place_block(BlockKind::Core, uvec2(4, 12), Rotation::Up),
             Err(PlaceBlockError::CoreAlreadyPlaced)
         );
-        world.remove_block_at(uvec2(3, 3)).unwrap();
+        world.remove_block_at(uvec2(13, 13)).unwrap();
         assert!(
             world
-                .place_block(BlockKind::Core, uvec2(8, 2), Rotation::Up)
+                .place_block(BlockKind::Core, uvec2(4, 12), Rotation::Up)
                 .is_ok()
         );
         assert!(!world.contains_block(first));

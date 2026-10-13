@@ -8,3 +8,6 @@ api.path = "api"
 formats.path = "formats"
 ui.path = "ui"
 strum = { version = "0.28", features = ["derive"] }
+
+[profile.release]
+debug = true
