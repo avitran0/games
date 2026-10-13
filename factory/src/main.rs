@@ -1,6 +1,7 @@
 use crate::{screen::main::MainMenu, state::State};
 
 mod core;
+mod rendering;
 mod screen;
 mod state;
 

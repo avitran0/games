@@ -31,6 +31,16 @@ impl Rng {
         Self { state }
     }
 
+    pub fn seeded(seed: u64) -> Self {
+        let state = [
+            seed,
+            seed.rotate_left(16),
+            seed.rotate_right(16),
+            seed.rotate_right(32),
+        ];
+        Self { state }
+    }
+
     #[inline]
     fn next(&mut self) -> u64 {
         let result = self.state[0]
@@ -56,6 +66,16 @@ impl Rng {
 impl Default for Rng {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Rng {
+    pub fn choice<'slice, T>(&mut self, slice: &'slice [T]) -> &'slice T {
+        let len = slice.len();
+        assert!(len > 0);
+
+        let choice = self.get_usize_range(0..len);
+        &slice[choice]
     }
 }
 

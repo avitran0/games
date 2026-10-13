@@ -21,7 +21,10 @@ impl api::Screen<State> for MainMenu {
         self.ui.set_bounds(Rect::new(0, 60, WIDTH, HEIGHT - 60));
 
         if self.ui.button("Play").clicked {
-            return api::ScreenAction::Replace(Box::new(GameScreen::new()));
+            return match GameScreen::new(ctx) {
+                Ok(screen) => api::ScreenAction::Replace(Box::new(screen)),
+                Err(action) => action,
+            };
         }
 
         if self.ui.button("Quit").clicked {
