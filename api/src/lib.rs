@@ -14,7 +14,7 @@ mod tween;
 
 use std::time::{Duration, Instant};
 
-pub use assets::{Assets, TilemapSetError};
+pub use assets::{Assets, TilemapCreateError, TilemapSetError};
 pub use camera::Camera2D;
 use context::Context;
 pub use formats::Tileset;

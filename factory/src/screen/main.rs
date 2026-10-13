@@ -1,7 +1,7 @@
 use api::{HEIGHT, WIDTH};
 use ui::{Alignment, Rect, Ui};
 
-use crate::state::State;
+use crate::{screen::game::GameScreen, state::State};
 
 pub struct MainMenu {
     ui: Ui,
@@ -20,7 +20,9 @@ impl api::Screen<State> for MainMenu {
         self.ui.begin_frame(ctx);
         self.ui.set_bounds(Rect::new(0, 60, WIDTH, HEIGHT - 60));
 
-        self.ui.button("Play");
+        if self.ui.button("Play").clicked {
+            return api::ScreenAction::Replace(Box::new(GameScreen::new()));
+        }
 
         if self.ui.button("Quit").clicked {
             return api::ScreenAction::Quit;

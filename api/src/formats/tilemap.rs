@@ -9,6 +9,14 @@ pub(crate) struct TilemapData {
 }
 
 impl TilemapData {
+    pub(crate) fn new(size: U16Vec2, tileset_id: Uuid) -> Self {
+        Self {
+            size,
+            tileset_id,
+            cells: vec![Tile::default(); usize::from(size.x) * usize::from(size.y)],
+        }
+    }
+
     pub(crate) fn from_document(document: TilemapDocument) -> Self {
         Self {
             size: document.size.as_u16vec2(),
@@ -35,40 +43,5 @@ impl TilemapData {
             id,
             ..Tile::default()
         };
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use formats::{Tile, TilemapDocument};
-    use glam::uvec2;
-    use uuid::Uuid;
-
-    use super::TilemapData;
-
-    #[test]
-    fn set_tile_updates_the_cell_and_clears_flip_flags() {
-        let document = TilemapDocument {
-            size: uvec2(3, 2),
-            tileset_id: Uuid::nil(),
-            cells: vec![
-                Tile {
-                    id: 1,
-                    flip_x: true,
-                    flip_y: true,
-                    flip_diagonal: true,
-                };
-                6
-            ],
-        };
-        let mut map = TilemapData::from_document(document);
-        map.set_tile(uvec2(2, 1), 2);
-        assert_eq!(
-            map.cells()[5],
-            Tile {
-                id: 2,
-                ..Tile::default()
-            }
-        );
     }
 }

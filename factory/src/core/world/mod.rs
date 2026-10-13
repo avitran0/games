@@ -54,8 +54,13 @@ impl World {
         })
     }
 
-    fn get(&self, pos: UVec2) -> Option<TileInfo> {
-        None
+    pub fn size(&self) -> UVec2 {
+        self.size
+    }
+
+    pub fn terrain_at(&self, pos: UVec2) -> Option<TerrainCell> {
+        let coords = self.locate(pos)?;
+        Some(self.chunks[coords.chunk].terrain[coords.cell])
     }
 }
 

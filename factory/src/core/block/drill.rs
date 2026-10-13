@@ -1,3 +1,1 @@
-pub struct Drill {
-
-}
+pub struct Drill {}

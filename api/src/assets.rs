@@ -47,6 +47,10 @@ impl<Id: Hash + Eq + Copy, Asset> AssetRegistry<Id, Asset> {
         self.cache.insert(hash, id);
     }
 
+    fn insert_uncached(&mut self, id: Id, asset: Asset) {
+        self.registry.insert(id, asset);
+    }
+
     fn len(&self) -> usize {
         self.registry.len()
     }
@@ -139,6 +143,27 @@ impl Assets {
         );
         self.tilemaps
             .insert_cached(id, TilemapData::from_document(document), hash);
+        Ok(TilemapHandle::new(id))
+    }
+
+    /// Use this when map cells come from runtime world data.
+    pub fn create_tilemap(
+        &mut self,
+        size: UVec2,
+        tileset: &Tileset,
+    ) -> Result<TilemapHandle, TilemapCreateError> {
+        validate_tilemap_size(size)?;
+
+        let tileset_id = tileset.asset_id();
+        if !self.tileset_sprites.contains_key(&tileset_id) {
+            return Err(TilemapCreateError::TilesetNotLoaded(tileset_id));
+        }
+
+        let id = TilemapId(
+            u16::try_from(self.tilemaps.len()).map_err(|_| TilemapCreateError::TooManyTilemaps)?,
+        );
+        self.tilemaps
+            .insert_uncached(id, TilemapData::new(size.as_u16vec2(), tileset_id));
         Ok(TilemapHandle::new(id))
     }
 
@@ -250,6 +275,17 @@ fn show_asset_error<State>(error: AssetLoadError) -> ScreenAction<State> {
     ScreenAction::Push(Box::new(ErrorScreen::new(error)))
 }
 
+fn validate_tilemap_size(size: UVec2) -> Result<(), TilemapCreateError> {
+    if (1..=256).contains(&size.x) && (1..=256).contains(&size.y) {
+        Ok(())
+    } else {
+        Err(TilemapCreateError::InvalidSize {
+            width: size.x,
+            height: size.y,
+        })
+    }
+}
+
 fn validate_tile_position(position: UVec2, size: U16Vec2) -> Result<(), TilemapSetError> {
     if position.x < u32::from(size.x) && position.y < u32::from(size.y) {
         Ok(())
@@ -272,6 +308,16 @@ fn validate_tile_id(tile_id: u32, tile_count: u32) -> Result<(), TilemapSetError
             tile_count,
         })
     }
+}
+
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum TilemapCreateError {
+    #[error("tilemap size {width}x{height} is invalid; each dimension must be from 1 to 256")]
+    InvalidSize { width: u32, height: u32 },
+    #[error("tileset {0} is not loaded")]
+    TilesetNotLoaded(Uuid),
+    #[error("the number of tilemaps is too high")]
+    TooManyTilemaps,
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -307,7 +353,27 @@ pub(crate) enum AssetLoadError {
 mod tests {
     use glam::{u16vec2, uvec2};
 
-    use super::{TilemapSetError, validate_tile_id, validate_tile_position};
+    use super::{
+        TilemapCreateError, TilemapSetError, validate_tile_id, validate_tile_position,
+        validate_tilemap_size,
+    };
+
+    #[test]
+    fn validates_runtime_tilemap_sizes() {
+        assert!(validate_tilemap_size(uvec2(1, 1)).is_ok());
+        assert!(validate_tilemap_size(uvec2(256, 256)).is_ok());
+        assert_eq!(
+            validate_tilemap_size(uvec2(0, 1)),
+            Err(TilemapCreateError::InvalidSize {
+                width: 0,
+                height: 1
+            })
+        );
+        assert!(matches!(
+            validate_tilemap_size(uvec2(257, 1)),
+            Err(TilemapCreateError::InvalidSize { .. })
+        ));
+    }
 
     #[test]
     fn validates_tile_positions_and_ids() {

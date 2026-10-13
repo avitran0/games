@@ -2,8 +2,8 @@ use crate::core::world::{BlockId, terrain::TerrainCell};
 
 #[derive(Clone)]
 pub struct Chunk {
-    terrain: [TerrainCell; Self::CELL_COUNT],
-    blocks: [Option<BlockId>; Self::CELL_COUNT],
+    pub terrain: [TerrainCell; Self::CELL_COUNT],
+    pub blocks: [Option<BlockId>; Self::CELL_COUNT],
 }
 
 impl Chunk {
