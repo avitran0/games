@@ -18,6 +18,7 @@ pub struct World {
 
 impl World {
     pub fn new(size: UVec2) -> Self {
+        assert!(size.x > 0 && size.y > 0, "World must not be empty");
         assert!(size.x < 512, "World width has to be 512 or less");
         assert!(size.y < 512, "World height has to be 512 or less");
         assert!(
@@ -31,13 +32,13 @@ impl World {
 
         Self {
             size,
-            chunks: vec![Chunk::default(); (size.x * size.y) as usize],
+            chunks: vec![Chunk::default(); (size.x / 16 * size.y / 16) as usize],
             blocks: BlockArena::default(),
         }
     }
 
     fn locate(&self, pos: UVec2) -> Option<TileCoords> {
-        if pos.x > self.size.x || pos.y > self.size.y {
+        if pos.x >= self.size.x || pos.y >= self.size.y {
             return None;
         }
 
