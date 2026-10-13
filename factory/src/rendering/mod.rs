@@ -17,7 +17,7 @@ pub struct WorldRenderer {
 
 impl WorldRenderer {
     pub fn new<State>(assets: &mut Assets, world: &World) -> Result<Self, ScreenAction<State>> {
-        let terrain_tileset = assets.load_tileset(include_bytes!("assets/terrain.pxt"))?;
+        let terrain_tileset = assets.load_tileset(include_bytes!("../assets/terrain.pxt"))?;
         let terrain_map = assets
             .create_tilemap(world.size(), &terrain_tileset)
             .expect("world dimensions must fit in a tilemap");
