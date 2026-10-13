@@ -1,8 +1,8 @@
 use api::glam::{UVec2, uvec2};
+use ui::EnumIter;
 
-use crate::sprites::Sprites;
-
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, EnumIter)]
+#[strum(crate = "ui")]
 pub enum Difficulty {
     Easy,
     #[default]

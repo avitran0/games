@@ -7,10 +7,10 @@ pub struct GameScreen {
 }
 
 impl GameScreen {
-    pub fn new(difficulty: Difficulty) -> Self {
-        Self {
+    pub fn new(ctx: &mut api::ScreenContext<State>, difficulty: Difficulty) -> Result<Self, api::ScreenAction<State>> {
+        Ok(Self {
             cursor: difficulty.size() / 2,
-        }
+        })
     }
 }
 
