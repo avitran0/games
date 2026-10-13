@@ -5,7 +5,11 @@ use crate::core::block::{BlockCategory, BlockSize};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumIter)]
 pub enum BlockKind {
     Conveyor,
+    Storage,
     Drill,
+    Smelter,
+    SolarPanel,
+    Core,
 }
 
 impl BlockKind {
@@ -14,17 +18,18 @@ impl BlockKind {
     }
 
     pub fn definition(self) -> BlockDefinition {
-        match self {
-            Self::Conveyor => BlockDefinition {
-                label: "Conveyor",
-                category: BlockCategory::Logistics,
-                size: BlockSize::Single,
-            },
-            Self::Drill => BlockDefinition {
-                label: "Drill",
-                category: BlockCategory::Extraction,
-                size: BlockSize::Double,
-            },
+        let (label, category, size) = match self {
+            Self::Conveyor => ("Conveyor", BlockCategory::Logistics, BlockSize::Single),
+            Self::Storage => ("Storage", BlockCategory::Logistics, BlockSize::Double),
+            Self::Drill => ("Drill", BlockCategory::Extraction, BlockSize::Double),
+            Self::Smelter => ("Smelter", BlockCategory::Production, BlockSize::Double),
+            Self::SolarPanel => ("Solar panel", BlockCategory::Power, BlockSize::Single),
+            Self::Core => ("Core", BlockCategory::Core, BlockSize::Quad),
+        };
+        BlockDefinition {
+            label,
+            category,
+            size,
         }
     }
 

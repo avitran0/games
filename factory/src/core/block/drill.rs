@@ -24,21 +24,21 @@ impl Drill {
 }
 
 impl BlockBehavior for Drill {
-    fn tick(&mut self, ore: Option<OreKind>, _tick: usize) {
+    fn tick(&mut self, ore: Option<OreKind>, _tick: usize, _powered: bool) -> bool {
         if self
             .output
             .is_some_and(|stack| stack.count() >= Self::OUTPUT_CAPACITY)
         {
-            return;
+            return false;
         }
 
         let Some(ore) = ore else {
             self.progress = 0;
-            return;
+            return false;
         };
         let item = ore.item();
         if self.output.is_some_and(|stack| stack.item() != item) {
-            return;
+            return false;
         }
 
         self.progress += 1;
@@ -52,6 +52,7 @@ impl BlockBehavior for Drill {
             }
             self.progress = 0;
         }
+        false
     }
 
     fn items(&self) -> Option<ItemStack> {

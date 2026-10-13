@@ -5,7 +5,7 @@ use api::{
 
 use crate::{
     core::{block_kind::BlockKind, world::World},
-    rendering::WorldRenderer,
+    rendering::{CursorView, WorldRenderer},
     screen::{
         block_selection::BlockSelectionScreen,
         cursor::{Cursor, CursorEvent},
@@ -128,10 +128,23 @@ impl api::Screen<State> for GameScreen {
             &self.camera,
             frame,
             &self.world,
-            self.cursor.position(),
-            state.picked_block,
-            self.cursor.rotation(),
+            CursorView {
+                position: self.cursor.position(),
+                selected_block: state.picked_block,
+                rotation: self.cursor.rotation(),
+            },
             self.simulation_tick,
+        );
+
+        frame.rectangle(
+            api::glam::IVec2::ZERO,
+            uvec2(api::WIDTH, 12),
+            api::Color::Cinder,
+        );
+        frame.text(
+            format!("PWR {}", self.world.power()),
+            api::glam::IVec2::new(5, 3),
+            api::Anchor::TopLeft,
         );
     }
 }

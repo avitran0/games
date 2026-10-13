@@ -5,5 +5,6 @@ edition = "2024"
 
 [dependencies]
 api.workspace = true
+formats.workspace = true
 ui.workspace = true
 strum.workspace = true

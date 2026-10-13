@@ -4,8 +4,7 @@ pub struct TerrainCell {
     pub ore: Option<OreKind>,
 }
 
-#[expect(dead_code, reason = "additional terrain types await future biomes")]
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum GroundKind {
     #[default]
     Stone,
@@ -23,8 +22,7 @@ impl GroundKind {
     }
 }
 
-#[expect(dead_code, reason = "additional ores are reserved for future deposits")]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum OreKind {
     Iron,
     Coal,

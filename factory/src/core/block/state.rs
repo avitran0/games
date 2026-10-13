@@ -6,11 +6,17 @@ use crate::core::{
     world::terrain::OreKind,
 };
 
-use super::{behavior::BlockBehavior, conveyor::Conveyor, drill::Drill};
+use super::{
+    behavior::BlockBehavior, conveyor::Conveyor, drill::Drill, smelter::Smelter, storage::Storage,
+};
 
 pub(super) enum BlockState {
     Conveyor(Conveyor),
     Drill(Drill),
+    Storage(Storage),
+    Smelter(Smelter),
+    SolarPanel,
+    Core,
 }
 
 impl BlockState {
@@ -18,15 +24,22 @@ impl BlockState {
         match kind {
             BlockKind::Conveyor => Self::Conveyor(Conveyor::new()),
             BlockKind::Drill => Self::Drill(Drill::new()),
+            BlockKind::Storage => Self::Storage(Storage::new()),
+            BlockKind::Smelter => Self::Smelter(Smelter::new()),
+            BlockKind::SolarPanel => Self::SolarPanel,
+            BlockKind::Core => Self::Core,
         }
     }
 }
 
 impl BlockBehavior for BlockState {
-    fn tick(&mut self, ore: Option<OreKind>, tick: usize) {
+    fn tick(&mut self, ore: Option<OreKind>, tick: usize, powered: bool) -> bool {
         match self {
-            Self::Conveyor(block) => block.tick(ore, tick),
-            Self::Drill(block) => block.tick(ore, tick),
+            Self::Conveyor(block) => block.tick(ore, tick, powered),
+            Self::Drill(block) => block.tick(ore, tick, powered),
+            Self::Storage(block) => block.tick(ore, tick, powered),
+            Self::Smelter(block) => block.tick(ore, tick, powered),
+            Self::SolarPanel | Self::Core => false,
         }
     }
 
@@ -34,6 +47,9 @@ impl BlockBehavior for BlockState {
         match self {
             Self::Conveyor(block) => block.output_item(tick),
             Self::Drill(block) => block.output_item(tick),
+            Self::Storage(block) => block.output_item(tick),
+            Self::Smelter(block) => block.output_item(tick),
+            Self::SolarPanel | Self::Core => None,
         }
     }
 
@@ -41,6 +57,9 @@ impl BlockBehavior for BlockState {
         match self {
             Self::Conveyor(block) => block.item_progress(tick),
             Self::Drill(block) => block.item_progress(tick),
+            Self::Storage(block) => block.item_progress(tick),
+            Self::Smelter(block) => block.item_progress(tick),
+            Self::SolarPanel | Self::Core => None,
         }
     }
 
@@ -48,6 +67,9 @@ impl BlockBehavior for BlockState {
         match self {
             Self::Conveyor(block) => block.item_input_direction(),
             Self::Drill(block) => block.item_input_direction(),
+            Self::Storage(block) => block.item_input_direction(),
+            Self::Smelter(block) => block.item_input_direction(),
+            Self::SolarPanel | Self::Core => None,
         }
     }
 
@@ -55,6 +77,9 @@ impl BlockBehavior for BlockState {
         match self {
             Self::Conveyor(block) => block.items(),
             Self::Drill(block) => block.items(),
+            Self::Storage(block) => block.items(),
+            Self::Smelter(block) => block.items(),
+            Self::SolarPanel | Self::Core => None,
         }
     }
 
@@ -62,6 +87,10 @@ impl BlockBehavior for BlockState {
         match self {
             Self::Conveyor(block) => block.can_accept(item),
             Self::Drill(block) => block.can_accept(item),
+            Self::Storage(block) => block.can_accept(item),
+            Self::Smelter(block) => block.can_accept(item),
+            Self::SolarPanel => false,
+            Self::Core => true,
         }
     }
 
@@ -69,6 +98,10 @@ impl BlockBehavior for BlockState {
         match self {
             Self::Conveyor(block) => block.accept(item, tick, input_direction),
             Self::Drill(block) => block.accept(item, tick, input_direction),
+            Self::Storage(block) => block.accept(item, tick, input_direction),
+            Self::Smelter(block) => block.accept(item, tick, input_direction),
+            Self::SolarPanel => false,
+            Self::Core => true,
         }
     }
 
@@ -76,6 +109,9 @@ impl BlockBehavior for BlockState {
         match self {
             Self::Conveyor(block) => block.take(),
             Self::Drill(block) => block.take(),
+            Self::Storage(block) => block.take(),
+            Self::Smelter(block) => block.take(),
+            Self::SolarPanel | Self::Core => None,
         }
     }
 }

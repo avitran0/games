@@ -38,7 +38,8 @@ impl api::Screen<State> for BlockSelectionScreen {
 
         let mut picked_block = ctx.state.picked_block;
         let mut picked_now = false;
-        self.ui.panel(PANEL, "Select a block (B closes)", |ui| {
+        let title = format!("Build · {}", self.category.label());
+        self.ui.panel(PANEL, &title, |ui| {
             ui.tab_bar(&mut self.category, |ui, category| {
                 for block in category.blocks() {
                     let size = block.size().cells();

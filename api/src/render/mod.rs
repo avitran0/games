@@ -160,6 +160,7 @@ impl Renderer {
             (position.as_vec2() - anchor.offset(size)).round(),
         );
         shader.set_vec2("size", size);
+        shader.set_vec2("sprite_size", sprite.size().as_vec2());
         shader.set_vec2("rotation_anchor", rotation_anchor.offset(size).round());
         shader.set_f32("rotation", rotation);
         shader.set_vec2("flip", flip.vector());

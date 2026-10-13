@@ -1,8 +1,22 @@
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Item {
     IronOre,
+    IronPlate,
     Coal,
     TitaniumOre,
+}
+
+impl Item {
+    pub const COUNT: usize = 4;
+
+    pub const fn index(self) -> usize {
+        match self {
+            Self::IronOre => 0,
+            Self::IronPlate => 1,
+            Self::Coal => 2,
+            Self::TitaniumOre => 3,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -5,7 +5,7 @@ precision highp usampler2DArray;
 uniform usampler2DArray sprite_texture;
 uniform sampler2D palette_texture;
 uniform int sprite_frame;
-uniform vec2 size;
+uniform vec2 sprite_size;
 uniform float opacity;
 
 in vec2 uv;
@@ -13,7 +13,7 @@ in vec2 uv;
 layout(location = 0) out vec4 color;
 
 void main() {
-    ivec2 pixel = ivec2(uv * size);
+    ivec2 pixel = ivec2(uv * sprite_size);
 
     uint palette_index = texelFetch(
         sprite_texture,

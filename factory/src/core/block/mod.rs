@@ -14,7 +14,9 @@ mod category;
 mod conveyor;
 mod drill;
 mod size;
+mod smelter;
 mod state;
+mod storage;
 
 use behavior::BlockBehavior;
 use state::BlockState;
@@ -73,30 +75,28 @@ impl Block {
         self.kind.size().cells()
     }
 
+    pub(crate) fn output_direction(&self) -> IVec2 {
+        self.rotation.direction()
+    }
+
     pub(crate) fn output_position(&self) -> Option<UVec2> {
         let side = self.footprint_cells();
-        match self.rotation {
-            Rotation::Up => self
-                .origin
-                .y
-                .checked_sub(1)
-                .map(|y| UVec2::new(self.origin.x, y)),
-            Rotation::Right => self
-                .origin
-                .x
-                .checked_add(side)
-                .map(|x| UVec2::new(x, self.origin.y)),
-            Rotation::Down => self
-                .origin
-                .y
-                .checked_add(side)
-                .map(|y| UVec2::new(self.origin.x, y)),
-            Rotation::Left => self
-                .origin
-                .x
-                .checked_sub(1)
-                .map(|x| UVec2::new(x, self.origin.y)),
-        }
+        let direction = self.output_direction();
+        let x = if direction.x < 0 {
+            self.origin.x.checked_sub(1)?
+        } else if direction.x > 0 {
+            self.origin.x.checked_add(side)?
+        } else {
+            self.origin.x
+        };
+        let y = if direction.y < 0 {
+            self.origin.y.checked_sub(1)?
+        } else if direction.y > 0 {
+            self.origin.y.checked_add(side)?
+        } else {
+            self.origin.y
+        };
+        Some(UVec2::new(x, y))
     }
 
     pub(crate) fn items(&self) -> Option<ItemStack> {
@@ -127,7 +127,7 @@ impl Block {
         self.state.take()
     }
 
-    pub(crate) fn tick(&mut self, ore: Option<OreKind>, tick: usize) {
-        self.state.tick(ore, tick);
+    pub(crate) fn tick(&mut self, ore: Option<OreKind>, tick: usize, powered: bool) -> bool {
+        self.state.tick(ore, tick, powered)
     }
 }

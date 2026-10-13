@@ -676,6 +676,7 @@ name = "factory"
 version = "0.1.0"
 dependencies = [
  "api",
+ "formats",
  "strum",
  "ui",
 ]

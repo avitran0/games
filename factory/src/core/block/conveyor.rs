@@ -34,7 +34,9 @@ impl Conveyor {
 }
 
 impl BlockBehavior for Conveyor {
-    fn tick(&mut self, _ore: Option<OreKind>, _tick: usize) {}
+    fn tick(&mut self, _ore: Option<OreKind>, _tick: usize, _powered: bool) -> bool {
+        false
+    }
 
     fn items(&self) -> Option<ItemStack> {
         self.items
