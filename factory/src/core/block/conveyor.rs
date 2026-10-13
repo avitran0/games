@@ -1,15 +1,9 @@
-use crate::core::{item::Item, world::command::WorldCommand};
-
-pub struct Conveyor {
-    item: Option<Item>,
-}
+pub struct Conveyor;
 
 impl Conveyor {
     pub fn new() -> Self {
-        Self { item: None }
+        Self
     }
 
-    pub fn tick(&mut self) -> Option<WorldCommand> {
-        None
-    }
+    pub fn tick(&mut self) {}
 }

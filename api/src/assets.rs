@@ -17,6 +17,8 @@ use crate::{
     screen::error::ErrorScreen,
 };
 
+pub const MAX_TILEMAP_SIDE: u32 = 256;
+
 struct AssetRegistry<Id: Hash + Eq + Copy, Asset> {
     registry: HashMap<Id, Asset>,
     cache: HashMap<blake3::Hash, Id>,
@@ -276,7 +278,7 @@ fn show_asset_error<State>(error: AssetLoadError) -> ScreenAction<State> {
 }
 
 fn validate_tilemap_size(size: UVec2) -> Result<(), TilemapCreateError> {
-    if (1..=256).contains(&size.x) && (1..=256).contains(&size.y) {
+    if (1..=MAX_TILEMAP_SIDE).contains(&size.x) && (1..=MAX_TILEMAP_SIDE).contains(&size.y) {
         Ok(())
     } else {
         Err(TilemapCreateError::InvalidSize {
@@ -354,14 +356,14 @@ mod tests {
     use glam::{u16vec2, uvec2};
 
     use super::{
-        TilemapCreateError, TilemapSetError, validate_tile_id, validate_tile_position,
-        validate_tilemap_size,
+        MAX_TILEMAP_SIDE, TilemapCreateError, TilemapSetError, validate_tile_id,
+        validate_tile_position, validate_tilemap_size,
     };
 
     #[test]
     fn validates_runtime_tilemap_sizes() {
         assert!(validate_tilemap_size(uvec2(1, 1)).is_ok());
-        assert!(validate_tilemap_size(uvec2(256, 256)).is_ok());
+        assert!(validate_tilemap_size(uvec2(MAX_TILEMAP_SIDE, MAX_TILEMAP_SIDE)).is_ok());
         assert_eq!(
             validate_tilemap_size(uvec2(0, 1)),
             Err(TilemapCreateError::InvalidSize {
@@ -370,7 +372,7 @@ mod tests {
             })
         );
         assert!(matches!(
-            validate_tilemap_size(uvec2(257, 1)),
+            validate_tilemap_size(uvec2(MAX_TILEMAP_SIDE + 1, 1)),
             Err(TilemapCreateError::InvalidSize { .. })
         ));
     }

@@ -1,4 +1,4 @@
-use std::num::NonZeroU32;
+use std::{fmt, num::NonZeroU32};
 
 use api::glam::UVec2;
 
@@ -10,9 +10,7 @@ use crate::core::{
 
 mod arena;
 mod chunk;
-pub mod command;
 pub mod terrain;
-pub mod view;
 
 pub struct World {
     size: UVec2,
@@ -21,24 +19,30 @@ pub struct World {
 }
 
 impl World {
-    pub fn new(size: UVec2) -> Self {
-        assert!(size.x > 0 && size.y > 0, "World must not be empty");
-        assert!(size.x < 512, "World width has to be 512 or less");
-        assert!(size.y < 512, "World height has to be 512 or less");
-        assert!(
-            size.x.is_multiple_of(16),
-            "World width has to be a multiple of 16"
-        );
-        assert!(
-            size.y.is_multiple_of(16),
-            "World height has to be a multiple of 16"
-        );
+    const MAX_SIZE: u32 = api::MAX_TILEMAP_SIDE;
 
-        Self {
-            size,
-            chunks: vec![Chunk::default(); (size.x / 16 * size.y / 16) as usize],
-            blocks: BlockArena::default(),
+    pub fn new(size: UVec2) -> Result<Self, WorldCreateError> {
+        if size.x == 0 || size.y == 0 {
+            return Err(WorldCreateError::Empty { size });
         }
+        if size.x > Self::MAX_SIZE || size.y > Self::MAX_SIZE {
+            return Err(WorldCreateError::TooLarge {
+                size,
+                max_size: Self::MAX_SIZE,
+            });
+        }
+
+        let chunk_side = Chunk::SIDE_COUNT as u32;
+        if !size.x.is_multiple_of(chunk_side) || !size.y.is_multiple_of(chunk_side) {
+            return Err(WorldCreateError::NotChunkAligned { size, chunk_side });
+        }
+
+        let chunk_count = (size.x / chunk_side * size.y / chunk_side) as usize;
+        Ok(Self {
+            size,
+            chunks: vec![Chunk::default(); chunk_count],
+            blocks: BlockArena::default(),
+        })
     }
 
     fn locate(&self, pos: UVec2) -> Option<TileCoords> {
@@ -46,11 +50,12 @@ impl World {
             return None;
         }
 
-        let chunk = pos / 16;
-        let chunk_index = chunk.y * (self.size.x / 16) + chunk.x;
+        let chunk_side = Chunk::SIDE_COUNT as u32;
+        let chunk = pos / chunk_side;
+        let chunk_index = chunk.y * (self.size.x / chunk_side) + chunk.x;
 
-        let cell = pos % 16;
-        let cell_index = cell.y * Chunk::SIDE_COUNT as u32 + cell.x;
+        let cell = pos % chunk_side;
+        let cell_index = cell.y * chunk_side + cell.x;
 
         Some(TileCoords {
             chunk: chunk_index as usize,
@@ -70,6 +75,14 @@ impl World {
     pub fn block_id_at(&self, pos: UVec2) -> Option<BlockId> {
         let coords = self.locate(pos)?;
         self.chunks[coords.chunk].blocks[coords.cell]
+    }
+
+    pub fn blocks(&self) -> impl Iterator<Item = (BlockId, &Block)> {
+        self.blocks.iter()
+    }
+
+    pub(crate) fn contains_block(&self, id: BlockId) -> bool {
+        self.blocks.get(id).is_some()
     }
 
     pub fn place_block(
@@ -107,6 +120,12 @@ impl World {
         Ok(id)
     }
 
+    pub(crate) fn tick(&mut self) {
+        for (_, block) in self.blocks.iter_mut() {
+            block.tick();
+        }
+    }
+
     pub fn remove_block_at(&mut self, pos: UVec2) -> Option<Block> {
         let id = self.block_id_at(pos)?;
         let block = self.blocks.get(id)?;
@@ -135,10 +154,32 @@ struct TileCoords {
     cell: usize,
 }
 
-pub struct TileInfo {
-    terrain: TerrainCell,
-    block: Option<BlockId>,
+#[derive(Debug, PartialEq, Eq)]
+pub enum WorldCreateError {
+    Empty { size: UVec2 },
+    TooLarge { size: UVec2, max_size: u32 },
+    NotChunkAligned { size: UVec2, chunk_side: u32 },
 }
+
+impl fmt::Display for WorldCreateError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Empty { .. } => write!(f, "world dimensions must be non-zero"),
+            Self::TooLarge { size, max_size } => write!(
+                f,
+                "world dimensions {}x{} exceed the maximum side length of {max_size}",
+                size.x, size.y
+            ),
+            Self::NotChunkAligned { size, chunk_side } => write!(
+                f,
+                "world dimensions {}x{} must be multiples of {chunk_side}",
+                size.x, size.y
+            ),
+        }
+    }
+}
+
+impl std::error::Error for WorldCreateError {}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum PlaceBlockError {
@@ -158,11 +199,28 @@ mod tests {
 
     use crate::core::{block::Rotation, block_kind::BlockKind};
 
-    use super::{PlaceBlockError, World};
+    use super::{PlaceBlockError, World, WorldCreateError};
+
+    #[test]
+    fn world_creation_validates_dimensions_without_panicking() {
+        assert!(matches!(
+            World::new(uvec2(0, 16)),
+            Err(WorldCreateError::Empty { .. })
+        ));
+        assert!(matches!(
+            World::new(uvec2(15, 16)),
+            Err(WorldCreateError::NotChunkAligned { .. })
+        ));
+        assert!(matches!(
+            World::new(uvec2(272, 16)),
+            Err(WorldCreateError::TooLarge { .. })
+        ));
+        assert!(World::new(uvec2(256, 16)).is_ok());
+    }
 
     #[test]
     fn multi_cell_blocks_reserve_their_full_footprint() {
-        let mut world = World::new(uvec2(16, 16));
+        let mut world = World::new(uvec2(16, 16)).unwrap();
         let id = world
             .place_block(BlockKind::Drill, uvec2(3, 3), Rotation::Up)
             .unwrap();
@@ -180,7 +238,7 @@ mod tests {
 
     #[test]
     fn multi_cell_footprints_cross_chunk_boundaries() {
-        let mut world = World::new(uvec2(32, 32));
+        let mut world = World::new(uvec2(32, 32)).unwrap();
         let id = world
             .place_block(BlockKind::Drill, uvec2(15, 15), Rotation::Up)
             .unwrap();
@@ -200,8 +258,24 @@ mod tests {
     }
 
     #[test]
+    fn removed_block_ids_do_not_alias_reused_slots() {
+        let mut world = World::new(uvec2(16, 16)).unwrap();
+        let first = world
+            .place_block(BlockKind::Conveyor, uvec2(1, 1), Rotation::Up)
+            .unwrap();
+        world.remove_block_at(uvec2(1, 1)).unwrap();
+        let second = world
+            .place_block(BlockKind::Conveyor, uvec2(1, 1), Rotation::Up)
+            .unwrap();
+
+        assert_ne!(first, second);
+        assert!(!world.contains_block(first));
+        assert!(world.contains_block(second));
+    }
+
+    #[test]
     fn failed_placement_does_not_partially_occupy_cells() {
-        let mut world = World::new(uvec2(16, 16));
+        let mut world = World::new(uvec2(16, 16)).unwrap();
 
         assert_eq!(
             world.place_block(BlockKind::Drill, uvec2(15, 15), Rotation::Up),
@@ -214,7 +288,7 @@ mod tests {
 
     #[test]
     fn removing_from_any_occupied_cell_removes_the_whole_block() {
-        let mut world = World::new(uvec2(16, 16));
+        let mut world = World::new(uvec2(16, 16)).unwrap();
         world
             .place_block(BlockKind::Drill, uvec2(3, 3), Rotation::Down)
             .unwrap();

@@ -1,7 +1,9 @@
-pub struct Drill {}
+pub struct Drill;
 
 impl Drill {
     pub fn new() -> Self {
-        Self {}
+        Self
     }
+
+    pub fn tick(&mut self) {}
 }

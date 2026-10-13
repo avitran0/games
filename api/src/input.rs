@@ -1,7 +1,7 @@
 use glam::Vec2;
 
 #[repr(u16)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Button {
     Up = 1 << 0,
     Down = 1 << 1,

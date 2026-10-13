@@ -34,7 +34,7 @@ impl api::Screen<State> for MainMenu {
         api::ScreenAction::None
     }
 
-    fn draw(&mut self, state: &State, frame: &mut api::Frame) {
+    fn draw(&mut self, _state: &State, frame: &mut api::Frame) {
         self.ui.paint(frame);
     }
 }

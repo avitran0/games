@@ -41,14 +41,6 @@ impl BlockArena {
         slot.block.as_ref()
     }
 
-    pub fn get_mut(&mut self, id: BlockId) -> Option<&mut Block> {
-        let slot = self.slots.get_mut(id.index as usize)?;
-        if slot.generation != id.generation {
-            return None;
-        }
-        slot.block.as_mut()
-    }
-
     pub fn remove(&mut self, id: BlockId) -> Option<Block> {
         let slot = self.slots.get_mut(id.index as usize)?;
         if slot.generation != id.generation {
@@ -61,6 +53,22 @@ impl BlockArena {
         }
 
         Some(block)
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (BlockId, &mut Block)> {
+        self.slots
+            .iter_mut()
+            .enumerate()
+            .filter_map(|(index, slot)| {
+                let block = slot.block.as_mut()?;
+                Some((
+                    BlockId {
+                        index: index as u32,
+                        generation: slot.generation,
+                    },
+                    block,
+                ))
+            })
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (BlockId, &Block)> {

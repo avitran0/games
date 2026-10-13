@@ -1,3 +1,7 @@
+#[expect(
+    dead_code,
+    reason = "larger footprints are reserved for future block kinds"
+)]
 #[derive(Clone, Copy)]
 pub enum BlockSize {
     /// 1x1

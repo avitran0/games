@@ -9,7 +9,7 @@ pub struct ErrorScreen<E: Error + 'static> {
 }
 
 impl<E: Error> ErrorScreen<E> {
-    pub(crate) fn new(error: E) -> Self {
+    pub fn new(error: E) -> Self {
         Self { error }
     }
 }

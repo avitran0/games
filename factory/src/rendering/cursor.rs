@@ -1,6 +1,12 @@
-use api::{Anchor, Assets, Camera2D, Frame, ScreenAction, Sprite, SpriteOptions, glam::UVec2};
+use api::{Anchor, Camera2D, Frame, Sprite, SpriteOptions, glam::UVec2};
 
-use crate::core::{block::BlockSize, block::Rotation, block_kind::BlockKind};
+use crate::{
+    core::{
+        block::{BlockSize, Rotation},
+        block_kind::BlockKind,
+    },
+    sprite_store::SpriteStore,
+};
 
 pub struct CursorRenderer {
     single: Sprite,
@@ -10,13 +16,13 @@ pub struct CursorRenderer {
 }
 
 impl CursorRenderer {
-    pub fn new<State>(assets: &mut Assets) -> Result<Self, ScreenAction<State>> {
-        Ok(Self {
-            single: assets.load_sprite(include_bytes!("../assets/cursor/single.pxs"))?,
-            double: assets.load_sprite(include_bytes!("../assets/cursor/double.pxs"))?,
-            triple: assets.load_sprite(include_bytes!("../assets/cursor/triple.pxs"))?,
-            quad: assets.load_sprite(include_bytes!("../assets/cursor/quad.pxs"))?,
-        })
+    pub fn new(sprites: &SpriteStore) -> Self {
+        Self {
+            single: sprites.cursor.single,
+            double: sprites.cursor.double,
+            triple: sprites.cursor.triple,
+            quad: sprites.cursor.quad,
+        }
     }
 
     pub fn draw(
@@ -25,10 +31,10 @@ impl CursorRenderer {
         frame: &mut Frame,
         tile_size: UVec2,
         position: UVec2,
-        selected_block: BlockKind,
+        selected_block: Option<BlockKind>,
         rotation: Rotation,
     ) {
-        let size = selected_block.size();
+        let size = selected_block.map_or(BlockSize::Single, BlockKind::size);
         let cursor_size = tile_size.as_ivec2() * size.cells() as i32;
         let center = position.as_ivec2() * tile_size.as_ivec2() + cursor_size / 2;
         let angle = match rotation {

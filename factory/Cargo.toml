@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 api.workspace = true
 ui.workspace = true
+strum.workspace = true

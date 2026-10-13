@@ -5,8 +5,10 @@ use crate::core::{
     block_kind::BlockKind,
 };
 
+pub use category::BlockCategory;
 pub use size::BlockSize;
 
+mod category;
 mod conveyor;
 mod drill;
 mod size;
@@ -49,11 +51,15 @@ impl Block {
     }
 
     pub fn footprint_cells(&self) -> u32 {
-        self.state.size().cells()
+        self.kind.size().cells()
+    }
+
+    pub(crate) fn tick(&mut self) {
+        self.state.tick();
     }
 }
 
-pub enum BlockState {
+enum BlockState {
     Conveyor(Conveyor),
     Drill(Drill),
 }
@@ -66,10 +72,10 @@ impl BlockState {
         }
     }
 
-    pub fn size(&self) -> BlockSize {
+    fn tick(&mut self) {
         match self {
-            Self::Conveyor(_) => BlockSize::Single,
-            Self::Drill(_) => BlockSize::Double,
+            Self::Conveyor(conveyor) => conveyor.tick(),
+            Self::Drill(drill) => drill.tick(),
         }
     }
 }
