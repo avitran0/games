@@ -15,10 +15,11 @@ pub(crate) enum PaintCmd {
         position: IVec2,
         color: Color,
         height: u32,
+        width: u32,
     },
     Scroll {
         viewport: Rect,
-        offset_y: i32,
+        offset: IVec2,
         commands: Vec<PaintCmd>,
     },
 }
@@ -39,10 +40,10 @@ impl PaintList {
         self.0.split_off(start)
     }
 
-    pub fn scroll(&mut self, viewport: Rect, offset_y: i32, commands: Vec<PaintCmd>) {
+    pub fn scroll(&mut self, viewport: Rect, offset: IVec2, commands: Vec<PaintCmd>) {
         self.0.push(PaintCmd::Scroll {
             viewport,
-            offset_y,
+            offset,
             commands,
         });
     }
@@ -72,23 +73,31 @@ impl PaintList {
         });
     }
 
-    pub fn text(&mut self, text: impl Into<String>, position: IVec2, color: Color, height: u32) {
+    pub fn text(
+        &mut self,
+        text: impl Into<String>,
+        position: IVec2,
+        color: Color,
+        height: u32,
+        width: u32,
+    ) {
         self.0.push(PaintCmd::Text {
             text: text.into(),
             position,
             color,
             height,
+            width,
         });
     }
 
     pub fn draw(&self, frame: &mut Frame) {
         for command in &self.0 {
-            draw_command(frame, command, None, 0);
+            draw_command(frame, command, None, IVec2::ZERO);
         }
     }
 }
 
-fn draw_command(frame: &mut Frame, command: &PaintCmd, clip: Option<Rect>, offset_y: i32) {
+fn draw_command(frame: &mut Frame, command: &PaintCmd, clip: Option<Rect>, offset: IVec2) {
     match command {
         PaintCmd::Rect {
             rect,
@@ -96,7 +105,7 @@ fn draw_command(frame: &mut Frame, command: &PaintCmd, clip: Option<Rect>, offse
             border,
             radius,
         } => {
-            let mut rect = translated(*rect, offset_y);
+            let mut rect = translated(*rect, offset);
             if let Some(clip) = clip {
                 let Some(clipped) = intersection(rect, clip) else {
                     return;
@@ -123,12 +132,19 @@ fn draw_command(frame: &mut Frame, command: &PaintCmd, clip: Option<Rect>, offse
             position,
             color,
             height,
+            width,
         } => {
-            let position = IVec2::new(position.x, position.y.saturating_sub(offset_y));
+            let position = *position - offset;
             if let Some(clip) = clip {
+                let text_right = position.x.saturating_add(*width as i32);
                 let text_bottom = position.y.saturating_add(*height as i32);
+                let clip_right = clip.position.x.saturating_add(clip.size.x as i32);
                 let clip_bottom = clip.position.y.saturating_add(clip.size.y as i32);
-                if position.y < clip.position.y || text_bottom > clip_bottom {
+                if position.x < clip.position.x
+                    || text_right > clip_right
+                    || position.y < clip.position.y
+                    || text_bottom > clip_bottom
+                {
                     return;
                 }
             }
@@ -136,10 +152,10 @@ fn draw_command(frame: &mut Frame, command: &PaintCmd, clip: Option<Rect>, offse
         }
         PaintCmd::Scroll {
             viewport,
-            offset_y: inner_offset,
+            offset: inner_offset,
             commands,
         } => {
-            let viewport = translated(*viewport, offset_y);
+            let viewport = translated(*viewport, offset);
             let visible = match clip {
                 Some(clip) => intersection(viewport, clip),
                 None => Some(viewport),
@@ -148,19 +164,14 @@ fn draw_command(frame: &mut Frame, command: &PaintCmd, clip: Option<Rect>, offse
                 return;
             };
             for child in commands {
-                draw_command(
-                    frame,
-                    child,
-                    Some(visible),
-                    offset_y.saturating_add(*inner_offset),
-                );
+                draw_command(frame, child, Some(visible), offset + *inner_offset);
             }
         }
     }
 }
 
-fn translated(mut rect: Rect, offset_y: i32) -> Rect {
-    rect.position.y = rect.position.y.saturating_sub(offset_y);
+fn translated(mut rect: Rect, offset: IVec2) -> Rect {
+    rect.position -= offset;
     rect
 }
 

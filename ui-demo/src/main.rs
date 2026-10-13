@@ -21,6 +21,8 @@ enum Page {
     Overview,
     Controls,
     Layout,
+    Overflow1,
+    Overflow2,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -103,6 +105,7 @@ impl Screen<State> for Demo {
                     ui.button("Five");
                 });
             }
+            Page::Overflow1 | Page::Overflow2 => {}
         });
 
         ScreenAction::None

@@ -224,7 +224,7 @@ impl Ui {
         new_offset = new_offset.min(max_offset);
         let delta = new_offset as i32 - old_offset;
         let commands = self.paint.take_from(paint_start);
-        self.paint.scroll(content_rect, delta, commands);
+        self.paint.scroll(content_rect, ivec2(0, delta), commands);
         if max_offset > 0 && scrollbar_width > 0 {
             let track = Rect {
                 position: glam::ivec2(
@@ -249,6 +249,23 @@ impl Ui {
         self.layout = parent;
         self.advance(rect.size.y + self.style.spacing);
         *offset = new_offset;
+        output
+    }
+
+    pub(crate) fn horizontal_scroll<R>(
+        &mut self,
+        viewport: Rect,
+        offset_x: u32,
+        contents: impl FnOnce(&mut Self) -> R,
+    ) -> R {
+        let paint_start = self.paint.len();
+        let output = contents(self);
+        let commands = self.paint.take_from(paint_start);
+        self.paint.scroll(
+            viewport,
+            ivec2(offset_x.min(i32::MAX as u32) as i32, 0),
+            commands,
+        );
         output
     }
 
@@ -394,8 +411,10 @@ impl Ui {
     }
 
     pub(crate) fn draw_text(&mut self, text: impl Into<String>, position: IVec2, color: Color) {
+        let text = text.into();
+        let width = self.text_width(&text);
         self.paint
-            .text(text, position, color, self.style.row_height);
+            .text(text, position, color, self.style.row_height, width);
     }
 
     pub(crate) fn draw_aligned_text(&mut self, rect: Rect, text: &str, color: Color, inset: u32) {
