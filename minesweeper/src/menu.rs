@@ -16,8 +16,8 @@ impl MainMenu {
 
         Self {
             ui,
-            width: 20,
-            height: 15,
+            width: 30,
+            height: 20,
         }
     }
 }

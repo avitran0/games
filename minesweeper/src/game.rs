@@ -4,7 +4,9 @@ use api::{
 };
 
 use crate::{
+    camera::CameraRig,
     cursor::Cursor,
+    end_screen::{EndScreen, Outcome},
     pause::PauseScreen,
     sprites::Sprites,
     state::State,
@@ -19,6 +21,7 @@ pub struct GameScreen {
     cursor: Cursor,
     board: Vec<Tile>,
     generated: bool,
+    elapsed_ticks: usize,
 }
 
 impl GameScreen {
@@ -28,6 +31,8 @@ impl GameScreen {
     ) -> Result<Self, api::ScreenAction<State>> {
         let size = size.max(UVec2::ONE);
         let cursor = Cursor::new(size);
+        let camera_position = Self::cell_center(cursor.pos());
+        ctx.state.camera = CameraRig::new(camera_position);
         let sprites = Sprites::load(ctx)?;
         let board = vec![Tile::default(); size.x as usize * size.y as usize];
 
@@ -37,7 +42,12 @@ impl GameScreen {
             cursor,
             board,
             generated: false,
+            elapsed_ticks: 0,
         })
+    }
+
+    fn cell_center(cell: UVec2) -> api::glam::Vec2 {
+        cell.as_vec2() * TILE_SIZE as f32 + api::glam::Vec2::splat(TILE_SIZE as f32 * 0.5)
     }
 }
 
@@ -47,22 +57,22 @@ impl api::Screen<State> for GameScreen {
             return api::ScreenAction::Push(Box::new(PauseScreen::new()));
         }
 
-        self.cursor.tick(ctx);
-
-        if ctx.input.just_pressed(Button::A) {
-            self.uncover();
-        }
-
-        if ctx.input.just_pressed(Button::B) {
-            self.flag();
+        self.tick_cursor_and_camera(ctx);
+        if let Some(outcome) = self.update_gameplay(ctx) {
+            self.finish(outcome, ctx.state);
+            return api::ScreenAction::Push(Box::new(EndScreen::new(
+                outcome,
+                self.elapsed_ticks,
+                self.size,
+            )));
         }
 
         api::ScreenAction::None
     }
 
-    fn draw(&mut self, _state: &State, frame: &mut api::Frame) {
+    fn draw(&mut self, state: &State, frame: &mut api::Frame) {
         let sprites = &self.sprites;
-        let camera = self.cursor.camera();
+        let camera = state.camera.camera();
         let top_left = camera.screen_to_world(ivec2(0, 0));
         let bottom_right = camera.screen_to_world(ivec2(api::WIDTH as i32, api::HEIGHT as i32));
         let tile_size = TILE_SIZE as f32;
@@ -122,16 +132,78 @@ impl GameScreen {
                         4 => Color::PurpleHeart,
                         _ => Color::Bunker,
                     };
-                    world.text_color(
-                        neighbors.to_string(),
-                        text_pos,
-                        Anchor::Center,
-                        color,
-                    );
+                    world.text_color(neighbors.to_string(), text_pos, Anchor::Center, color);
                 }
             }
             TileKind::Bomb => {
                 world.sprite(&self.sprites.bomb, draw_pos, SpriteOptions::default());
+            }
+        }
+    }
+
+    fn tick_cursor_and_camera(&mut self, ctx: &mut api::ScreenContext<'_, State>) {
+        let previous_position = self.cursor.pos();
+        self.cursor.tick(ctx);
+
+        let camera = &mut ctx.state.camera;
+        if self.cursor.pos() != previous_position {
+            camera.move_to(Self::cell_center(self.cursor.pos()));
+        }
+        camera.tick();
+    }
+
+    fn update_gameplay(&mut self, ctx: &mut api::ScreenContext<'_, State>) -> Option<Outcome> {
+        let was_generated = self.generated;
+        let outcome = if ctx.input.just_pressed(Button::A) {
+            if self.uncover() {
+                self.has_won().then_some(Outcome::Win)
+            } else {
+                Some(Outcome::GameOver)
+            }
+        } else {
+            None
+        };
+
+        if ctx.input.just_pressed(Button::B) {
+            self.flag();
+        }
+        if was_generated || self.generated {
+            self.elapsed_ticks += 1;
+        }
+
+        outcome
+    }
+
+    fn finish(&mut self, outcome: Outcome, state: &mut State) {
+        match outcome {
+            Outcome::Win => self.flag_all_bombs(),
+            Outcome::GameOver => self.reveal_all_bombs(),
+        }
+        state
+            .camera
+            .frame_board(self.size.as_vec2() * TILE_SIZE as f32);
+    }
+
+    fn has_won(&self) -> bool {
+        self.generated
+            && self
+                .board
+                .iter()
+                .all(|tile| tile.kind == TileKind::Bomb || tile.uncovered)
+    }
+
+    fn flag_all_bombs(&mut self) {
+        for tile in &mut self.board {
+            if tile.kind == TileKind::Bomb {
+                tile.flagged = true;
+            }
+        }
+    }
+
+    fn reveal_all_bombs(&mut self) {
+        for tile in &mut self.board {
+            if tile.kind == TileKind::Bomb {
+                tile.uncovered = true;
             }
         }
     }

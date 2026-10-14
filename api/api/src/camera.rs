@@ -9,7 +9,7 @@ pub struct Camera2D {
 }
 
 impl Camera2D {
-    const MIN_ZOOM: f32 = 0.01;
+    const MIN_ZOOM: f32 = 0.0001;
 
     pub fn new(position: Vec2) -> Self {
         Self {

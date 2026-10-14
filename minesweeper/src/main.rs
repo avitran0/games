@@ -1,6 +1,8 @@
 use crate::{menu::MainMenu, state::State};
 
+mod camera;
 mod cursor;
+mod end_screen;
 mod game;
 mod menu;
 mod pause;

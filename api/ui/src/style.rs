@@ -6,6 +6,7 @@ pub struct Style {
     pub panel: Color,
     pub panel_border: Color,
     pub text: Color,
+    pub widget_text: Color,
     pub focused_text: Color,
     pub muted_text: Color,
     pub widget: Color,
@@ -24,13 +25,14 @@ pub struct Style {
     pub scrollbar_thumb: Color,
 }
 
-impl Default for Style {
-    fn default() -> Self {
+impl Style {
+    pub fn dark() -> Self {
         Self {
             background: Color::Bunker,
             panel: Color::Bunker,
             panel_border: Color::ShuttleGray,
             text: Color::Mischka,
+            widget_text: Color::Mischka,
             focused_text: Color::Bunker,
             muted_text: Color::Chatelle,
             widget: Color::Bunker,
@@ -48,5 +50,37 @@ impl Default for Style {
             scrollbar_track: Color::Bunker,
             scrollbar_thumb: Color::ShuttleGray,
         }
+    }
+
+    pub fn light() -> Self {
+        Self {
+            background: Color::Mischka,
+            panel: Color::Chatelle,
+            panel_border: Color::MountainMist,
+            text: Color::Bunker,
+            widget_text: Color::Mischka,
+            focused_text: Color::Bunker,
+            muted_text: Color::ShuttleGray,
+            widget: Color::Bunker,
+            widget_focused: Color::Mischka,
+            widget_pressed: Color::Chatelle,
+            accent: Color::Bunker,
+            disabled: Color::ShuttleGray,
+            row_height: 16,
+            spacing: 3,
+            padding: 6,
+            outer_padding: 8,
+            border_width: 1,
+            corner_radius: 8,
+            scrollbar_width: 3,
+            scrollbar_track: Color::Chatelle,
+            scrollbar_thumb: Color::ShuttleGray,
+        }
+    }
+}
+
+impl Default for Style {
+    fn default() -> Self {
+        Self::dark()
     }
 }

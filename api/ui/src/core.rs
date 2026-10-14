@@ -464,7 +464,7 @@ impl Ui {
         let color = if response.focused || selected {
             self.style.focused_text
         } else {
-            self.style.text
+            self.style.widget_text
         };
         self.draw_text(
             text,

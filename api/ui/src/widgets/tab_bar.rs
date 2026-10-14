@@ -172,7 +172,7 @@ fn draw_tab(ui: &mut Ui, rect: Rect, label: &str, active: bool) {
         if active {
             ui.style.focused_text
         } else {
-            ui.style.text
+            ui.style.widget_text
         },
     );
 }
