@@ -1,10 +1,17 @@
-use api::{Button, glam::UVec2};
+use api::{
+    Button, Camera2D, Interpolation, Tween,
+    glam::{UVec2, Vec2},
+};
 
-use crate::state::State;
+use crate::{game::TILE_SIZE, state::State};
+
+const CAMERA_TWEEN_TICKS: usize = 10;
 
 pub struct Cursor {
     position: UVec2,
     size: UVec2,
+    camera: Camera2D,
+    camera_tween: Tween<Vec2>,
     hold: Option<(Button, usize)>,
 }
 
@@ -15,10 +22,18 @@ impl Cursor {
 
     pub fn new(size: UVec2) -> Self {
         let position = size / 2;
+        let camera_position = Self::cell_center(position);
 
         Self {
-            size,
             position,
+            size,
+            camera: Camera2D::new(camera_position),
+            camera_tween: Tween::new(
+                camera_position,
+                camera_position,
+                CAMERA_TWEEN_TICKS,
+                Interpolation::EaseOutCubic,
+            ),
             hold: None,
         }
     }
@@ -27,7 +42,26 @@ impl Cursor {
         self.position
     }
 
+    pub fn camera(&self) -> &Camera2D {
+        &self.camera
+    }
+
     pub fn tick(&mut self, ctx: &mut api::ScreenContext<State>) {
+        let previous_position = self.position;
+        self.tick_input(ctx);
+
+        if self.position != previous_position {
+            self.camera_tween.retarget(Self::cell_center(self.position));
+        }
+        self.camera_tween.tick();
+        self.camera.set_position(self.camera_tween.current());
+    }
+
+    fn cell_center(cell: UVec2) -> Vec2 {
+        cell.as_vec2() * TILE_SIZE as f32 + Vec2::splat(TILE_SIZE as f32 * 0.5)
+    }
+
+    fn tick_input(&mut self, ctx: &mut api::ScreenContext<State>) {
         let newly_pressed = Self::DIRECTIONS
             .into_iter()
             .find(|&button| ctx.input.just_pressed(button));
