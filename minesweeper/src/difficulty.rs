@@ -17,14 +17,14 @@ impl Difficulty {
         }
     }
 
-    pub const fn tile_scale(self) -> f32 {
-        self.tile_size() as f32 / 16.0
-    }
-
     pub const fn size(self) -> UVec2 {
         uvec2(
             api::WIDTH / self.tile_size(),
             api::HEIGHT / self.tile_size(),
         )
+    }
+
+    pub const fn board_len(self) -> usize {
+        ((api::WIDTH / self.tile_size()) * (api::HEIGHT / self.tile_size())) as usize
     }
 }

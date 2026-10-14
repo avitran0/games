@@ -39,5 +39,5 @@ macro_rules! include_foods {
 }
 
 include_foods!(
-    "apple", "banana", "cupcake", "grapes", "keks", "pizza", "schoki"
+    "apple", "banana", "cupcake", "grapes", "keks", "melon", "pizza", "schoki"
 );
