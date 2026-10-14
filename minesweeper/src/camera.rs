@@ -13,8 +13,8 @@ impl Default for CameraRig {
 }
 
 impl CameraRig {
-    const CURSOR_MOVE_TICKS: usize = 8;
-    const END_SCREEN_TWEEN_TICKS: usize = 60;
+    const CURSOR_MOVE_TICKS: usize = 10;
+    const END_SCREEN_TWEEN_TICKS: usize = 120;
     const MIN_ZOOM: f32 = 0.0001;
 
     pub fn new(position: Vec2) -> Self {

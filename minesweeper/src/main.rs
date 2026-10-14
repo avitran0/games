@@ -1,5 +1,6 @@
 use crate::{menu::MainMenu, state::State};
 
+mod board;
 mod camera;
 mod cursor;
 mod end_screen;
