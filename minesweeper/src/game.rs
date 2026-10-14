@@ -5,33 +5,43 @@ use api::{
 
 use crate::{
     cursor::Cursor,
-    difficulty::Difficulty,
     pause::PauseScreen,
     sprites::Sprites,
     state::State,
     tile::{Tile, TileKind},
 };
 
+pub const TILE_SIZE: u32 = 16;
+
 pub struct GameScreen {
     sprites: Sprites,
-    difficulty: Difficulty,
+    size: UVec2,
     cursor: Cursor,
     board: Vec<Tile>,
     generated: bool,
 }
 
 impl GameScreen {
+    pub const MIN_BOARD_SIZE: u32 = 5;
+    pub const MAX_BOARD_WIDTH: u32 = api::WIDTH / TILE_SIZE;
+    pub const MAX_BOARD_HEIGHT: u32 = api::HEIGHT / TILE_SIZE;
+
     pub fn new(
         ctx: &mut api::ScreenContext<State>,
-        difficulty: Difficulty,
+        size: UVec2,
     ) -> Result<Self, api::ScreenAction<State>> {
-        let cursor = Cursor::new(difficulty);
+        // Keep the full board visible at the fixed tile size.
+        let size = uvec2(
+            size.x.clamp(Self::MIN_BOARD_SIZE, Self::MAX_BOARD_WIDTH),
+            size.y.clamp(Self::MIN_BOARD_SIZE, Self::MAX_BOARD_HEIGHT),
+        );
+        let cursor = Cursor::new(size);
         let sprites = Sprites::load(ctx)?;
-        let board = vec![Tile::default(); difficulty.board_len()];
+        let board = vec![Tile::default(); size.x as usize * size.y as usize];
 
         Ok(Self {
             sprites,
-            difficulty,
+            size,
             cursor,
             board,
             generated: false,
@@ -58,41 +68,40 @@ impl api::Screen<State> for GameScreen {
         api::ScreenAction::None
     }
 
-    fn draw(&mut self, state: &State, frame: &mut api::Frame) {
-        let sprites = self.sprites.set(self.difficulty);
+    fn draw(&mut self, _state: &State, frame: &mut api::Frame) {
+        let stride = self.size.x;
 
-        let stride = self.difficulty.size().x;
         for (pos, tile) in self
             .board
             .iter()
             .enumerate()
             .map(|(index, tile)| (Self::index_to_coord(index, stride as usize), tile))
         {
-            let draw_pos = (pos * self.difficulty.tile_size()).as_ivec2();
+            let draw_pos = (pos * TILE_SIZE).as_ivec2();
             if !tile.uncovered {
-                frame.sprite(&sprites.covered, draw_pos, SpriteOptions::default());
+                frame.sprite(&self.sprites.covered, draw_pos, SpriteOptions::default());
                 if tile.flagged {
-                    frame.sprite(&sprites.flag, draw_pos, SpriteOptions::default());
+                    frame.sprite(&self.sprites.flag, draw_pos, SpriteOptions::default());
                 }
                 continue;
             }
 
-            frame.sprite(&sprites.uncovered, draw_pos, SpriteOptions::default());
+            frame.sprite(&self.sprites.uncovered, draw_pos, SpriteOptions::default());
             match tile.kind {
                 TileKind::Clear => {
                     let neighbors = self.neighbors(pos);
                     frame.text(neighbors.to_string(), draw_pos, Anchor::TopLeft);
                 }
                 TileKind::Bomb => {
-                    frame.sprite(&sprites.bomb, draw_pos, SpriteOptions::default());
+                    frame.sprite(&self.sprites.bomb, draw_pos, SpriteOptions::default());
                 }
             }
         }
 
         let cursor_opacity = (frame.tick() as f32 * 0.02).sin().abs() * 0.5 + 0.5;
         frame.sprite(
-            &sprites.cursor,
-            (self.cursor.pos() * self.difficulty.tile_size()).as_ivec2(),
+            &self.sprites.cursor,
+            (self.cursor.pos() * TILE_SIZE).as_ivec2(),
             SpriteOptions::default().opacity(cursor_opacity),
         );
     }
@@ -102,12 +111,11 @@ impl GameScreen {
     fn uncover(&mut self) -> bool {
         let start = self.cursor.pos();
         if !self.generated {
-            self.board = Self::generate_board(self.difficulty.size(), start);
+            self.board = Self::generate_board(self.size, start);
             self.generated = true;
         }
 
-        let size = self.difficulty.size();
-        let stride = size.x as usize;
+        let stride = self.size.x as usize;
         let start_index = Self::coord_to_index(start, stride);
 
         if self.board[start_index].uncovered {
@@ -130,13 +138,13 @@ impl GameScreen {
 
             self.board[index].uncovered = true;
 
-            // numbered tiles should be revealed, but don't propagate
+            // Numbered tiles should be revealed, but don't propagate through them.
             if self.neighbors(pos) != 0 {
                 continue;
             }
 
-            // only tiles with no neighbors propagate
-            let size = size.as_ivec2();
+            // Zero-neighbor tiles propagate to each valid adjacent position.
+            let size = self.size.as_ivec2();
             for dy in -1..=1 {
                 for dx in -1..=1 {
                     if dx == 0 && dy == 0 {
@@ -161,7 +169,7 @@ impl GameScreen {
     }
 
     fn flag(&mut self) {
-        let stride = self.difficulty.size().x as usize;
+        let stride = self.size.x as usize;
         let index = Self::coord_to_index(self.cursor.pos(), stride);
         self.board[index].flagged = !self.board[index].flagged;
     }
@@ -173,22 +181,22 @@ impl GameScreen {
         let mut candidates: Vec<usize> = (0..board.len())
             .filter(|&index| {
                 let pos = Self::index_to_coord(index, stride);
-                pos.x.abs_diff(first_tile.x) > 1 && pos.y.abs_diff(first_tile.y) > 1
+                pos.x.abs_diff(first_tile.x) > 1 || pos.y.abs_diff(first_tile.y) > 1
             })
             .collect();
 
-        let bomb_count = size.x * size.y / 10;
+        let bomb_count = (size.x * size.y / 10) as usize;
         let mut rng = Rng::new();
         rng.shuffle(&mut candidates);
-        for tile in candidates.into_iter().take(bomb_count as usize) {
-            board[tile].kind = TileKind::Bomb;
+        for index in candidates.into_iter().take(bomb_count) {
+            board[index].kind = TileKind::Bomb;
         }
 
         board
     }
 
     fn neighbors(&self, pos: UVec2) -> usize {
-        let size = self.difficulty.size().as_ivec2();
+        let size = self.size.as_ivec2();
         let mut count = 0;
 
         for dy in -1..=1 {
@@ -197,12 +205,13 @@ impl GameScreen {
                     continue;
                 }
 
-                let pos = pos.as_ivec2() + ivec2(dx, dy);
-                if pos.x < 0 || pos.y < 0 || pos.x >= size.x || pos.y >= size.y {
+                let neighbor = pos.as_ivec2() + ivec2(dx, dy);
+                if neighbor.x < 0 || neighbor.y < 0 || neighbor.x >= size.x || neighbor.y >= size.y
+                {
                     continue;
                 }
 
-                let index = Self::coord_to_index(pos.as_uvec2(), size.x as usize);
+                let index = Self::coord_to_index(neighbor.as_uvec2(), size.x as usize);
                 if self.board[index].kind == TileKind::Bomb {
                     count += 1;
                 }

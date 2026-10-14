@@ -1,13 +1,10 @@
-use api::{
-    Button,
-    glam::{IVec2, UVec2},
-};
+use api::{Button, glam::UVec2};
 
-use crate::{difficulty::Difficulty, state::State};
+use crate::state::State;
 
 pub struct Cursor {
     position: UVec2,
-    difficulty: Difficulty,
+    size: UVec2,
     hold: Option<(Button, usize)>,
 }
 
@@ -16,11 +13,11 @@ impl Cursor {
     const REPEAT_INTERVAL: usize = 20;
     const DIRECTIONS: [Button; 4] = [Button::Left, Button::Right, Button::Up, Button::Down];
 
-    pub fn new(difficulty: Difficulty) -> Self {
-        let position = difficulty.size() / 2;
+    pub fn new(size: UVec2) -> Self {
+        let position = size / 2;
 
         Self {
-            difficulty,
+            size,
             position,
             hold: None,
         }
@@ -65,12 +62,15 @@ impl Cursor {
     }
 
     fn move_cursor(&mut self, button: Button) {
-        let size = self.difficulty.size();
         match button {
             Button::Left => self.position.x = self.position.x.saturating_sub(1),
-            Button::Right => self.position.x = self.position.x.saturating_add(1).min(size.x - 1),
+            Button::Right => {
+                self.position.x = self.position.x.saturating_add(1).min(self.size.x - 1)
+            }
             Button::Up => self.position.y = self.position.y.saturating_sub(1),
-            Button::Down => self.position.y = self.position.y.saturating_add(1).min(size.y - 1),
+            Button::Down => {
+                self.position.y = self.position.y.saturating_add(1).min(self.size.y - 1)
+            }
             _ => {}
         }
     }

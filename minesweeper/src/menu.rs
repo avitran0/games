@@ -1,9 +1,11 @@
-use crate::{difficulty::Difficulty, game::GameScreen, state::State};
+use api::glam::uvec2;
 
-#[derive(Default)]
+use crate::{game::GameScreen, state::State};
+
 pub struct MainMenu {
     ui: ui::Ui,
-    difficulty: Difficulty,
+    width: u32,
+    height: u32,
 }
 
 impl MainMenu {
@@ -14,7 +16,8 @@ impl MainMenu {
 
         Self {
             ui,
-            difficulty: Difficulty::Normal,
+            width: 10,
+            height: 8,
         }
     }
 }
@@ -24,14 +27,25 @@ impl api::Screen<State> for MainMenu {
         self.ui.begin_frame(ctx);
 
         if self.ui.button("Play").clicked {
-            let game = match GameScreen::new(ctx, self.difficulty) {
+            let game = match GameScreen::new(ctx, uvec2(self.width, self.height)) {
                 Ok(game) => game,
                 Err(action) => return action,
             };
             return api::ScreenAction::Replace(Box::new(game));
         }
 
-        self.ui.combo_box("Difficulty", &mut self.difficulty);
+        self.ui.slider(
+            "Width",
+            &mut self.width,
+            GameScreen::MIN_BOARD_SIZE,
+            GameScreen::MAX_BOARD_WIDTH,
+        );
+        self.ui.slider(
+            "Height",
+            &mut self.height,
+            GameScreen::MIN_BOARD_SIZE,
+            GameScreen::MAX_BOARD_HEIGHT,
+        );
 
         if self.ui.button("Quit").clicked {
             return api::ScreenAction::Quit;
@@ -40,7 +54,7 @@ impl api::Screen<State> for MainMenu {
         api::ScreenAction::None
     }
 
-    fn draw(&mut self, state: &State, frame: &mut api::Frame) {
+    fn draw(&mut self, _state: &State, frame: &mut api::Frame) {
         self.ui.paint(frame);
     }
 }

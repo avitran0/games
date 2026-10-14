@@ -1,7 +1,6 @@
 use crate::{menu::MainMenu, state::State};
 
 mod cursor;
-mod difficulty;
 mod game;
 mod menu;
 mod pause;
