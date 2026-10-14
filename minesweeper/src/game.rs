@@ -115,11 +115,18 @@ impl GameScreen {
                 let neighbors = self.neighbors(pos);
                 if neighbors != 0 {
                     let text_pos = draw_pos + TILE_SIZE as i32 / 2;
+                    let color = match neighbors {
+                        1 => Color::Indigo,
+                        2 => Color::ForestGreen,
+                        3 => Color::TallPoppy,
+                        4 => Color::PurpleHeart,
+                        _ => Color::Bunker,
+                    };
                     world.text_color(
                         neighbors.to_string(),
                         text_pos,
                         Anchor::Center,
-                        Color::Bunker,
+                        color,
                     );
                 }
             }

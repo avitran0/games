@@ -5,8 +5,6 @@ use api::{
 
 use crate::{game::TILE_SIZE, state::State};
 
-const CAMERA_TWEEN_TICKS: usize = 10;
-
 pub struct Cursor {
     position: UVec2,
     size: UVec2,
@@ -18,6 +16,7 @@ pub struct Cursor {
 impl Cursor {
     const INITIAL_DELAY: usize = 40;
     const REPEAT_INTERVAL: usize = 20;
+    const CAMERA_TWEEN_TICKS: usize = 10;
     const DIRECTIONS: [Button; 4] = [Button::Left, Button::Right, Button::Up, Button::Down];
 
     pub fn new(size: UVec2) -> Self {
@@ -31,7 +30,7 @@ impl Cursor {
             camera_tween: Tween::new(
                 camera_position,
                 camera_position,
-                CAMERA_TWEEN_TICKS,
+                Self::CAMERA_TWEEN_TICKS,
                 Interpolation::EaseOutCubic,
             ),
             hold: None,
