@@ -45,6 +45,10 @@ impl api::Screen<State> for GameScreen {
 
         self.cursor.tick(ctx);
 
+        if ctx.input.just_pressed(Button::A) {
+            self.uncover();
+        }
+
         api::ScreenAction::None
     }
 
@@ -56,7 +60,7 @@ impl api::Screen<State> for GameScreen {
             .board
             .iter()
             .enumerate()
-            .map(|(index, tile)| (index_to_coord(index, stride as usize), tile))
+            .map(|(index, tile)| (Self::index_to_coord(index, stride as usize), tile))
         {
             let pos = (pos * self.difficulty.tile_size()).as_ivec2();
             if !tile.uncovered {
@@ -65,7 +69,9 @@ impl api::Screen<State> for GameScreen {
             }
 
             match tile.kind {
-                TileKind::Clear => {}
+                TileKind::Clear => {
+                    frame.sprite(&sprites.uncovered, pos, SpriteOptions::default());
+                }
                 TileKind::Bomb => {
                     frame.sprite(&sprites.bomb, pos, SpriteOptions::default());
                 }
@@ -81,10 +87,32 @@ impl api::Screen<State> for GameScreen {
     }
 }
 
-fn generate_board(size: UVec2, first_tile: UVec2) -> Vec<Tile> {
-    Vec::new()
-}
+impl GameScreen {
+    fn uncover(&mut self) -> bool {
+        let stride = self.difficulty.size().x as usize;
+        let index = Self::coord_to_index(self.cursor.pos(), stride);
+        let tile = &mut self.board[index];
 
-fn index_to_coord(index: usize, stride: usize) -> UVec2 {
-    usizevec2(index % stride, index / stride).as_uvec2()
+        if tile.uncovered {
+            return true;
+        }
+
+        tile.uncovered = true;
+        match tile.kind {
+            TileKind::Clear => true,
+            TileKind::Bomb => false,
+        }
+    }
+
+    fn generate_board(size: UVec2, first_tile: UVec2) -> Vec<Tile> {
+        Vec::new()
+    }
+
+    fn coord_to_index(coord: UVec2, stride: usize) -> usize {
+        coord.y as usize * stride + coord.x as usize
+    }
+
+    fn index_to_coord(index: usize, stride: usize) -> UVec2 {
+        usizevec2(index % stride, index / stride).as_uvec2()
+    }
 }

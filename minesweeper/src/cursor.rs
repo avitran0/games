@@ -31,35 +31,36 @@ impl Cursor {
     }
 
     pub fn tick(&mut self, ctx: &mut api::ScreenContext<State>) {
-        let direction = Self::DIRECTIONS
+        let newly_pressed = Self::DIRECTIONS
             .into_iter()
-            .find(|&button| ctx.input.just_pressed(button))
-            .or_else(|| {
-                Self::DIRECTIONS
-                    .into_iter()
-                    .find(|&button| ctx.input.is_pressed(button))
-            });
+            .find(|&button| ctx.input.just_pressed(button));
 
-        match direction {
-            None => self.hold = None,
-            Some(button) => {
-                let (elapsed, move_now) = match self.hold {
-                    Some((held, elapsed)) if held == button => {
-                        let elapsed = elapsed + 1;
-                        let move_now = elapsed >= Self::INITIAL_DELAY
-                            && (elapsed - Self::INITIAL_DELAY)
-                                .is_multiple_of(Self::REPEAT_INTERVAL);
-                        (elapsed, move_now)
-                    }
-                    _ => (0, true),
-                };
+        if let Some(button) = newly_pressed {
+            self.hold = Some((button, 0));
+            self.move_cursor(button);
+            return;
+        }
 
-                self.hold = Some((button, elapsed));
-
-                if move_now {
-                    self.move_cursor(button);
-                }
+        if let Some((button, elapsed)) = self.hold
+            && ctx.input.is_pressed(button)
+        {
+            let elapsed = elapsed + 1;
+            if elapsed >= Self::INITIAL_DELAY
+                && (elapsed - Self::INITIAL_DELAY).is_multiple_of(Self::REPEAT_INTERVAL)
+            {
+                self.move_cursor(button);
             }
+            self.hold = Some((button, elapsed));
+            return;
+        }
+
+        if let Some(button) = Self::DIRECTIONS
+            .into_iter()
+            .find(|&button| ctx.input.is_pressed(button))
+        {
+            self.hold = Some((button, 0));
+        } else {
+            self.hold = None;
         }
     }
 
