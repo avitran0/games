@@ -164,6 +164,7 @@ impl<State: 'static> Context<State> {
             None => self.screens.len().saturating_sub(1),
         };
 
+        self.frame.set_tick(self.tick);
         for screen in &mut self.screens[start..] {
             screen.draw(&self.state, &mut self.frame);
         }

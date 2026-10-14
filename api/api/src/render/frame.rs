@@ -13,6 +13,7 @@ pub use world::WorldFrame;
 
 #[derive(Default)]
 pub struct Frame {
+    tick: usize,
     draw_cmds: Vec<DrawCmd>,
 }
 
@@ -25,8 +26,16 @@ impl Frame {
         &self.draw_cmds
     }
 
+    pub(crate) fn set_tick(&mut self, tick: usize) {
+        self.tick = tick;
+    }
+
     pub(crate) fn clear(&mut self) {
         self.draw_cmds.clear();
+    }
+
+    pub fn tick(&self) -> usize {
+        self.tick
     }
 
     pub fn world<'frame, 'camera>(
