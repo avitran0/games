@@ -1,6 +1,6 @@
 use api::{
-    Button, SpriteOptions,
-    glam::{UVec2, usizevec2},
+    Anchor, Button, SpriteOptions,
+    glam::{UVec2, ivec2, usizevec2, uvec2},
 };
 
 use crate::{
@@ -62,18 +62,20 @@ impl api::Screen<State> for GameScreen {
             .enumerate()
             .map(|(index, tile)| (Self::index_to_coord(index, stride as usize), tile))
         {
-            let pos = (pos * self.difficulty.tile_size()).as_ivec2();
+            let draw_pos = (pos * self.difficulty.tile_size()).as_ivec2();
             if !tile.uncovered {
-                frame.sprite(&sprites.covered, pos, SpriteOptions::default());
+                frame.sprite(&sprites.covered, draw_pos, SpriteOptions::default());
                 continue;
             }
 
+            frame.sprite(&sprites.uncovered, draw_pos, SpriteOptions::default());
             match tile.kind {
                 TileKind::Clear => {
-                    frame.sprite(&sprites.uncovered, pos, SpriteOptions::default());
+                    let neighbors = self.neighbors(pos);
+                    frame.text(neighbors.to_string(), draw_pos, Anchor::TopLeft);
                 }
                 TileKind::Bomb => {
-                    frame.sprite(&sprites.bomb, pos, SpriteOptions::default());
+                    frame.sprite(&sprites.bomb, draw_pos, SpriteOptions::default());
                 }
             }
         }
@@ -106,6 +108,31 @@ impl GameScreen {
 
     fn generate_board(size: UVec2, first_tile: UVec2) -> Vec<Tile> {
         Vec::new()
+    }
+
+    fn neighbors(&self, pos: UVec2) -> usize {
+        let size = self.difficulty.size().as_ivec2();
+        let mut count = 0;
+
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                if dx == 0 && dy == 0 {
+                    continue;
+                }
+
+                let pos = pos.as_ivec2() + ivec2(dx, dy);
+                if pos.x < 0 || pos.y < 0 || pos.x >= size.x || pos.y >= size.y {
+                    continue;
+                }
+
+                let index = Self::coord_to_index(pos.as_uvec2(), size.x as usize);
+                if self.board[index].kind == TileKind::Bomb {
+                    count += 1;
+                }
+            }
+        }
+
+        count
     }
 
     fn coord_to_index(coord: UVec2, stride: usize) -> usize {
