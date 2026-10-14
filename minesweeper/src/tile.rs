@@ -2,6 +2,7 @@
 pub struct Tile {
     pub kind: TileKind,
     pub uncovered: bool,
+    pub flagged: bool,
 }
 
 #[derive(Clone, Copy, Default, PartialEq)]

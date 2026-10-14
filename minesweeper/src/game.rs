@@ -51,6 +51,10 @@ impl api::Screen<State> for GameScreen {
             self.uncover();
         }
 
+        if ctx.input.just_pressed(Button::B) {
+            self.flag();
+        }
+
         api::ScreenAction::None
     }
 
@@ -67,6 +71,9 @@ impl api::Screen<State> for GameScreen {
             let draw_pos = (pos * self.difficulty.tile_size()).as_ivec2();
             if !tile.uncovered {
                 frame.sprite(&sprites.covered, draw_pos, SpriteOptions::default());
+                if tile.flagged {
+                    frame.sprite(&sprites.flag, draw_pos, SpriteOptions::default());
+                }
                 continue;
             }
 
@@ -93,39 +100,88 @@ impl api::Screen<State> for GameScreen {
 
 impl GameScreen {
     fn uncover(&mut self) -> bool {
+        let start = self.cursor.pos();
         if !self.generated {
-            self.board = Self::generate_board(self.difficulty.size(), self.cursor.pos());
+            self.board = Self::generate_board(self.difficulty.size(), start);
             self.generated = true;
         }
 
-        let stride = self.difficulty.size().x as usize;
-        let index = Self::coord_to_index(self.cursor.pos(), stride);
-        let tile = &mut self.board[index];
+        let size = self.difficulty.size();
+        let stride = size.x as usize;
+        let start_index = Self::coord_to_index(start, stride);
 
-        if tile.uncovered {
+        if self.board[start_index].uncovered {
             return true;
         }
 
-        tile.uncovered = true;
-        match tile.kind {
-            TileKind::Clear => true,
-            TileKind::Bomb => false,
+        if self.board[start_index].kind == TileKind::Bomb {
+            self.board[start_index].uncovered = true;
+            return false;
         }
+
+        let mut pending = vec![start];
+
+        while let Some(pos) = pending.pop() {
+            let index = Self::coord_to_index(pos, stride);
+
+            if self.board[index].uncovered || self.board[index].kind == TileKind::Bomb {
+                continue;
+            }
+
+            self.board[index].uncovered = true;
+
+            // numbered tiles should be revealed, but don't propagate
+            if self.neighbors(pos) != 0 {
+                continue;
+            }
+
+            // only tiles with no neighbors propagate
+            let size = size.as_ivec2();
+            for dy in -1..=1 {
+                for dx in -1..=1 {
+                    if dx == 0 && dy == 0 {
+                        continue;
+                    }
+
+                    let adjacent = pos.as_ivec2() + ivec2(dx, dy);
+                    if adjacent.x < 0
+                        || adjacent.y < 0
+                        || adjacent.x >= size.x
+                        || adjacent.y >= size.y
+                    {
+                        continue;
+                    }
+
+                    pending.push(adjacent.as_uvec2());
+                }
+            }
+        }
+
+        true
+    }
+
+    fn flag(&mut self) {
+        let stride = self.difficulty.size().x as usize;
+        let index = Self::coord_to_index(self.cursor.pos(), stride);
+        self.board[index].flagged = !self.board[index].flagged;
     }
 
     fn generate_board(size: UVec2, first_tile: UVec2) -> Vec<Tile> {
         let mut board = vec![Tile::default(); size.x as usize * size.y as usize];
+
+        let stride = size.x as usize;
+        let mut candidates: Vec<usize> = (0..board.len())
+            .filter(|&index| {
+                let pos = Self::index_to_coord(index, stride);
+                pos.x.abs_diff(first_tile.x) > 1 && pos.y.abs_diff(first_tile.y) > 1
+            })
+            .collect();
+
         let bomb_count = size.x * size.y / 10;
         let mut rng = Rng::new();
-        for bomb in (0..bomb_count)
-            .map(|_| uvec2(rng.get_u32_range(0..size.x), rng.get_u32_range(0..size.y)))
-        {
-            if bomb == first_tile {
-                continue;
-            }
-
-            let index = Self::coord_to_index(bomb, size.x as usize);
-            board[index].kind = TileKind::Bomb;
+        rng.shuffle(&mut candidates);
+        for tile in candidates.into_iter().take(bomb_count as usize) {
+            board[tile].kind = TileKind::Bomb;
         }
 
         board

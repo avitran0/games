@@ -77,6 +77,13 @@ impl Rng {
         let choice = self.get_usize_range(0..len);
         &slice[choice]
     }
+
+    pub fn shuffle<T>(&mut self, slice: &mut [T]) {
+        for i in (1..slice.len()).rev() {
+            let j = self.get_usize_range(0..i + 1);
+            slice.swap(i, j);
+        }
+    }
 }
 
 macro_rules! impl_int {
