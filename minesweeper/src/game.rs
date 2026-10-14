@@ -1,5 +1,5 @@
 use api::{
-    Anchor, Button, SpriteOptions,
+    Anchor, Button, Rng, SpriteOptions,
     glam::{UVec2, ivec2, usizevec2, uvec2},
 };
 
@@ -17,6 +17,7 @@ pub struct GameScreen {
     difficulty: Difficulty,
     cursor: Cursor,
     board: Vec<Tile>,
+    generated: bool,
 }
 
 impl GameScreen {
@@ -33,6 +34,7 @@ impl GameScreen {
             difficulty,
             cursor,
             board,
+            generated: false,
         })
     }
 }
@@ -91,6 +93,11 @@ impl api::Screen<State> for GameScreen {
 
 impl GameScreen {
     fn uncover(&mut self) -> bool {
+        if !self.generated {
+            self.board = Self::generate_board(self.difficulty.size(), self.cursor.pos());
+            self.generated = true;
+        }
+
         let stride = self.difficulty.size().x as usize;
         let index = Self::coord_to_index(self.cursor.pos(), stride);
         let tile = &mut self.board[index];
@@ -107,7 +114,21 @@ impl GameScreen {
     }
 
     fn generate_board(size: UVec2, first_tile: UVec2) -> Vec<Tile> {
-        Vec::new()
+        let mut board = vec![Tile::default(); size.x as usize * size.y as usize];
+        let bomb_count = size.x * size.y / 10;
+        let mut rng = Rng::new();
+        for bomb in (0..bomb_count)
+            .map(|_| uvec2(rng.get_u32_range(0..size.x), rng.get_u32_range(0..size.y)))
+        {
+            if bomb == first_tile {
+                continue;
+            }
+
+            let index = Self::coord_to_index(bomb, size.x as usize);
+            board[index].kind = TileKind::Bomb;
+        }
+
+        board
     }
 
     fn neighbors(&self, pos: UVec2) -> usize {
