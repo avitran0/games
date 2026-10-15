@@ -1,8 +1,8 @@
 use api::{
     Frame, HEIGHT, Screen, ScreenAction, ScreenContext, WIDTH,
     glam::{ivec2, uvec2},
+    strum::EnumIter,
 };
-use ui::{EnumIter, Ui};
 
 #[derive(Default)]
 struct State {
@@ -15,7 +15,7 @@ struct State {
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, EnumIter)]
-#[strum(crate = "ui")]
+#[strum(crate = "api::strum")]
 enum Page {
     #[default]
     Overview,
@@ -34,7 +34,7 @@ enum Choice {
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, EnumIter)]
-#[strum(crate = "ui")]
+#[strum(crate = "api::strum")]
 enum Scaling {
     #[default]
     Aspect,
@@ -43,14 +43,14 @@ enum Scaling {
 }
 
 struct Demo {
-    ui: Ui,
+    ui: ui::Ui,
     scroll: u32,
 }
 
 impl Demo {
     fn new() -> Self {
         Self {
-            ui: Ui::new(),
+            ui: ui::Ui::new(),
             scroll: 0,
         }
     }

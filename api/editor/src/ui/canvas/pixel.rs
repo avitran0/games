@@ -170,16 +170,22 @@ fn show_pixels_inner(
     let (light, dark) = view.background.colors();
     let grid_stroke = view.background.grid_stroke();
 
-    for y in 0..height {
-        for x in 0..width {
+    let visible_x_start = (((viewport.left() - rect.left()) / cell).floor() as isize)
+        .clamp(0, width as isize) as usize;
+    let visible_x_end = (((viewport.right() - rect.left()) / cell).ceil() as isize)
+        .clamp(0, width as isize) as usize;
+    let visible_y_start = (((viewport.top() - rect.top()) / cell).floor() as isize)
+        .clamp(0, height as isize) as usize;
+    let visible_y_end = (((viewport.bottom() - rect.top()) / cell).ceil() as isize)
+        .clamp(0, height as isize) as usize;
+
+    for y in visible_y_start..visible_y_end {
+        for x in visible_x_start..visible_x_end {
             let value = display_pixels.get(y * width + x).copied().unwrap_or(0);
             let pixel_rect = Rect::from_min_size(
                 Pos2::new(rect.left() + x as f32 * cell, rect.top() + y as f32 * cell),
                 Vec2::splat(cell),
             );
-            if !pixel_rect.intersects(viewport) {
-                continue;
-            }
             let fill = match (mode, value) {
                 (PixelMode::Indexed, value) if value != 0 => palette::color(value),
                 (PixelMode::Monochrome, value) if value != 0 => match view.background {

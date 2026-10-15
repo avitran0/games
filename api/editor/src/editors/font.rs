@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     document::AssetKind,
     editors::{FileState, apply_pixel_edit},
@@ -255,6 +257,9 @@ fn preview_panel(ui: &mut Ui, document: &mut FontDocument, state: &mut State) ->
                 for (index, glyph) in document.glyphs.iter().enumerate() {
                     const CARD_SIZE: egui::Vec2 = egui::Vec2::new(72.0, 96.0);
                     let (card, response) = ui.allocate_exact_size(CARD_SIZE, egui::Sense::click());
+                    if !card.intersects(ui.clip_rect()) {
+                        continue;
+                    }
                     let painter = ui.painter_at(card);
                     let selected = index == state.glyph_index;
                     let fill = if selected {
@@ -340,6 +345,15 @@ fn canvas(ui: &mut Ui, document: &mut FontDocument, state: &mut State) -> bool {
 }
 
 fn paint_font_preview(ui: &mut Ui, document: &FontDocument, text: &str) {
+    let glyphs: HashMap<char, &GlyphDocument> = document
+        .glyphs
+        .iter()
+        .map(|glyph| (glyph.codepoint, glyph))
+        .collect();
+    let fallback = glyphs
+        .get(&'\u{FFFD}')
+        .copied()
+        .unwrap_or(&document.glyphs[0]);
     let scale = (44.0 / f32::from(document.height)).clamp(0.5, 3.0);
     let line_height = f32::from(document.height) * scale + 4.0;
     let mut line_width = 0.0_f32;
@@ -353,7 +367,7 @@ fn paint_font_preview(ui: &mut Ui, document: &FontDocument, text: &str) {
         } else if character == '\t' {
             line_width += f32::from(document.height) * scale * 4.0;
         } else if character != '\r' {
-            let glyph = find_glyph(document, character);
+            let glyph = find_glyph(&glyphs, fallback, character);
             line_width += f32::from(glyph.advance) * scale;
         }
     }
@@ -378,7 +392,7 @@ fn paint_font_preview(ui: &mut Ui, document: &FontDocument, text: &str) {
                     '\t' => x += f32::from(document.height) * scale * 4.0,
                     '\r' => {}
                     character => {
-                        let glyph = find_glyph(document, character);
+                        let glyph = find_glyph(&glyphs, fallback, character);
                         let glyph_width = usize::from(glyph.width);
                         for row in 0..usize::from(document.height) {
                             for column in 0..glyph_width {
@@ -410,18 +424,12 @@ fn paint_font_preview(ui: &mut Ui, document: &FontDocument, text: &str) {
         });
 }
 
-fn find_glyph(document: &FontDocument, character: char) -> &GlyphDocument {
-    document
-        .glyphs
-        .iter()
-        .find(|glyph| glyph.codepoint == character)
-        .or_else(|| {
-            document
-                .glyphs
-                .iter()
-                .find(|glyph| glyph.codepoint == '\u{FFFD}')
-        })
-        .unwrap_or(&document.glyphs[0])
+fn find_glyph<'a>(
+    glyphs: &HashMap<char, &'a GlyphDocument>,
+    fallback: &'a GlyphDocument,
+    character: char,
+) -> &'a GlyphDocument {
+    glyphs.get(&character).copied().unwrap_or(fallback)
 }
 
 fn parse_character(text: &str) -> Option<char> {

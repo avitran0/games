@@ -56,18 +56,21 @@ impl Board {
             return UncoverResult::HitBomb;
         }
 
+        self.tiles[start_index].uncovered = true;
         let mut pending = vec![start];
         while let Some(pos) = pending.pop() {
-            let index = Self::coord_to_index(pos, self.size.x as usize);
-            let tile = self.tiles[index];
-            if tile.uncovered || tile.flagged || tile.kind == TileKind::Bomb {
+            if self.neighbors(pos) != 0 {
                 continue;
             }
 
-            self.tiles[index].uncovered = true;
-            if self.neighbors(pos) == 0 {
-                pending.extend(Self::adjacent_positions(pos, self.size));
-            }
+            Self::for_each_adjacent(pos, self.size, |neighbor| {
+                let index = Self::coord_to_index(neighbor, self.size.x as usize);
+                let tile = &mut self.tiles[index];
+                if !tile.uncovered && !tile.flagged && tile.kind != TileKind::Bomb {
+                    tile.uncovered = true;
+                    pending.push(neighbor);
+                }
+            });
         }
 
         UncoverResult::Safe
@@ -106,10 +109,13 @@ impl Board {
     }
 
     pub fn neighbors(&self, pos: UVec2) -> usize {
-        Self::adjacent_positions(pos, self.size)
-            .into_iter()
-            .filter(|&neighbor| self.tile(neighbor).kind == TileKind::Bomb)
-            .count()
+        let mut count = 0;
+        Self::for_each_adjacent(pos, self.size, |neighbor| {
+            if self.tile(neighbor).kind == TileKind::Bomb {
+                count += 1;
+            }
+        });
+        count
     }
 
     fn generate(&mut self, first_tile: UVec2) {
@@ -123,14 +129,15 @@ impl Board {
 
         let bomb_count = (self.size.x as u64 * self.size.y as u64 / 10) as usize;
         let mut rng = Rng::new();
-        rng.shuffle(&mut candidates);
-        for index in candidates.into_iter().take(bomb_count) {
-            self.tiles[index].kind = TileKind::Bomb;
+        let bomb_count = bomb_count.min(candidates.len());
+        for index in 0..bomb_count {
+            let selected = rng.get_usize_range(index..candidates.len());
+            candidates.swap(index, selected);
+            self.tiles[candidates[index]].kind = TileKind::Bomb;
         }
     }
 
-    fn adjacent_positions(pos: UVec2, size: UVec2) -> Vec<UVec2> {
-        let mut adjacent = Vec::with_capacity(8);
+    fn for_each_adjacent(pos: UVec2, size: UVec2, mut visit: impl FnMut(UVec2)) {
         for dy in -1i32..=1 {
             for dx in -1i32..=1 {
                 if dx == 0 && dy == 0 {
@@ -140,11 +147,10 @@ impl Board {
                 let x = pos.x as i32 + dx;
                 let y = pos.y as i32 + dy;
                 if x >= 0 && y >= 0 && x < size.x as i32 && y < size.y as i32 {
-                    adjacent.push(uvec2(x as u32, y as u32));
+                    visit(uvec2(x as u32, y as u32));
                 }
             }
         }
-        adjacent
     }
 
     fn coord_to_index(coord: UVec2, stride: usize) -> usize {
