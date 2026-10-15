@@ -22,11 +22,11 @@ impl Leaderboard {
         self.sort();
 
         if self.entries.len() > 100 {
-            self.entries.remove(self.entries.len() - 1);
+            self.entries.truncate(100);
         }
     }
 
-    fn sort(&mut self) {
+    pub fn sort(&mut self) {
         self.entries.sort_by(|a, b| {
             let a = a.ticks_per_tile();
             let b = b.ticks_per_tile();

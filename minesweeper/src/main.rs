@@ -15,6 +15,7 @@ mod tile;
 fn main() {
     api::run("Minesweeper", State::default(), |ctx| {
         ctx.state.leaderboard = api::load(LEADERBOARD)?;
+        ctx.state.leaderboard.sort();
         Ok(Box::new(MainMenu::new()))
     });
 }
