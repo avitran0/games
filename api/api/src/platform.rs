@@ -39,8 +39,9 @@ impl Platform {
                 }
             })
             .collect();
-        info!("detected {} gamepads", _gamepads.len());
+
         let video = sdl.video()?;
+        info!("sdl video driver: '{}'", video.current_video_driver());
 
         let gl_attr = video.gl_attr();
         gl_attr.set_context_profile(GLProfile::GLES);
@@ -81,6 +82,9 @@ impl Platform {
             debug!("initialized OpenGL debug callback");
         }
         let gl = Rc::new(gl);
+
+        let renderer = unsafe { gl.get_parameter_string(glow::RENDERER) };
+        info!("graphics device: '{renderer}'");
 
         Ok(Self {
             _sdl: sdl,
