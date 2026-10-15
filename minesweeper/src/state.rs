@@ -5,3 +5,5 @@ pub struct State {
     pub camera: CameraRig,
     pub leaderboard: Leaderboard,
 }
+
+api::impl_app_state!(State);

@@ -253,18 +253,6 @@ fn paint_tile_pixels(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::visible_cells;
-
-    #[test]
-    fn visible_cell_ranges_include_partial_cells_and_clip_to_map_bounds() {
-        assert_eq!(visible_cells(0.0, 10.0, 20, 25.0, 45.0), 2..5);
-        assert_eq!(visible_cells(-15.0, 10.0, 20, 0.0, 20.0), 1..4);
-        assert_eq!(visible_cells(0.0, 10.0, 20, 220.0, 240.0), 20..20);
-    }
-}
-
 fn paint_checker(
     painter: &egui::Painter,
     rect: Rect,

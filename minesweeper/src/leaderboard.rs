@@ -8,7 +8,7 @@ use api::{
 
 use crate::state::State;
 
-pub const LEADERBOARD: api::SaveName = api::save_name!("leaderboard");
+pub const LEADERBOARD: api::SaveName = api::save_name("leaderboard");
 
 #[derive(Default, Serialize, Deserialize)]
 #[serde(crate = "api::serde")]

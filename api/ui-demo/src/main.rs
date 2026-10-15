@@ -14,6 +14,8 @@ struct State {
     scaling: Scaling,
 }
 
+api::impl_app_state!(State);
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, EnumIter)]
 #[strum(crate = "api::strum")]
 enum Page {

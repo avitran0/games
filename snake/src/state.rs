@@ -9,6 +9,8 @@ pub struct State {
     pub score: u32,
 }
 
+api::impl_app_state!(State);
+
 #[derive(Default, Clone, Copy, Debug, PartialEq, EnumIter)]
 #[strum(crate = "api::strum")]
 pub enum Difficulty {

@@ -11,4 +11,4 @@ pub struct Config {
     pub snake: Snake,
 }
 
-pub const CONFIG_NAME: SaveName = api::save_name!("snake");
+pub const CONFIG_NAME: SaveName = api::save_name("snake");

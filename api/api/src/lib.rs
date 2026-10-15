@@ -30,7 +30,7 @@ pub use render::{
         Anchor, Flip, Frame, ShapeOptions, SpriteOptions, TextOptions, TilemapOptions, WorldFrame,
     },
 };
-pub use save::{SaveName, load, save};
+pub use save::{SaveName, load, save, save_name};
 pub use screen::{Screen, ScreenAction, ScreenContext, error::ErrorScreen};
 pub use tween::{Interpolation, Tween};
 
@@ -40,13 +40,13 @@ pub use utils::{debug, error, info, warn};
 
 const TICK_DURATION: Duration = Duration::from_nanos(1_000_000_000 / 120);
 
-pub fn run<State: 'static, Setup>(title: &str, state: State, setup: Setup)
+pub fn run<State: AppState + 'static, Setup>(title: &str, state: State, setup: Setup)
 where
     Setup: FnOnce(
         &mut ScreenContext<'_, State>,
     ) -> Result<Box<dyn Screen<State>>, ScreenAction<State>>,
 {
-    utils::log::init();
+    init_game_logger(State::app_id());
 
     let mut ctx = match Context::load(title, state) {
         Ok(ctx) => ctx,
@@ -73,6 +73,42 @@ where
             next_tick = now;
         }
     }
+}
+
+fn init_game_logger(app_id: &str) {
+    let config_dir = save::game_config_dir(app_id);
+    std::fs::create_dir_all(&config_dir).unwrap_or_else(|error| {
+        panic!(
+            "Cannot create game config directory {}: {error}",
+            config_dir.display()
+        )
+    });
+
+    let options = utils::log::LoggerOptions::default()
+        .file(config_dir.join("game.log"))
+        .truncate(true)
+        .stdout(true);
+    utils::log::init_ext(options).unwrap_or_else(|error| {
+        panic!(
+            "Cannot initialize game log in {}: {error}",
+            config_dir.display()
+        )
+    });
+}
+
+pub trait AppState {
+    fn app_id() -> &'static str;
+}
+
+#[macro_export]
+macro_rules! impl_app_state {
+    ($state:ty) => {
+        impl $crate::AppState for $state {
+            fn app_id() -> &'static str {
+                env!("CARGO_CRATE_NAME")
+            }
+        }
+    };
 }
 
 pub const FPS: u32 = 120;

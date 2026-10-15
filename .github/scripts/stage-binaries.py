@@ -12,7 +12,7 @@ PORTS_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 GAME_DIR="$(basename -- "$0" .sh)"
 export LD_LIBRARY_PATH=/lib:/usr/lib
 cd "$PORTS_DIR/$GAME_DIR"
-exec ./game "$@" > game.log 2>&1
+exec ./game "$@"
 """
 
 ES_FIELDS = {
