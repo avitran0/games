@@ -4,8 +4,8 @@ use api::{
 };
 
 use crate::{
+    end_screen::{EndScreen, Outcome},
     foods::Foods,
-    game_over::GameOverScreen,
     pause::PauseScreen,
     snakes::{Snake, SnakeSprites},
     state::State,
@@ -14,6 +14,7 @@ use crate::{
 const TILE_SIZE: i32 = 16;
 const GRID_WIDTH: i32 = (api::WIDTH / TILE_SIZE as u32) as i32;
 const GRID_HEIGHT: i32 = (api::HEIGHT / TILE_SIZE as u32) as i32;
+const FOOD_POINTS: u32 = 10;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Direction {
@@ -98,43 +99,38 @@ pub struct GameScreen {
     sprites: Sprites,
     rng: api::Rng,
     snake: Vec<IVec2>,
-    food: (api::Sprite, IVec2),
+    food: Option<(api::Sprite, IVec2)>,
     direction: Direction,
     queued_direction: Direction,
 }
 
 impl GameScreen {
     pub fn new(ctx: &mut api::ScreenContext<State>) -> Result<Self, api::ScreenAction<State>> {
-        let mut sprites = Sprites::load(ctx)?;
+        let sprites = Sprites::load(ctx)?;
         let start = ivec2(GRID_WIDTH / 2, GRID_HEIGHT / 2);
-        let food_sprite = *sprites.foods.random();
-
-        Ok(Self {
+        let mut game = Self {
             sprites,
             rng: api::Rng::new(),
             snake: vec![start],
-            food: (food_sprite, ivec2(5, 5)),
+            food: None,
             direction: Direction::Right,
             queued_direction: Direction::Right,
-        })
+        };
+        game.spawn_food();
+        Ok(game)
     }
 
-    fn spawn_food(&mut self) {
+    fn spawn_food(&mut self) -> bool {
         let free = free_positions(&self.snake);
-        if !free.is_empty() {
-            let index = self.rng.get_usize_range(0..free.len());
-            let sprite = *self.sprites.foods.random();
-            self.food = (sprite, free[index]);
+        if free.is_empty() {
+            self.food = None;
+            return false;
         }
-    }
 
-    fn reset(&mut self) {
-        let start = ivec2(GRID_WIDTH / 2, GRID_HEIGHT / 2);
-        self.snake.clear();
-        self.snake.push(start);
-        self.direction = Direction::Right;
-        self.queued_direction = Direction::Right;
-        self.spawn_food();
+        let index = self.rng.get_usize_range(0..free.len());
+        let sprite = *self.sprites.foods.random();
+        self.food = Some((sprite, free[index]));
+        true
     }
 }
 
@@ -158,19 +154,23 @@ impl api::Screen<State> for GameScreen {
             self.direction = self.queued_direction;
             let head = self.snake[0];
             let next = next_position(head, self.direction);
-            let growing = next == self.food.1;
+            let growing = self
+                .food
+                .as_ref()
+                .is_some_and(|(_, position)| next == *position);
 
             if hits_snake(&self.snake, next, growing) {
-                self.reset();
-                return api::ScreenAction::Replace(Box::new(GameOverScreen));
-            } else {
-                self.snake.insert(0, next);
-                if growing {
-                    ctx.state.score += 1;
-                    self.spawn_food();
-                } else {
-                    self.snake.pop();
+                return api::ScreenAction::Replace(Box::new(EndScreen::new(Outcome::GameOver)));
+            }
+
+            self.snake.insert(0, next);
+            if growing {
+                ctx.state.score = score_after_food(ctx.state.score);
+                if !self.spawn_food() {
+                    return api::ScreenAction::Replace(Box::new(EndScreen::new(Outcome::Win)));
                 }
+            } else {
+                self.snake.pop();
             }
         }
 
@@ -217,12 +217,20 @@ impl api::Screen<State> for GameScreen {
             );
         }
 
-        frame.sprite(
-            &self.food.0,
-            self.food.1 * TILE_SIZE,
-            SpriteOptions::default(),
+        if let Some((sprite, position)) = &self.food {
+            frame.sprite(sprite, *position * TILE_SIZE, SpriteOptions::default());
+        }
+
+        frame.text(
+            format!("Score: {}", state.score),
+            ivec2(4, 4),
+            Anchor::TopLeft,
         );
     }
+}
+
+fn score_after_food(score: u32) -> u32 {
+    score.saturating_add(FOOD_POINTS)
 }
 
 fn next_position(position: IVec2, direction: Direction) -> IVec2 {
@@ -265,8 +273,8 @@ mod tests {
     use api::{Flip, glam::ivec2};
 
     use super::{
-        Direction, GRID_HEIGHT, GRID_WIDTH, corner_rotation, free_positions, hits_snake,
-        next_position,
+        Direction, FOOD_POINTS, GRID_HEIGHT, GRID_WIDTH, corner_rotation, free_positions,
+        hits_snake, next_position, score_after_food,
     };
 
     #[test]
@@ -302,6 +310,22 @@ mod tests {
         let free = free_positions(&snake);
         assert_eq!(free.len(), (GRID_WIDTH * GRID_HEIGHT - 2) as usize);
         assert!(!free.contains(&ivec2(0, 0)));
+    }
+
+    #[test]
+    fn a_full_board_has_no_food_positions_left() {
+        let snake: Vec<_> = (0..GRID_HEIGHT)
+            .flat_map(|y| (0..GRID_WIDTH).map(move |x| ivec2(x, y)))
+            .collect();
+        assert!(free_positions(&snake).is_empty());
+    }
+
+    #[test]
+    fn eating_food_awards_ten_points() {
+        assert_eq!(FOOD_POINTS, 10);
+        assert_eq!(score_after_food(0), 10);
+        assert_eq!(score_after_food(30), 40);
+        assert_eq!(score_after_food(u32::MAX), u32::MAX);
     }
 
     #[test]

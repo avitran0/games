@@ -1,9 +1,9 @@
 use crate::{main_menu::MainMenu, state::State};
 
 mod config;
+mod end_screen;
 mod foods;
 mod game;
-mod game_over;
 mod main_menu;
 mod pause;
 mod snakes;

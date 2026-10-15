@@ -36,7 +36,10 @@ impl Screen<State> for MainMenu {
 
         if self.ui.button("Start").clicked {
             return match GameScreen::new(ctx) {
-                Ok(game) => api::ScreenAction::Replace(Box::new(game)),
+                Ok(game) => {
+                    ctx.state.score = 0;
+                    api::ScreenAction::Replace(Box::new(game))
+                }
                 Err(action) => action,
             };
         }

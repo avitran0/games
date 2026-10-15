@@ -2,12 +2,25 @@ use api::{Anchor, Button, HEIGHT, Screen, WIDTH, glam::uvec2};
 
 use crate::{main_menu::MainMenu, state::State};
 
-pub struct GameOverScreen;
+#[derive(Clone, Copy)]
+pub enum Outcome {
+    Win,
+    GameOver,
+}
 
-impl Screen<State> for GameOverScreen {
+pub struct EndScreen {
+    outcome: Outcome,
+}
+
+impl EndScreen {
+    pub fn new(outcome: Outcome) -> Self {
+        Self { outcome }
+    }
+}
+
+impl Screen<State> for EndScreen {
     fn update(&mut self, ctx: &mut api::ScreenContext<'_, State>) -> api::ScreenAction<State> {
         if ctx.input.just_pressed(Button::Start) || ctx.input.just_pressed(Button::A) {
-            ctx.state.score = 0;
             let menu = match MainMenu::new(ctx) {
                 Ok(menu) => menu,
                 Err(action) => return action,
@@ -18,9 +31,16 @@ impl Screen<State> for GameOverScreen {
         }
     }
 
-    fn draw(&mut self, _state: &State, frame: &mut api::Frame) {
+    fn draw(&mut self, state: &State, frame: &mut api::Frame) {
+        let heading = match self.outcome {
+            Outcome::Win => "You win!",
+            Outcome::GameOver => "Game over.",
+        };
         frame.text(
-            "Game over.\nPress \u{E000} to try again.",
+            format!(
+                "{heading}\nScore: {}\nPress \u{E000} to return to menu.",
+                state.score
+            ),
             uvec2(WIDTH / 2, HEIGHT / 2).as_ivec2(),
             Anchor::Center,
         );

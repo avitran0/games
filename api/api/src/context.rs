@@ -156,6 +156,9 @@ impl<State: 'static> Context<State> {
             }
             ScreenAction::Quit => self.should_quit = true,
         }
+        if self.screens.is_empty() {
+            self.should_quit = true;
+        }
     }
 
     pub(crate) fn draw_screens(&mut self) {
