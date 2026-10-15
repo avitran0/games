@@ -7,7 +7,7 @@ edition = "2024"
 utils.git = "https://codeberg.org/avitrano/utils"
 # for asset hashing
 blake3 = "1.8"
-glam = "0.34"
+glam.workspace = true
 formats.workspace = true
 glow = "0.18"
 serde = { version = "1.0", features = ["derive"] }

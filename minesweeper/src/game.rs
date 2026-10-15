@@ -8,6 +8,7 @@ use crate::{
     camera::CameraRig,
     cursor::Cursor,
     end_screen::{EndScreen, Outcome},
+    leaderboard::{LEADERBOARD, Leaderboard, LeaderboardEntry},
     pause::PauseScreen,
     sprites::Sprites,
     state::State,
@@ -55,7 +56,10 @@ impl api::Screen<State> for GameScreen {
 
         self.tick_cursor_and_camera(ctx);
         if let Some(outcome) = self.update_gameplay(ctx) {
-            self.finish(outcome, ctx.state);
+            if let Err(action) = self.finish(outcome, ctx.state) {
+                return action;
+            }
+
             return api::ScreenAction::Push(Box::new(EndScreen::new(
                 outcome,
                 self.elapsed_ticks,
@@ -182,12 +186,25 @@ impl GameScreen {
         outcome
     }
 
-    fn finish(&mut self, outcome: Outcome, state: &mut State) {
+    fn finish(
+        &mut self,
+        outcome: Outcome,
+        state: &mut State,
+    ) -> Result<(), api::ScreenAction<State>> {
         match outcome {
             Outcome::Win => self.board.flag_bombs(),
             Outcome::GameOver => self.board.reveal_bombs(),
         }
         let board_pixels = self.board.size().as_vec2() * TILE_SIZE as f32;
         state.camera.frame_board(board_pixels);
+
+        if outcome == Outcome::Win {
+            state.leaderboard.insert(LeaderboardEntry {
+                size: self.board.size(),
+                time: self.elapsed_ticks,
+            });
+            api::save::<State, Leaderboard>(LEADERBOARD, &state.leaderboard)?;
+        }
+        Ok(())
     }
 }

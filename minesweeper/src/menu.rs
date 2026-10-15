@@ -1,11 +1,10 @@
-use api::glam::uvec2;
+use api::glam::{UVec2, uvec2};
 
-use crate::{game::GameScreen, state::State};
+use crate::{game::GameScreen, leaderboard::LeaderboardScreen, state::State};
 
 pub struct MainMenu {
     ui: ui::Ui,
-    width: u16,
-    height: u16,
+    size: UVec2,
 }
 
 impl MainMenu {
@@ -16,8 +15,7 @@ impl MainMenu {
 
         Self {
             ui,
-            width: 30,
-            height: 20,
+            size: uvec2(30, 20),
         }
     }
 }
@@ -27,15 +25,21 @@ impl api::Screen<State> for MainMenu {
         self.ui.begin_frame(ctx);
 
         if self.ui.button("Play").clicked {
-            let game = match GameScreen::new(ctx, uvec2(self.width.into(), self.height.into())) {
+            let game = match GameScreen::new(ctx, self.size) {
                 Ok(game) => game,
                 Err(action) => return action,
             };
             return api::ScreenAction::Replace(Box::new(game));
         }
 
-        self.ui.slider("Width", &mut self.width, 1, u16::MAX);
-        self.ui.slider("Height", &mut self.height, 1, u16::MAX);
+        self.ui
+            .add(ui::Slider::new("Width", &mut self.size.x, 5, 200).with_step(5));
+        self.ui
+            .add(ui::Slider::new("Height", &mut self.size.y, 5, 200).with_step(5));
+
+        if self.ui.button("Leaderboard").clicked {
+            return api::ScreenAction::Push(Box::new(LeaderboardScreen::new()));
+        }
 
         if self.ui.button("Quit").clicked {
             return api::ScreenAction::Quit;

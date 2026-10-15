@@ -17,3 +17,5 @@ resolver = "3"
 api.path = "api/api"
 formats.path = "api/formats"
 ui.path = "api/ui"
+
+glam = { version = "0.34", features = ["serde"] }

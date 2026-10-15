@@ -3,7 +3,7 @@ use ui::{Alignment, Rect, Style, Ui};
 
 use crate::{game::GameScreen, menu::MainMenu, state::State};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Outcome {
     Win,
     GameOver,
