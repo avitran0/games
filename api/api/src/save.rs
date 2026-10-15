@@ -4,8 +4,32 @@ use serde::{Serialize, de::DeserializeOwned};
 
 use crate::{ErrorScreen, ScreenAction};
 
-fn save_path(name: &str) -> PathBuf {
-    let filename = format!("{}.toml", name.trim_end_matches(".toml"));
+#[macro_export]
+macro_rules! save_name {
+    ($name:literal) => {
+        const { $crate::SaveName::new(env!("CARGO_CRATE_NAME"), $name) }
+    };
+}
+
+#[derive(Clone, Copy)]
+pub struct SaveName {
+    module: &'static str,
+    name: &'static str,
+}
+
+impl SaveName {
+    #[doc(hidden)]
+    pub const fn new(module: &'static str, name: &'static str) -> Self {
+        Self { module, name }
+    }
+}
+
+fn save_path(name: SaveName) -> PathBuf {
+    let filename = format!(
+        "{}::{}.toml",
+        name.module,
+        name.name.trim_end_matches(".toml")
+    );
 
     std::env::current_exe()
         .expect("Failed to get current executable path")
@@ -14,7 +38,7 @@ fn save_path(name: &str) -> PathBuf {
         .join(filename)
 }
 
-pub fn save<State, T: Serialize>(name: &str, save: &T) -> Result<(), ScreenAction<State>> {
+pub fn save<State, T: Serialize>(name: SaveName, save: &T) -> Result<(), ScreenAction<State>> {
     let path = save_path(name);
     let content = toml::to_string(&save).map_err(|source| {
         show_save_error(SaveError::Serialize {
@@ -27,7 +51,9 @@ pub fn save<State, T: Serialize>(name: &str, save: &T) -> Result<(), ScreenActio
     Ok(())
 }
 
-pub fn load<State, T: Default + DeserializeOwned>(name: &str) -> Result<T, ScreenAction<State>> {
+pub fn load<State, T: Default + DeserializeOwned>(
+    name: SaveName,
+) -> Result<T, ScreenAction<State>> {
     let path = save_path(name);
     let content = match std::fs::read_to_string(&path) {
         Ok(content) => content,

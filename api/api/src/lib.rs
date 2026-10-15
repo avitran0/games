@@ -30,7 +30,7 @@ pub use render::{
         Anchor, Flip, Frame, ShapeOptions, SpriteOptions, TextOptions, TilemapOptions, WorldFrame,
     },
 };
-pub use save::{load, save};
+pub use save::{SaveName, load, save};
 pub use screen::{Screen, ScreenAction, ScreenContext, error::ErrorScreen};
 pub use tween::{Interpolation, Tween};
 

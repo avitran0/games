@@ -1,4 +1,7 @@
-use api::serde::{Deserialize, Serialize};
+use api::{
+    SaveName,
+    serde::{Deserialize, Serialize},
+};
 
 use crate::snakes::Snake;
 
@@ -8,4 +11,4 @@ pub struct Config {
     pub snake: Snake,
 }
 
-pub const CONFIG_NAME: &str = "snake";
+pub const CONFIG_NAME: SaveName = api::save_name!("snake");
