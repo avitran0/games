@@ -74,7 +74,7 @@ impl Screen {
             selected,
             self.state.mode == EditMode::Tileset,
         );
-        match action {
+        let changed = match action {
             Some(ui::tile_strip::Action::Select(index)) => {
                 self.state.tile_index = index;
                 self.state.selected_tile = (index + 1) as u32;
@@ -125,13 +125,23 @@ impl Screen {
             | Some(ui::tile_strip::Action::MoveLeft)
             | Some(ui::tile_strip::Action::MoveRight)
             | None => false,
+        };
+        if changed {
+            self.state.preview_cache.clear();
         }
+        changed
     }
 
     pub fn canvas(&mut self, ui: &mut Ui) -> bool {
         match self.state.mode {
             EditMode::Map => canvas_map(ui, &mut self.map, &self.tileset, &mut self.state),
-            EditMode::Tileset => canvas_tileset(ui, &mut self.tileset, &mut self.state),
+            EditMode::Tileset => {
+                let changed = canvas_tileset(ui, &mut self.tileset, &mut self.state);
+                if changed {
+                    self.state.preview_cache.clear();
+                }
+                changed
+            }
         }
     }
 
@@ -203,6 +213,7 @@ struct State {
     flip_diagonal: bool,
     map_canvas: ui::canvas::CanvasView,
     tile_canvas: ui::canvas::CanvasView,
+    preview_cache: ui::canvas::TilemapPreviewCache,
 }
 
 impl Default for State {
@@ -217,6 +228,7 @@ impl Default for State {
             flip_diagonal: false,
             map_canvas: ui::canvas::CanvasView::default(),
             tile_canvas: ui::canvas::CanvasView::default(),
+            preview_cache: ui::canvas::TilemapPreviewCache::default(),
         }
     }
 }
@@ -321,6 +333,7 @@ fn canvas_map(
             flip_diagonal: state.flip_diagonal,
         },
         &mut state.map_canvas,
+        &mut state.preview_cache,
     );
     let Some(edit) = edit else { return false };
     let Some(cell) = map.cells.get_mut(edit.index) else {

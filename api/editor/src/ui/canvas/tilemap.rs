@@ -3,6 +3,9 @@ use crate::palette;
 use api::glam::UVec2;
 use eframe::egui::{self, Color32, Pos2, Rect, Stroke, Ui, Vec2};
 use formats::{Tile, TilemapDocument, TilesetDocument};
+use std::ops::Range;
+
+const MAX_BATCH_VERTICES: usize = 32_768;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CellEdit {
@@ -18,12 +21,25 @@ pub struct TilePlacement {
     pub flip_diagonal: bool,
 }
 
+#[derive(Default)]
+pub struct TilemapPreviewCache {
+    fallback_colors: Vec<Option<Color32>>,
+    tile_count: usize,
+}
+
+impl TilemapPreviewCache {
+    pub fn clear(&mut self) {
+        self.fallback_colors.fill(None);
+    }
+}
+
 pub fn show_tilemap(
     ui: &mut Ui,
     document: &TilemapDocument,
     tileset: &TilesetDocument,
     placement: TilePlacement,
     view: &mut CanvasView,
+    cache: &mut TilemapPreviewCache,
 ) -> Option<CellEdit> {
     let width = document.size.x as usize;
     let height = document.size.y as usize;
@@ -37,61 +53,102 @@ pub fn show_tilemap(
             .saturating_mul(tile_width)
             .saturating_mul(tile_height)
             <= 1_000_000;
-    let mut fallback_colors = vec![None; tileset.tiles.len()];
+    let x_range = visible_cells(
+        rect.left(),
+        cell_size,
+        width,
+        viewport.left(),
+        viewport.right(),
+    );
+    let y_range = visible_cells(
+        rect.top(),
+        cell_size,
+        height,
+        viewport.top(),
+        viewport.bottom(),
+    );
+    if cache.tile_count != tileset.tiles.len() {
+        cache.fallback_colors.clear();
+        cache.fallback_colors.resize(tileset.tiles.len(), None);
+        cache.tile_count = tileset.tiles.len();
+    }
 
-    for y in 0..height {
-        for x in 0..width {
+    // Paint cell backgrounds first so the tile-pixel meshes can be batched without
+    // changing the layering of later cell outlines and labels.
+    for y in y_range.clone() {
+        for x in x_range.clone() {
             let index = y * width + x;
             let cell = document.cells.get(index).copied().unwrap_or_default();
-            let cell_rect = Rect::from_min_size(
-                Pos2::new(
-                    rect.left() + x as f32 * cell_size,
-                    rect.top() + y as f32 * cell_size,
-                ),
-                Vec2::splat(cell_size),
-            );
+            let cell_rect = cell_rect(rect, x, y, cell_size);
             if !cell_rect.intersects(viewport) {
                 continue;
             }
             if cell.id == 0 {
                 paint_checker(&painter, cell_rect, x, y, view.background);
             } else if let Some(tile) = tileset.tiles.get(cell.id.saturating_sub(1) as usize) {
-                let pixels = tile.pixels();
-                let fallback = fallback_colors[cell.id as usize - 1].get_or_insert_with(|| {
-                    pixels
-                        .iter()
-                        .copied()
-                        .find(|pixel| *pixel != 0)
-                        .map(palette::color)
-                        .unwrap_or_else(|| {
-                            palette::color(
-                                ((cell.id - 1) % crate::palette::COLOR_COUNT as u32 + 1) as u8,
-                            )
-                        })
-                });
+                let fallback =
+                    cache.fallback_colors[cell.id as usize - 1].get_or_insert_with(|| {
+                        tile.pixels()
+                            .iter()
+                            .copied()
+                            .find(|pixel| *pixel != 0)
+                            .map(palette::color)
+                            .unwrap_or_else(|| {
+                                palette::color(
+                                    ((cell.id - 1) % crate::palette::COLOR_COUNT as u32 + 1) as u8,
+                                )
+                            })
+                    });
                 painter.rect_filled(cell_rect, 0.0, *fallback);
-                if can_preview_tiles {
-                    paint_tile_pixels(
-                        &painter,
-                        cell_rect,
-                        pixels,
-                        UVec2::new(tile_width as u32, tile_height as u32),
-                        cell,
-                    );
-                }
             } else {
                 painter.rect_filled(cell_rect, 0.0, Color32::RED);
             }
+        }
+    }
 
+    if can_preview_tiles {
+        let tile_size = UVec2::new(tile_width as u32, tile_height as u32);
+        let mut mesh = egui::Mesh::default();
+        for y in y_range.clone() {
+            for x in x_range.clone() {
+                let index = y * width + x;
+                let cell = document.cells.get(index).copied().unwrap_or_default();
+                let Some(tile) = cell
+                    .id
+                    .checked_sub(1)
+                    .and_then(|id| tileset.tiles.get(id as usize))
+                else {
+                    continue;
+                };
+                let rect = cell_rect(rect, x, y, cell_size);
+                if !rect.intersects(viewport) {
+                    continue;
+                }
+                paint_tile_pixels(&painter, &mut mesh, rect, tile.pixels(), tile_size, cell);
+            }
+        }
+        if !mesh.is_empty() {
+            painter.add(egui::Shape::mesh(mesh));
+        }
+    }
+
+    for y in y_range.clone() {
+        for x in x_range.clone() {
+            let index = y * width + x;
+            let cell = document.cells.get(index).copied().unwrap_or_default();
+            let rect = cell_rect(rect, x, y, cell_size);
+            if !rect.intersects(viewport) {
+                continue;
+            }
             painter.rect_stroke(
-                cell_rect,
+                rect,
                 0.0,
                 Stroke::new(0.5, view.background.grid_stroke()),
                 egui::StrokeKind::Inside,
             );
             if cell_size >= 28.0 && cell.id > 0 {
                 painter.text(
-                    cell_rect.left_top() + Vec2::splat(2.0),
+                    rect.left_top() + Vec2::splat(2.0),
                     egui::Align2::LEFT_TOP,
                     cell.id.to_string(),
                     egui::FontId::monospace((cell_size * 0.3).min(10.0)),
@@ -120,7 +177,43 @@ pub fn show_tilemap(
     })
 }
 
-fn paint_tile_pixels(painter: &egui::Painter, rect: Rect, pixels: &[u8], size: UVec2, cell: Tile) {
+fn cell_rect(canvas: Rect, x: usize, y: usize, cell_size: f32) -> Rect {
+    Rect::from_min_size(
+        Pos2::new(
+            canvas.left() + x as f32 * cell_size,
+            canvas.top() + y as f32 * cell_size,
+        ),
+        Vec2::splat(cell_size),
+    )
+}
+
+fn visible_cells(
+    origin: f32,
+    cell_size: f32,
+    count: usize,
+    visible_start: f32,
+    visible_end: f32,
+) -> Range<usize> {
+    if cell_size <= 0.0 || count == 0 {
+        return 0..0;
+    }
+    let first = ((visible_start - origin) / cell_size)
+        .floor()
+        .clamp(0.0, count as f32) as usize;
+    let end = ((visible_end - origin) / cell_size)
+        .ceil()
+        .clamp(0.0, count as f32) as usize;
+    first..end.max(first)
+}
+
+fn paint_tile_pixels(
+    painter: &egui::Painter,
+    mesh: &mut egui::Mesh,
+    rect: Rect,
+    pixels: &[u8],
+    size: UVec2,
+    cell: Tile,
+) {
     let width = size.x as usize;
     let height = size.y as usize;
     let pixel_width = rect.width() / width as f32;
@@ -142,7 +235,10 @@ fn paint_tile_pixels(painter: &egui::Painter, rect: Rect, pixels: &[u8], size: U
             let source_y = ((v * height as f32) as usize).min(height - 1);
             let color = pixels[source_y * width + source_x];
             if color != 0 {
-                painter.rect_filled(
+                if mesh.vertices.len() >= MAX_BATCH_VERTICES {
+                    painter.add(egui::Shape::mesh(std::mem::take(mesh)));
+                }
+                mesh.add_colored_rect(
                     Rect::from_min_size(
                         Pos2::new(
                             rect.left() + output_x as f32 * pixel_width,
@@ -150,11 +246,22 @@ fn paint_tile_pixels(painter: &egui::Painter, rect: Rect, pixels: &[u8], size: U
                         ),
                         Vec2::new(pixel_width, pixel_height),
                     ),
-                    0.0,
                     palette::color(color),
                 );
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::visible_cells;
+
+    #[test]
+    fn visible_cell_ranges_include_partial_cells_and_clip_to_map_bounds() {
+        assert_eq!(visible_cells(0.0, 10.0, 20, 25.0, 45.0), 2..5);
+        assert_eq!(visible_cells(-15.0, 10.0, 20, 0.0, 20.0), 1..4);
+        assert_eq!(visible_cells(0.0, 10.0, 20, 220.0, 240.0), 20..20);
     }
 }
 
