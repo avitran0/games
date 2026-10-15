@@ -6,32 +6,53 @@ use api::{
     serde::{Deserialize, Serialize},
 };
 
-use crate::state::State;
+use crate::{difficulty::Difficulty, state::State};
 
 pub const LEADERBOARD: api::SaveName = api::save_name("leaderboard");
 
 #[derive(Default, Serialize, Deserialize)]
 #[serde(crate = "api::serde")]
 pub struct Leaderboard {
-    entries: Vec<LeaderboardEntry>,
+    easy: Vec<LeaderboardEntry>,
+    normal: Vec<LeaderboardEntry>,
+    hard: Vec<LeaderboardEntry>,
 }
 
 impl Leaderboard {
-    pub fn insert(&mut self, entry: LeaderboardEntry) {
-        self.entries.push(entry);
+    pub fn insert(&mut self, difficulty: Difficulty, entry: LeaderboardEntry) {
+        self.entries_mut(difficulty).push(entry);
         self.sort();
-
-        if self.entries.len() > 100 {
-            self.entries.truncate(100);
-        }
     }
 
     pub fn sort(&mut self) {
-        self.entries.sort_by(|a, b| {
+        Self::sort_entries(&mut self.easy);
+        Self::sort_entries(&mut self.normal);
+        Self::sort_entries(&mut self.hard);
+    }
+
+    pub fn entries(&self, difficulty: Difficulty) -> &[LeaderboardEntry] {
+        match difficulty {
+            Difficulty::Easy => &self.easy,
+            Difficulty::Normal => &self.normal,
+            Difficulty::Hard => &self.hard,
+        }
+    }
+
+    fn entries_mut(&mut self, difficulty: Difficulty) -> &mut Vec<LeaderboardEntry> {
+        match difficulty {
+            Difficulty::Easy => &mut self.easy,
+            Difficulty::Normal => &mut self.normal,
+            Difficulty::Hard => &mut self.hard,
+        }
+    }
+
+    fn sort_entries(entries: &mut Vec<LeaderboardEntry>) {
+        entries.sort_by(|a, b| {
             let a = a.ticks_per_tile();
             let b = b.ticks_per_tile();
             a.partial_cmp(&b).unwrap_or(Ordering::Equal)
         });
+        entries.truncate(100);
     }
 }
 
@@ -55,13 +76,18 @@ impl LeaderboardEntry {
 pub struct LeaderboardScreen {
     ui: ui::Ui,
     scroll: u32,
+    difficulty: Difficulty,
 }
 
 impl LeaderboardScreen {
     pub fn new() -> Self {
         let ui = ui::Ui::new();
 
-        Self { ui, scroll: 0 }
+        Self {
+            ui,
+            scroll: 0,
+            difficulty: Difficulty::Normal,
+        }
     }
 }
 
@@ -74,9 +100,23 @@ impl api::Screen<State> for LeaderboardScreen {
         self.ui.begin_frame(ctx);
 
         self.ui.label("Leaderboard");
-        self.ui
-            .scroll_area(self.ui.remaining(), &mut self.scroll, |ui| {
-                for (index, entry) in ctx.state.leaderboard.entries.iter().enumerate() {
+        let previous_difficulty = self.difficulty;
+        let leaderboard = &ctx.state.leaderboard;
+        let scroll = &mut self.scroll;
+
+        self.ui.tab_bar(&mut self.difficulty, |ui, difficulty| {
+            if difficulty != previous_difficulty {
+                *scroll = 0;
+            }
+
+            let entries = leaderboard.entries(difficulty);
+            if entries.is_empty() {
+                ui.label("No records for this difficulty");
+                return;
+            }
+
+            ui.scroll_area(ui.remaining(), scroll, |ui| {
+                for (index, entry) in entries.iter().enumerate() {
                     ui.button(format!(
                         "{}: {:.2}s - {}x{} ({:.2}s/tile)",
                         index + 1,
@@ -87,6 +127,7 @@ impl api::Screen<State> for LeaderboardScreen {
                     ));
                 }
             });
+        });
 
         api::ScreenAction::None
     }

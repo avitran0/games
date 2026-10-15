@@ -3,25 +3,30 @@ use api::{
     glam::{UVec2, usizevec2, uvec2},
 };
 
-use crate::tile::{Tile, TileKind};
+use crate::{
+    difficulty::Difficulty,
+    tile::{Tile, TileKind},
+};
 
 pub struct Board {
     size: UVec2,
+    difficulty: Difficulty,
     tiles: Vec<Tile>,
     generated: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum UncoverResult {
     Safe,
     HitBomb,
 }
 
 impl Board {
-    pub fn new(size: UVec2) -> Self {
+    pub fn new(size: UVec2, difficulty: Difficulty) -> Self {
         let size = size.max(UVec2::ONE);
         Self {
             size,
+            difficulty,
             tiles: vec![Tile::default(); size.x as usize * size.y as usize],
             generated: false,
         }
@@ -35,6 +40,10 @@ impl Board {
         self.generated
     }
 
+    pub fn difficulty(&self) -> Difficulty {
+        self.difficulty
+    }
+
     pub fn tile(&self, pos: UVec2) -> Tile {
         self.tiles[Self::coord_to_index(pos, self.size.x as usize)]
     }
@@ -42,7 +51,10 @@ impl Board {
     pub fn uncover(&mut self, start: UVec2) -> UncoverResult {
         let start_index = Self::coord_to_index(start, self.size.x as usize);
         let start_tile = self.tiles[start_index];
-        if start_tile.uncovered || start_tile.flagged {
+        if start_tile.uncovered {
+            return self.chord(start);
+        }
+        if start_tile.flagged {
             return UncoverResult::Safe;
         }
 
@@ -74,6 +86,36 @@ impl Board {
         }
 
         UncoverResult::Safe
+    }
+
+    fn chord(&mut self, pos: UVec2) -> UncoverResult {
+        let tile = self.tile(pos);
+        if !tile.uncovered || tile.kind != TileKind::Clear {
+            return UncoverResult::Safe;
+        }
+
+        let mut adjacent_flags = 0;
+        let mut adjacent_tiles = Vec::new();
+        Self::for_each_adjacent(pos, self.size, |neighbor| {
+            if self.tile(neighbor).flagged {
+                adjacent_flags += 1;
+            }
+            adjacent_tiles.push(neighbor);
+        });
+
+        if adjacent_flags != self.neighbors(pos) {
+            return UncoverResult::Safe;
+        }
+
+        let mut result = UncoverResult::Safe;
+        for neighbor in adjacent_tiles {
+            let tile = self.tile(neighbor);
+            if !tile.uncovered && !tile.flagged && self.uncover(neighbor) == UncoverResult::HitBomb
+            {
+                result = UncoverResult::HitBomb;
+            }
+        }
+        result
     }
 
     pub fn flag(&mut self, pos: UVec2) {
@@ -127,7 +169,10 @@ impl Board {
             })
             .collect();
 
-        let bomb_count = (self.size.x as u64 * self.size.y as u64 / 10) as usize;
+        let bomb_count = (self.size.x as u64
+            * self.size.y as u64
+            * self.difficulty.mine_density_percent()
+            / 100) as usize;
         let mut rng = Rng::new();
         let bomb_count = bomb_count.min(candidates.len());
         for index in 0..bomb_count {

@@ -1,7 +1,10 @@
-use api::glam::UVec2;
+use api::{
+    Color, HEIGHT, WIDTH,
+    glam::{UVec2, ivec2, uvec2},
+};
 use ui::{Alignment, Rect, Style, Ui};
 
-use crate::{game::GameScreen, menu::MainMenu, state::State};
+use crate::{difficulty::Difficulty, game::GameScreen, menu::MainMenu, state::State};
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Outcome {
@@ -14,10 +17,16 @@ pub struct EndScreen {
     outcome: Outcome,
     elapsed_ticks: usize,
     size: UVec2,
+    difficulty: Difficulty,
 }
 
 impl EndScreen {
-    pub fn new(outcome: Outcome, elapsed_ticks: usize, size: UVec2) -> Self {
+    pub fn new(
+        outcome: Outcome,
+        elapsed_ticks: usize,
+        size: UVec2,
+        difficulty: Difficulty,
+    ) -> Self {
         let mut ui = Ui::new();
         ui.style = Style::light();
         ui.set_alignment(Alignment::Center);
@@ -28,6 +37,7 @@ impl EndScreen {
             outcome,
             elapsed_ticks,
             size,
+            difficulty,
         }
     }
 
@@ -49,7 +59,7 @@ impl api::Screen<State> for EndScreen {
         self.ui.label(format!("Time: {}", self.formatted_time()));
 
         if self.ui.button("Play again").clicked {
-            return match GameScreen::new(ctx, self.size) {
+            return match GameScreen::new(ctx, self.size, self.difficulty) {
                 Ok(game) => api::ScreenAction::ClearAndPush(Box::new(game)),
                 Err(action) => action,
             };
@@ -63,6 +73,7 @@ impl api::Screen<State> for EndScreen {
     }
 
     fn draw(&mut self, _state: &State, frame: &mut api::Frame) {
+        frame.rectangle_with_opacity(ivec2(0, 0), uvec2(WIDTH, HEIGHT), Color::Black, 0.1);
         self.ui.paint(frame);
     }
 

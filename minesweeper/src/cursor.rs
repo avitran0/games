@@ -10,7 +10,7 @@ pub struct Cursor {
 
 impl Cursor {
     const INITIAL_DELAY: usize = 40;
-    const REPEAT_INTERVAL: usize = 20;
+    const REPEAT_INTERVAL: usize = 15;
     const DIRECTIONS: [Button; 4] = [Button::Left, Button::Right, Button::Up, Button::Down];
 
     pub fn new(size: UVec2) -> Self {

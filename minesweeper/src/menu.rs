@@ -1,10 +1,7 @@
-use api::glam::{UVec2, uvec2};
-
-use crate::{game::GameScreen, leaderboard::LeaderboardScreen, state::State};
+use crate::{leaderboard::LeaderboardScreen, setup::SetupScreen, state::State};
 
 pub struct MainMenu {
     ui: ui::Ui,
-    size: UVec2,
 }
 
 impl MainMenu {
@@ -13,10 +10,7 @@ impl MainMenu {
         ui.set_alignment(ui::Alignment::Center);
         ui.set_bounds(ui::Rect::new(0, 48, api::WIDTH, api::HEIGHT - 48));
 
-        Self {
-            ui,
-            size: uvec2(30, 20),
-        }
+        Self { ui }
     }
 }
 
@@ -25,17 +19,8 @@ impl api::Screen<State> for MainMenu {
         self.ui.begin_frame(ctx);
 
         if self.ui.button("Play").clicked {
-            let game = match GameScreen::new(ctx, self.size) {
-                Ok(game) => game,
-                Err(action) => return action,
-            };
-            return api::ScreenAction::Replace(Box::new(game));
+            return api::ScreenAction::Push(Box::new(SetupScreen::new()));
         }
-
-        self.ui
-            .add(ui::Slider::new("Width", &mut self.size.x, 5, 200).with_step(5));
-        self.ui
-            .add(ui::Slider::new("Height", &mut self.size.y, 5, 200).with_step(5));
 
         if self.ui.button("Leaderboard").clicked {
             return api::ScreenAction::Push(Box::new(LeaderboardScreen::new()));

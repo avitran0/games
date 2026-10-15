@@ -7,6 +7,7 @@ use crate::{
     board::{Board, UncoverResult},
     camera::CameraRig,
     cursor::Cursor,
+    difficulty::Difficulty,
     end_screen::{EndScreen, Outcome},
     leaderboard::{LEADERBOARD, Leaderboard, LeaderboardEntry},
     pause::PauseScreen,
@@ -28,8 +29,9 @@ impl GameScreen {
     pub fn new(
         ctx: &mut api::ScreenContext<State>,
         size: UVec2,
+        difficulty: Difficulty,
     ) -> Result<Self, api::ScreenAction<State>> {
-        let board = Board::new(size);
+        let board = Board::new(size, difficulty);
         let cursor = Cursor::new(board.size());
         let camera_position = Self::cell_center(cursor.pos());
         ctx.state.camera = CameraRig::new(camera_position);
@@ -64,6 +66,7 @@ impl api::Screen<State> for GameScreen {
                 outcome,
                 self.elapsed_ticks,
                 self.board.size(),
+                self.board.difficulty(),
             )));
         }
 
@@ -199,10 +202,13 @@ impl GameScreen {
         state.camera.frame_board(board_pixels);
 
         if outcome == Outcome::Win {
-            state.leaderboard.insert(LeaderboardEntry {
-                size: self.board.size(),
-                time: self.elapsed_ticks,
-            });
+            state.leaderboard.insert(
+                self.board.difficulty(),
+                LeaderboardEntry {
+                    size: self.board.size(),
+                    time: self.elapsed_ticks,
+                },
+            );
             api::save::<State, Leaderboard>(LEADERBOARD, &state.leaderboard)?;
         }
         Ok(())
