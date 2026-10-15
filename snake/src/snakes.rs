@@ -4,7 +4,6 @@ macro_rules! snake_files {
     ($dir:literal) => {
         SnakeFiles {
             head: include_bytes!(concat!("assets/snakes/", $dir, "/head.pxs")),
-            head_only: include_bytes!(concat!("assets/snakes/", $dir, "/head_only.pxs")),
             body: include_bytes!(concat!("assets/snakes/", $dir, "/body.pxs")),
             body_angled: include_bytes!(concat!("assets/snakes/", $dir, "/body_angled.pxs")),
             tail: include_bytes!(concat!("assets/snakes/", $dir, "/tail.pxs")),
@@ -51,7 +50,6 @@ macro_rules! define_snakes {
 
 pub struct SnakeSprites {
     pub head: api::Sprite,
-    pub head_only: api::Sprite,
     pub body: api::Sprite,
     pub body_angled: api::Sprite,
     pub tail: api::Sprite,
@@ -59,7 +57,6 @@ pub struct SnakeSprites {
 
 struct SnakeFiles {
     head: &'static [u8],
-    head_only: &'static [u8],
     body: &'static [u8],
     body_angled: &'static [u8],
     tail: &'static [u8],
@@ -72,7 +69,6 @@ impl SnakeSprites {
     ) -> Result<Self, api::ScreenAction<State>> {
         Ok(Self {
             head: ctx.assets.load_sprite(files.head)?,
-            head_only: ctx.assets.load_sprite(files.head_only)?,
             body: ctx.assets.load_sprite(files.body)?,
             body_angled: ctx.assets.load_sprite(files.body_angled)?,
             tail: ctx.assets.load_sprite(files.tail)?,

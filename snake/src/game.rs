@@ -111,7 +111,7 @@ impl GameScreen {
         let mut game = Self {
             sprites,
             rng: api::Rng::new(),
-            snake: vec![start],
+            snake: initial_snake(start),
             food: None,
             direction: Direction::Right,
             queued_direction: Direction::Right,
@@ -189,9 +189,7 @@ impl api::Screen<State> for GameScreen {
 
         for (index, &segment) in self.snake.iter().enumerate() {
             let snake = &self.sprites.snakes[state.config.snake.index()];
-            let (sprite, rotation, flip) = if self.snake.len() == 1 {
-                (&snake.head_only, self.direction.rotation(), Flip::None)
-            } else if index == 0 {
+            let (sprite, rotation, flip) = if index == 0 {
                 (&snake.head, self.direction.rotation(), Flip::None)
             } else if index + 1 == self.snake.len() {
                 let direction = Direction::between(segment, self.snake[index - 1]);
@@ -231,6 +229,10 @@ impl api::Screen<State> for GameScreen {
 
 fn score_after_food(score: u32) -> u32 {
     score.saturating_add(FOOD_POINTS)
+}
+
+fn initial_snake(start: IVec2) -> Vec<IVec2> {
+    vec![start, next_position(start, Direction::Left)]
 }
 
 fn next_position(position: IVec2, direction: Direction) -> IVec2 {
@@ -274,7 +276,7 @@ mod tests {
 
     use super::{
         Direction, FOOD_POINTS, GRID_HEIGHT, GRID_WIDTH, corner_rotation, free_positions,
-        hits_snake, next_position, score_after_food,
+        hits_snake, initial_snake, next_position, score_after_food,
     };
 
     #[test]
@@ -294,6 +296,15 @@ mod tests {
             next_position(ivec2(0, 0), Direction::Up),
             ivec2(0, GRID_HEIGHT - 1)
         );
+    }
+
+    #[test]
+    fn snake_starts_with_a_head_and_a_trailing_body_segment() {
+        let start = ivec2(0, 0);
+        let snake = initial_snake(start);
+        assert_eq!(snake.len(), 2);
+        assert_eq!(snake[0], start);
+        assert_eq!(snake[1], ivec2(GRID_WIDTH - 1, 0));
     }
 
     #[test]
