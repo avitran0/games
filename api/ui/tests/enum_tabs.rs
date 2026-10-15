@@ -1,7 +1,8 @@
-use ui::{EnumIter, IntoEnumIterator, Label, SliderValue, TabBar, Ui};
+use api::strum::{EnumIter, IntoEnumIterator};
+use ui::{Label, SliderValue, TabBar, Ui};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, EnumIter)]
-#[strum(crate = "ui")]
+#[strum(crate = "api::strum")]
 enum Page {
     Home,
     Settings,

@@ -1,8 +1,7 @@
 use std::fmt::Debug;
 
-use api::{BTN_L, BTN_R, Button as EngineButton};
+use api::{BTN_L, BTN_R, Button as EngineButton, strum::IntoEnumIterator};
 use glam::ivec2;
-use strum::IntoEnumIterator;
 
 use super::Widget;
 use crate::{Rect, Response, Ui};

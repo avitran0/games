@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 
-use api::Button as EngineButton;
-use strum::IntoEnumIterator;
+use api::{Button as EngineButton, strum::IntoEnumIterator};
 
 use super::Widget;
 use crate::{Response, Ui};

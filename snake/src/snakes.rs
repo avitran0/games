@@ -13,9 +13,9 @@ macro_rules! snake_files {
 
 macro_rules! define_snakes {
     ($default:ident => $default_dir:literal $(, $variant:ident => $dir:literal)* $(,)?) => {
-        #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, ui::EnumIter, api::serde::Serialize, api::serde::Deserialize)]
+        #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, api::strum::EnumIter, api::serde::Serialize, api::serde::Deserialize)]
         #[serde(crate = "api::serde")]
-        #[strum(crate = "ui")]
+        #[strum(crate = "api::strum")]
         pub enum Snake {
             #[default]
             $default,
@@ -36,7 +36,7 @@ macro_rules! define_snakes {
             pub fn load_all(
                 ctx: &mut api::ScreenContext<State>,
             ) -> Result<Vec<SnakeSprites>, api::ScreenAction<State>> {
-                use ui::IntoEnumIterator;
+                use api::strum::IntoEnumIterator;
 
                 Self::iter().map(|snake| snake.load(ctx)).collect()
             }

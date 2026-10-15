@@ -1,4 +1,4 @@
-use ui::EnumIter;
+use api::strum::EnumIter;
 
 use crate::config::Config;
 
@@ -10,7 +10,7 @@ pub struct State {
 }
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, EnumIter)]
-#[strum(crate = "ui")]
+#[strum(crate = "api::strum")]
 pub enum Difficulty {
     Easy,
     #[default]

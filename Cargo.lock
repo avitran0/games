@@ -64,6 +64,7 @@ dependencies = [
  "glow 0.18.0",
  "sdl3",
  "serde",
+ "strum",
  "thiserror 2.0.21",
  "toml",
  "utils",
@@ -2471,7 +2472,6 @@ version = "0.1.0"
 dependencies = [
  "api",
  "glam",
- "strum",
 ]
 
 [[package]]
