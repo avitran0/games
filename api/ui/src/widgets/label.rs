@@ -64,6 +64,10 @@ impl Ui {
         self.add(Label::new(text))
     }
 
+    pub fn colored_label(&mut self, text: impl Into<String>, color: Color) -> Response {
+        self.add(Label::new(text).color(color))
+    }
+
     pub fn small(&mut self, text: impl Into<String>) -> Response {
         self.add(Label::new(text).muted())
     }

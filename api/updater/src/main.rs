@@ -92,7 +92,7 @@ impl Screen<State> for UpdaterScreen {
         self.poll_updates();
         self.ui.begin_frame(ctx);
 
-        self.ui.label(&self.status.0);
+        self.ui.colored_label(&self.status.0, self.status.1);
         if let Some(error) = &self.error {
             for line in wrap_text(error, 34) {
                 self.ui.label(line);
