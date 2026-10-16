@@ -4,7 +4,6 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
-import xml.etree.ElementTree as ET
 
 PORT_LAUNCH_SCRIPT = """#!/bin/sh
 set -eu
@@ -25,10 +24,6 @@ ES_FIELDS = {
 def fail(message):
     raise SystemExit(message)
 
-
-def add_text(parent, tag, text):
-    element = ET.SubElement(parent, tag)
-    element.text = str(text)
 
 
 def stage_binary(binary, name, ports_dir):
@@ -74,7 +69,7 @@ if ports_dir.exists():
     shutil.rmtree(ports_dir)
 ports_dir.mkdir(parents=True)
 
-game_list = ET.Element("gameList")
+metadata_entries = []
 for binary_name, package in binaries:
     game_name = binary_name.replace("_", " ").replace("-", " ").title()
     binary = build_dir / binary_name
@@ -90,13 +85,14 @@ for binary_name, package in binaries:
         if unknown:
             fail(f"{package['name']}: unsupported game metadata keys: {', '.join(sorted(unknown))}")
 
-        entry = ET.SubElement(game_list, "game")
-        add_text(entry, "path", f"./{game_name}.sh")
-        add_text(entry, "name", game_metadata.get("title", game_name))
+        entry = {
+            "path": f"./{game_name}.sh",
+            "name": game_metadata.get("title", game_name),
+        }
         for source_field, es_field in ES_FIELDS.items():
             value = game_metadata.get(source_field)
             if value is not None:
-                add_text(entry, es_field, value)
+                entry[es_field] = str(value)
 
         for source_field, es_field, output_name in (
             ("cover", "image", "cover.png"),
@@ -114,9 +110,10 @@ for binary_name, package in binaries:
                 fail(f"PXS converter not found: {converter}; build the pxs-to-png package first")
             artwork_output = game_dir / output_name
             subprocess.run([str(converter), str(artwork_path), str(artwork_output)], check=True)
-            add_text(entry, es_field, f"./{game_name}/{output_name}")
+            entry[es_field] = f"./{game_name}/{output_name}"
         if game_metadata.get("logo") is not None and game_metadata.get("cover") is None:
-            add_text(entry, "image", "")
+            entry["image"] = ""
+        metadata_entries.append(entry)
 
     print(f"Prepared {game_name} port")
 
@@ -124,12 +121,11 @@ updater_binary = build_dir / "updater"
 stage_binary(updater_binary, "Updater", ports_dir)
 print("Prepared Updater port")
 
-if len(game_list):
-    ET.indent(game_list, space="    ")
-    ET.ElementTree(game_list).write(
-        ports_dir / "gamelist-metadata.xml",
+if metadata_entries:
+    metadata_path = ports_dir / "gamelist-metadata.json"
+    metadata_path.write_text(
+        json.dumps({"games": metadata_entries}, ensure_ascii=False, indent=4) + "\n",
         encoding="utf-8",
-        xml_declaration=True,
     )
     print("Prepared EmulationStation metadata")
 

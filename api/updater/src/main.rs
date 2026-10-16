@@ -1,7 +1,7 @@
 mod metadata;
 mod update;
 
-use std::sync::mpsc::{self, Receiver};
+use std::sync::mpsc::{self, Receiver, TryRecvError};
 
 use api::{
     Button, Color, Frame, Screen, ScreenAction, ScreenContext,
@@ -39,6 +39,35 @@ impl UpdaterScreen {
         }
     }
 
+    fn poll_updates(&mut self) {
+        let Some(updates) = &self.updates else {
+            return;
+        };
+        loop {
+            match updates.try_recv() {
+                Ok(update::Progress::Status(message)) => self.status = message,
+                Ok(update::Progress::Finished) => {
+                    self.status = "Update complete".into();
+                    self.finished = true;
+                }
+                Ok(update::Progress::Failed(error)) => {
+                    self.status = "Update failed".into();
+                    self.error = Some(error);
+                    self.finished = true;
+                }
+                Err(TryRecvError::Empty) => return,
+                Err(TryRecvError::Disconnected) => {
+                    if !self.finished {
+                        self.status = "Update stopped unexpectedly".into();
+                        self.error = Some("The update stopped before it reported a result.".into());
+                        self.finished = true;
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
     fn start_update(&mut self) {
         let (sender, updates) = mpsc::channel();
         self.updates = Some(updates);
@@ -58,23 +87,7 @@ impl UpdaterScreen {
 
 impl Screen<State> for UpdaterScreen {
     fn update(&mut self, ctx: &mut ScreenContext<'_, State>) -> ScreenAction<State> {
-        if let Some(updates) = &self.updates {
-            while let Ok(progress) = updates.try_recv() {
-                match progress {
-                    update::Progress::Status(message) => self.status = message,
-                    update::Progress::Finished => {
-                        self.status = "Update complete".into();
-                        self.finished = true;
-                    }
-                    update::Progress::Failed(error) => {
-                        self.status = "Update failed".into();
-                        self.error = Some(error);
-                        self.finished = true;
-                    }
-                }
-            }
-        }
-
+        self.poll_updates();
         self.ui.begin_frame(ctx);
         self.ui.heading("Updater");
         self.ui.label(&self.status);

@@ -1,4 +1,5 @@
 use crate::metadata;
+use api::serde::{Deserialize, de::DeserializeOwned};
 use std::{
     env,
     ffi::OsStr,
@@ -62,22 +63,26 @@ pub fn run(mut report: impl FnMut(&str)) -> Result<(), String> {
     Ok(())
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
+#[serde(crate = "api::serde")]
 struct WorkflowRuns {
     workflow_runs: Vec<WorkflowRun>,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
+#[serde(crate = "api::serde")]
 struct WorkflowRun {
     id: u64,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
+#[serde(crate = "api::serde")]
 struct Artifacts {
     artifacts: Vec<Artifact>,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
+#[serde(crate = "api::serde")]
 struct Artifact {
     id: u64,
     name: String,
@@ -119,7 +124,7 @@ fn token(ports_dir: &Path) -> Option<String> {
         })
 }
 
-fn request_json<T: serde::de::DeserializeOwned>(
+fn request_json<T: DeserializeOwned>(
     agent: &Agent,
     token: Option<&str>,
     url: &str,
@@ -251,7 +256,7 @@ fn install(ports_dir: &Path, sources: &[PathBuf], build_dir: &Path) -> io::Resul
 
     for source in sources {
         let name = source.file_name().expect("artifact entries have names");
-        if name == OsStr::new("gamelist-metadata.xml")
+        if name == OsStr::new("gamelist-metadata.json")
             || Some(name) == script_name.as_deref()
             || name == log_name
         {
@@ -265,7 +270,7 @@ fn install(ports_dir: &Path, sources: &[PathBuf], build_dir: &Path) -> io::Resul
         return Err(io::Error::other("The update has no files to install"));
     }
 
-    let metadata_source = build_dir.join("gamelist-metadata.xml");
+    let metadata_source = build_dir.join("gamelist-metadata.json");
     if metadata_source.is_file() {
         let target = ports_dir.join("gamelist.xml");
         let original = if target.exists() {
