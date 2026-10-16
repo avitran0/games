@@ -198,10 +198,11 @@ impl GameScreen {
             Outcome::Win => self.board.flag_bombs(),
             Outcome::GameOver => self.board.reveal_bombs(),
         }
-        let board_pixels = self.board.size().as_vec2() * TILE_SIZE as f32;
-        state.camera.frame_board(board_pixels);
 
         if outcome == Outcome::Win {
+            let board_pixels = self.board.size().as_vec2() * TILE_SIZE as f32;
+            state.camera.frame_board(board_pixels);
+
             state.leaderboard.insert(
                 self.board.difficulty(),
                 LeaderboardEntry {
@@ -209,6 +210,7 @@ impl GameScreen {
                     time: self.elapsed_ticks,
                 },
             );
+
             api::save::<State, Leaderboard>(LEADERBOARD, &state.leaderboard)?;
         }
         Ok(())
