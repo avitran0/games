@@ -31,6 +31,20 @@ def add_text(parent, tag, text):
     element.text = str(text)
 
 
+def stage_binary(binary, name, ports_dir):
+    if not binary.is_file():
+        raise FileNotFoundError(f"Built executable not found: {binary}")
+
+    game_dir = ports_dir / name
+    game_dir.mkdir()
+    shutil.copy2(binary, game_dir / "game")
+
+    launcher = ports_dir / f"{name}.sh"
+    launcher.write_text(PORT_LAUNCH_SCRIPT, encoding="utf-8")
+    launcher.chmod(0o755)
+    return game_dir
+
+
 if len(sys.argv) != 3:
     raise SystemExit("usage: stage-binaries.py BUILD_DIR OUTPUT_DIR")
 
@@ -64,16 +78,7 @@ game_list = ET.Element("gameList")
 for binary_name, package in binaries:
     game_name = binary_name.replace("_", " ").replace("-", " ").title()
     binary = build_dir / binary_name
-    if not binary.is_file():
-        raise FileNotFoundError(f"Built executable not found: {binary}")
-
-    game_dir = ports_dir / game_name
-    game_dir.mkdir()
-    shutil.copy2(binary, game_dir / "game")
-
-    launcher = ports_dir / f"{game_name}.sh"
-    launcher.write_text(PORT_LAUNCH_SCRIPT, encoding="utf-8")
-    launcher.chmod(0o755)
+    game_dir = stage_binary(binary, game_name, ports_dir)
 
     package_metadata = package.get("metadata") or {}
     game_metadata = package_metadata.get("game")
@@ -114,6 +119,10 @@ for binary_name, package in binaries:
             add_text(entry, "image", "")
 
     print(f"Prepared {game_name} port")
+
+updater_binary = build_dir / "updater"
+stage_binary(updater_binary, "Updater", ports_dir)
+print("Prepared Updater port")
 
 if len(game_list):
     ET.indent(game_list, space="    ")

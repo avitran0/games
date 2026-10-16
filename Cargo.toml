@@ -6,6 +6,7 @@ members = [
     "api/pxs-to-png",
     "api/ui",
     "api/ui-demo",
+    "api/updater",
     "minesweeper",
     "pong",
     "snake",

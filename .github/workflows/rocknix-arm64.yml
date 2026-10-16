@@ -1,4 +1,4 @@
-name: rocknix-x64
+name: rocknix-arm64
 
 on:
   push:
@@ -27,6 +27,7 @@ jobs:
         run: |
           cargo build --locked --release --target aarch64-unknown-linux-gnu
           cargo build --locked -p pxs-to-png --release --target aarch64-unknown-linux-gnu
+          cargo build --locked -p updater --release --target aarch64-unknown-linux-gnu
 
       - name: Stage Ports layout
         run: |
