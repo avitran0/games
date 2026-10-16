@@ -119,7 +119,7 @@ impl Screen<State> for UpdaterScreen {
             if self.ui.button("Start update").clicked {
                 self.start_update();
             }
-            if ctx.input.just_pressed(Button::B) {
+            if self.ui.button("Exit").clicked || ctx.input.just_pressed(Button::B) {
                 return ScreenAction::Quit;
             }
         } else if self.finished
