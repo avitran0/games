@@ -76,7 +76,7 @@ where
 }
 
 fn init_game_logger(app_id: &str) {
-    let config_dir = save::game_config_dir(app_id);
+    let config_dir = save::game_data_dir(app_id);
     std::fs::create_dir_all(&config_dir).unwrap_or_else(|error| {
         panic!(
             "Cannot create game config directory {}: {error}",

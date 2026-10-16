@@ -122,7 +122,7 @@ impl Interpolation {
 
 #[cfg(test)]
 mod test {
-    use super::{Interpolation, Tween};
+    use super::Interpolation;
 
     macro_rules! test_interp {
         ($name:ident, $interp:expr, $values:expr) => {

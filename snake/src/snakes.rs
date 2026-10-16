@@ -55,6 +55,7 @@ pub struct SnakeSprites {
     pub tail: api::Sprite,
 }
 
+#[derive(Clone, Copy)]
 struct SnakeFiles {
     head: &'static [u8],
     body: &'static [u8],

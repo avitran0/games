@@ -6,7 +6,6 @@ use glow::HasContext;
 use crate::{
     Anchor, Flip, HEIGHT, Tilemap, WIDTH,
     assets::Assets,
-    formats::palette::Palette,
     render::{
         draw_cmd::{AnimatedSpriteCmd, DrawCmd, ShapeCmd, SpriteCmd, TextCmd, TilemapCmd},
         framebuffer::Framebuffer,
@@ -54,7 +53,7 @@ impl Renderer {
         let framebuffer = Framebuffer::new(gl.clone())?;
         let shaders = Shaders::load(gl.clone())?;
         let quad = Quad::new(gl.clone())?;
-        let palette = GlPalette::new(gl.clone(), Palette)?;
+        let palette = GlPalette::new(gl.clone())?;
 
         Ok(Self {
             gl,

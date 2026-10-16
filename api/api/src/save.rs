@@ -14,7 +14,7 @@ pub const fn save_name(name: &'static str) -> SaveName {
 }
 
 #[cfg(target_os = "windows")]
-pub(crate) fn game_config_dir(module: &str) -> PathBuf {
+pub(crate) fn game_data_dir(module: &str) -> PathBuf {
     std::env::var_os("LOCALAPPDATA")
         .map(PathBuf::from)
         .expect("LOCALAPPDATA is not set")
@@ -23,12 +23,12 @@ pub(crate) fn game_config_dir(module: &str) -> PathBuf {
 }
 
 #[cfg(target_os = "linux")]
-pub(crate) fn game_config_dir(module: &str) -> PathBuf {
+pub(crate) fn game_data_dir(module: &str) -> PathBuf {
     let config_home = config_home(
         std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from),
         std::env::var_os("HOME").map(PathBuf::from),
     )
-    .expect("failed to locate config directory: set XDG_CONFIG_HOME or HOME");
+    .expect("failed to locate data directory: set XDG_CONFIG_HOME or HOME");
     config_home.join("games").join(module)
 }
 
@@ -43,7 +43,7 @@ fn config_home(xdg_config_home: Option<PathBuf>, home: Option<PathBuf>) -> Optio
 }
 
 fn save_path<State: AppState>(name: SaveName) -> PathBuf {
-    game_config_dir(State::app_id()).join(format!("{}.toml", name.name.trim_end_matches(".toml")))
+    game_data_dir(State::app_id()).join(format!("{}.toml", name.name.trim_end_matches(".toml")))
 }
 
 pub fn save<State: AppState, T: Serialize>(

@@ -276,7 +276,7 @@ impl SpriteFrame {
         &mut self.pixels
     }
 
-    pub fn blank(size: UVec2) -> Self {
+    pub(crate) fn blank(size: UVec2) -> Self {
         Self {
             pixels: vec![0; (size.x * size.y) as usize],
         }
