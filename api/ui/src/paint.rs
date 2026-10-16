@@ -1,5 +1,7 @@
-use api::{Anchor, Color, Frame};
-use glam::IVec2;
+use api::{
+    Anchor, Color, Frame,
+    glam::{IVec2, uvec2},
+};
 
 use crate::Rect;
 
@@ -169,6 +171,6 @@ pub(crate) fn inset_rect(rect: Rect, inset: u32) -> Rect {
 pub(crate) fn row_rect(position: IVec2, width: u32, height: u32) -> Rect {
     Rect {
         position,
-        size: glam::uvec2(width, height),
+        size: uvec2(width, height),
     }
 }

@@ -19,3 +19,5 @@ formats.path = "api/formats"
 ui.path = "api/ui"
 
 glam = { version = "0.34", features = ["serde"] }
+uuid = "1.28"
+thiserror = "2.0"

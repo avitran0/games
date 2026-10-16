@@ -1,6 +1,6 @@
 use crate::formats::color::Color;
 
-#[derive(Clone, Default)]
+#[derive(Clone, Copy, Default)]
 pub(crate) struct Palette;
 
 impl Palette {

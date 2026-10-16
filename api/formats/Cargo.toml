@@ -9,6 +9,6 @@ edit = ["uuid/v4"]
 
 [dependencies]
 utils.git = "https://codeberg.org/avitrano/utils"
-glam = "0.34"
-thiserror = "2.0"
-uuid = "1.27"
+glam.workspace = true
+thiserror.workspace = true
+uuid.workspace = true

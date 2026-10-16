@@ -1,5 +1,7 @@
-use api::{Button as EngineButton, Color, Frame, HEIGHT, Input, WIDTH};
-use glam::{IVec2, ivec2, uvec2};
+use api::{
+    Button as EngineButton, Color, Frame, HEIGHT, Input, WIDTH,
+    glam::{IVec2, ivec2, uvec2},
+};
 
 use crate::{
     Alignment, Rect, Response, Style,
@@ -182,7 +184,7 @@ impl Ui {
             0
         };
         let content_rect = Rect {
-            size: glam::uvec2(
+            size: uvec2(
                 rect.size
                     .x
                     .saturating_sub(scrollbar_width)
@@ -193,7 +195,7 @@ impl Ui {
         };
         self.layout = Layout {
             bounds: content_rect,
-            cursor: glam::ivec2(content_rect.position.x, start_y),
+            cursor: ivec2(content_rect.position.x, start_y),
             horizontal: false,
         };
 
@@ -227,11 +229,11 @@ impl Ui {
         self.paint.scroll(content_rect, ivec2(0, delta), commands);
         if max_offset > 0 && scrollbar_width > 0 {
             let track = Rect {
-                position: glam::ivec2(
+                position: ivec2(
                     rect.position.x + content_rect.size.x as i32 + scrollbar_gap as i32,
                     rect.position.y,
                 ),
-                size: glam::uvec2(scrollbar_width, rect.size.y),
+                size: uvec2(scrollbar_width, rect.size.y),
             };
             let thumb_height = ((rect.size.y as u64 * rect.size.y as u64)
                 / content_height.max(1) as u64)
@@ -240,8 +242,8 @@ impl Ui {
             let travel = rect.size.y - thumb_height;
             let thumb_offset = (new_offset as u64 * travel as u64 / max_offset as u64) as u32;
             let thumb = Rect {
-                position: glam::ivec2(track.position.x, track.position.y + thumb_offset as i32),
-                size: glam::uvec2(scrollbar_width, thumb_height),
+                position: ivec2(track.position.x, track.position.y + thumb_offset as i32),
+                size: uvec2(scrollbar_width, thumb_height),
             };
             self.paint.rect(track, self.style.scrollbar_track, 0);
             self.paint.rect(thumb, self.style.scrollbar_thumb, 0);
@@ -370,7 +372,7 @@ impl Ui {
         let height = bottom.saturating_sub(horizontal.start_y).max(0) as u32;
         self.layout = Layout {
             bounds: Rect::new(x, horizontal.start_y, width, height),
-            cursor: glam::ivec2(x, horizontal.start_y),
+            cursor: ivec2(x, horizontal.start_y),
             horizontal: true,
         };
     }

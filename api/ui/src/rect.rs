@@ -1,4 +1,4 @@
-use glam::{IVec2, UVec2, ivec2, uvec2};
+use api::glam::{IVec2, UVec2, ivec2, uvec2};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Rect {

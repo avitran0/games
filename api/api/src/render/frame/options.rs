@@ -16,7 +16,7 @@ pub enum Anchor {
 }
 
 impl Anchor {
-    pub(crate) fn offset(&self, size: Vec2) -> Vec2 {
+    pub(crate) fn offset(self, size: Vec2) -> Vec2 {
         match self {
             Self::TopLeft => Vec2::ZERO,
             Self::Top => Vec2::new(size.x * 0.5, 0.0),
@@ -40,7 +40,7 @@ pub enum Flip {
 }
 
 impl Flip {
-    pub(crate) fn vector(&self) -> Vec2 {
+    pub(crate) fn vector(self) -> Vec2 {
         match self {
             Self::None => Vec2::NEG_ONE,
             Self::Horizontal => Vec2::X + Vec2::NEG_Y,
@@ -74,35 +74,42 @@ impl Default for SpriteOptions {
 }
 
 impl SpriteOptions {
+    #[must_use]
     pub fn anchor(mut self, anchor: Anchor) -> Self {
         self.anchor = anchor;
         self
     }
 
+    #[must_use]
     pub fn rotation(mut self, rotation: f32) -> Self {
         self.rotation = rotation;
         self
     }
 
+    #[must_use]
     pub fn rotation_anchor(mut self, anchor: Anchor) -> Self {
         self.rotation_anchor = anchor;
         self
     }
 
+    #[must_use]
     pub fn flip(mut self, flip: Flip) -> Self {
         self.flip = flip;
         self
     }
 
+    #[must_use]
     pub fn scale(mut self, scale: Vec2) -> Self {
         self.scale = scale.max(Vec2::ZERO);
         self
     }
 
+    #[must_use]
     pub fn uniform_scale(self, scale: f32) -> Self {
         self.scale(Vec2::splat(scale))
     }
 
+    #[must_use]
     pub fn opacity(mut self, opacity: f32) -> Self {
         self.opacity = opacity.clamp(0.0, 1.0);
         self
@@ -116,15 +123,18 @@ pub struct TilemapOptions {
 }
 
 impl TilemapOptions {
+    #[must_use]
     pub fn scale(mut self, scale: Vec2) -> Self {
         self.scale = scale;
         self
     }
 
+    #[must_use]
     pub fn uniform_scale(self, scale: f32) -> Self {
         self.scale(Vec2::splat(scale))
     }
 
+    #[must_use]
     pub fn opacity(mut self, opacity: f32) -> Self {
         self.opacity = opacity.clamp(0.0, 1.0);
         self
@@ -149,17 +159,20 @@ pub struct ShapeOptions {
 }
 
 impl ShapeOptions {
+    #[must_use]
     pub fn radius(mut self, radius: u32) -> Self {
         self.radius = radius as f32;
         self
     }
 
+    #[must_use]
     pub fn border(mut self, color: Color, width: u32) -> Self {
         self.border_color = color;
         self.border_width = width as f32;
         self
     }
 
+    #[must_use]
     pub fn opacity(mut self, opacity: f32) -> Self {
         self.opacity = opacity.clamp(0.0, 1.0);
         self
@@ -187,30 +200,36 @@ pub struct TextOptions {
 }
 
 impl TextOptions {
+    #[must_use]
     pub fn font(mut self, font: Font) -> Self {
         self.font = Some(font);
         self
     }
 
+    #[must_use]
     pub fn anchor(mut self, anchor: Anchor) -> Self {
         self.anchor = anchor;
         self
     }
 
+    #[must_use]
     pub fn color(mut self, color: Color) -> Self {
         self.color = color;
         self
     }
 
+    #[must_use]
     pub fn scale(mut self, scale: Vec2) -> Self {
         self.scale = scale.max(Vec2::ZERO);
         self
     }
 
+    #[must_use]
     pub fn uniform_scale(self, scale: f32) -> Self {
         self.scale(Vec2::splat(scale))
     }
 
+    #[must_use]
     pub fn opacity(mut self, opacity: f32) -> Self {
         self.opacity = opacity.clamp(0.0, 1.0);
         self
