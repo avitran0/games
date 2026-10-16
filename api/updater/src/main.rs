@@ -17,7 +17,7 @@ api::impl_app_state!(State);
 struct UpdaterScreen {
     ui: Ui,
     updates: Option<Receiver<update::Progress>>,
-    status: String,
+    status: (String, Color),
     error: Option<String>,
     started: bool,
     finished: bool,
@@ -29,10 +29,12 @@ impl UpdaterScreen {
         ui.set_alignment(Alignment::Center);
         ui.set_vertical_alignment(VerticalAlignment::Center);
         ui.set_bounds(Rect::new(0, 8, api::WIDTH, api::HEIGHT - 16));
+        let text_color = ui.style.text;
+
         Self {
             ui,
             updates: None,
-            status: "Ready".into(),
+            status: ("Ready".into(), text_color),
             error: None,
             started: false,
             finished: false,
@@ -45,20 +47,20 @@ impl UpdaterScreen {
         };
         loop {
             match updates.try_recv() {
-                Ok(update::Progress::Status(message)) => self.status = message,
+                Ok(update::Progress::Status(message)) => self.status.0 = message,
                 Ok(update::Progress::Finished) => {
-                    self.status = "Update complete".into();
+                    self.status = ("Update complete".into(), self.ui.style.success);
                     self.finished = true;
                 }
                 Ok(update::Progress::Failed(error)) => {
-                    self.status = "Update failed".into();
+                    self.status = ("Update failed".into(), self.ui.style.error);
                     self.error = Some(error);
                     self.finished = true;
                 }
                 Err(TryRecvError::Empty) => return,
                 Err(TryRecvError::Disconnected) => {
                     if !self.finished {
-                        self.status = "Update stopped unexpectedly".into();
+                        self.status = ("Update stopped unexpectedly".into(), self.ui.style.warn);
                         self.error = Some("The update stopped before it reported a result.".into());
                         self.finished = true;
                     }
@@ -72,7 +74,7 @@ impl UpdaterScreen {
         let (sender, updates) = mpsc::channel();
         self.updates = Some(updates);
         self.started = true;
-        self.status = "Starting update".into();
+        self.status.0 = "Starting update".into();
         std::thread::spawn(move || {
             let result = update::run(|message| {
                 let _ = sender.send(update::Progress::Status(message.to_owned()));
@@ -89,8 +91,8 @@ impl Screen<State> for UpdaterScreen {
     fn update(&mut self, ctx: &mut ScreenContext<'_, State>) -> ScreenAction<State> {
         self.poll_updates();
         self.ui.begin_frame(ctx);
-        self.ui.heading("Updater");
-        self.ui.label(&self.status);
+
+        self.ui.label(&self.status.0);
         if let Some(error) = &self.error {
             for line in wrap_text(error, 34) {
                 self.ui.label(line);
