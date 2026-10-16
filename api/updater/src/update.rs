@@ -4,7 +4,6 @@ use std::{
     ffi::OsStr,
     fs, io,
     path::{Path, PathBuf},
-    process::{Command, Output},
     time::Duration,
 };
 
@@ -55,15 +54,7 @@ pub fn run(mut report: impl FnMut(&str)) -> Result<(), String> {
     report("Checking the downloaded files…");
     let build_dir = workspace.path().join("build");
     fs::create_dir(&build_dir).map_err(display_error)?;
-    run_command(
-        Command::new("unzip")
-            .arg("-oq")
-            .arg(&archive)
-            .arg("-d")
-            .arg(&build_dir),
-        "Failed to extract the game update",
-    )
-    .map_err(display_error)?;
+    extract_archive(&archive, &build_dir)?;
 
     let sources = update_sources(&build_dir)?;
     report("Installing game files…");
@@ -167,21 +158,50 @@ fn authorized_get(
     request.call()
 }
 
-fn run_command(command: &mut Command, context: &str) -> io::Result<()> {
-    check_output(command.output()?, context)
-}
+fn extract_archive(archive_path: &Path, destination: &Path) -> Result<(), String> {
+    let archive_file = fs::File::open(archive_path)
+        .map_err(|error| format!("Failed to open the game update: {error}"))?;
+    let mut archive = zip::ZipArchive::new(archive_file)
+        .map_err(|error| format!("Failed to read the game update: {error}"))?;
 
-fn check_output(output: Output, context: &str) -> io::Result<()> {
-    if output.status.success() {
-        Ok(())
-    } else {
-        let detail = String::from_utf8_lossy(&output.stderr).trim().to_owned();
-        Err(io::Error::other(if detail.is_empty() {
-            format!("{context} (exit status {})", output.status)
-        } else {
-            format!("{context}: {detail}")
-        }))
+    for index in 0..archive.len() {
+        let mut entry = archive
+            .by_index(index)
+            .map_err(|error| format!("Failed to read an update file: {error}"))?;
+        let name = entry
+            .name()
+            .map_err(|error| format!("Failed to read an update file name: {error}"))?
+            .into_owned();
+        if entry.is_symlink() {
+            return Err(format!("The game update contains a symbolic link: {name}"));
+        }
+        let relative = entry
+            .enclosed_name()
+            .ok_or_else(|| format!("The game update contains an unsafe path: {name}"))?;
+        let path = destination.join(relative);
+        if entry.is_dir() {
+            fs::create_dir_all(&path)
+                .map_err(|error| format!("Failed to create an update folder: {error}"))?;
+            continue;
+        }
+
+        let parent = path
+            .parent()
+            .ok_or_else(|| format!("The game update contains an invalid path: {name}"))?;
+        fs::create_dir_all(parent)
+            .map_err(|error| format!("Failed to create an update folder: {error}"))?;
+        let mut output = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .map_err(|error| format!("Failed to create an update file: {error}"))?;
+        io::copy(&mut entry, &mut output)
+            .map_err(|error| format!("Failed to extract an update file: {error}"))?;
+        output
+            .sync_all()
+            .map_err(|error| format!("Failed to save an update file: {error}"))?;
     }
+    Ok(())
 }
 
 fn update_sources(build_dir: &Path) -> Result<Vec<PathBuf>, String> {
@@ -316,8 +336,11 @@ fn set_launcher_permissions(path: &Path) -> io::Result<()> {
     if path.is_file()
         && (path.extension() == Some(OsStr::new("sh")) || name == Some(OsStr::new("game")))
     {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(path, fs::Permissions::from_mode(0o755))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(path, fs::Permissions::from_mode(0o755))?;
+        }
     }
     if path.is_dir() {
         for entry in fs::read_dir(path)? {
@@ -361,8 +384,11 @@ impl TempWorkspace {
             let path = parent.join(format!(".updater-{}-{attempt}", std::process::id()));
             match fs::create_dir(&path) {
                 Ok(()) => {
-                    use std::os::unix::fs::PermissionsExt;
-                    fs::set_permissions(&path, fs::Permissions::from_mode(0o700))?;
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        fs::set_permissions(&path, fs::Permissions::from_mode(0o700))?;
+                    }
                     return Ok(Self(path));
                 }
                 Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}

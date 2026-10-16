@@ -9,9 +9,6 @@ use api::{
 };
 use ui::{Alignment, Rect, Ui, VerticalAlignment};
 
-#[cfg(not(target_os = "linux"))]
-compile_error!("The ROCKNIX updater supports Linux only.");
-
 #[derive(Default)]
 struct State;
 
