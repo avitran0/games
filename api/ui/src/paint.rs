@@ -70,9 +70,32 @@ impl PaintList {
         });
     }
 
-    pub fn draw(&self, frame: &mut Frame) {
+    pub fn vertical_bounds(&self) -> Option<(i32, i32)> {
+        self.0.iter().fold(None, |bounds, command| {
+            let (top, bottom) = match command {
+                PaintCmd::Rect { rect, .. } => (
+                    rect.position.y,
+                    rect.position.y.saturating_add(rect.size.y as i32),
+                ),
+                PaintCmd::Text {
+                    position, height, ..
+                } => (position.y, position.y.saturating_add(*height as i32)),
+                PaintCmd::Scroll { viewport, .. } => (
+                    viewport.position.y,
+                    viewport.position.y.saturating_add(viewport.size.y as i32),
+                ),
+            };
+            Some(match bounds {
+                Some((min_y, max_y)) => (min_y.min(top), max_y.max(bottom)),
+                None => (top, bottom),
+            })
+        })
+    }
+
+    pub fn draw(&self, frame: &mut Frame, shift: IVec2) {
+        let offset = IVec2::new(shift.x.saturating_neg(), shift.y.saturating_neg());
         for command in &self.0 {
-            draw_command(frame, command, None, IVec2::ZERO);
+            draw_command(frame, command, None, offset);
         }
     }
 }

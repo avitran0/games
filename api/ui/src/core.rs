@@ -4,7 +4,7 @@ use api::{
 };
 
 use crate::{
-    Alignment, Rect, Response, Style,
+    Alignment, Rect, Response, Style, VerticalAlignment,
     layout::{Horizontal, Layout, LayoutSnapshot},
     paint::{PaintList, inset_rect},
     widgets::{Label, Widget},
@@ -13,6 +13,7 @@ use crate::{
 pub struct Ui {
     pub style: Style,
     alignment: Alignment,
+    vertical_alignment: VerticalAlignment,
     input: Input,
     text_metrics: Option<api::TextMetrics>,
     layout: Layout,
@@ -46,6 +47,7 @@ impl Ui {
         Self {
             style,
             alignment: Alignment::Left,
+            vertical_alignment: VerticalAlignment::Top,
             input: Input::default(),
             text_metrics: None,
             layout: Layout {
@@ -128,6 +130,10 @@ impl Ui {
 
     pub fn set_alignment(&mut self, alignment: Alignment) {
         self.alignment = alignment;
+    }
+
+    pub fn set_vertical_alignment(&mut self, alignment: VerticalAlignment) {
+        self.vertical_alignment = alignment;
     }
 
     pub fn with_alignment<R>(
@@ -330,7 +336,28 @@ impl Ui {
     }
 
     pub fn paint(&self, frame: &mut Frame) {
-        self.paint.draw(frame);
+        self.paint.draw(frame, ivec2(0, self.vertical_shift()));
+    }
+
+    fn vertical_shift(&self) -> i32 {
+        if self.vertical_alignment == VerticalAlignment::Top {
+            return 0;
+        }
+        let Some((content_top, content_bottom)) = self.paint.vertical_bounds() else {
+            return 0;
+        };
+        let content_height = content_bottom.saturating_sub(content_top);
+        let bounds_height = i32::try_from(self.root_bounds.size.y).unwrap_or(i32::MAX);
+        let free_space = bounds_height.saturating_sub(content_height);
+        if free_space <= 0 {
+            return 0;
+        }
+        let aligned_top = match self.vertical_alignment {
+            VerticalAlignment::Top => return 0,
+            VerticalAlignment::Center => self.root_bounds.position.y.saturating_add(free_space / 2),
+            VerticalAlignment::Bottom => self.root_bounds.position.y.saturating_add(free_space),
+        };
+        aligned_top.saturating_sub(content_top)
     }
 
     pub(crate) fn input(&self) -> &Input {
@@ -478,5 +505,30 @@ impl Ui {
             ivec2(pill_x + inset as i32, rect.position.y + 2),
             color,
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vertical_centering_shifts_the_paint_bounds_into_the_middle() {
+        let mut ui = Ui::new();
+        ui.set_bounds(Rect::new(0, 10, 100, 100));
+        ui.paint.rect(Rect::new(5, 20, 90, 20), ui.style.panel, 0);
+        ui.set_vertical_alignment(VerticalAlignment::Center);
+
+        assert_eq!(ui.vertical_shift(), 30);
+    }
+
+    #[test]
+    fn vertical_centering_does_not_shift_content_that_is_too_tall() {
+        let mut ui = Ui::new();
+        ui.set_bounds(Rect::new(0, 10, 100, 100));
+        ui.paint.rect(Rect::new(5, 0, 90, 120), ui.style.panel, 0);
+        ui.set_vertical_alignment(VerticalAlignment::Center);
+
+        assert_eq!(ui.vertical_shift(), 0);
     }
 }

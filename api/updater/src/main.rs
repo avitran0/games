@@ -7,15 +7,15 @@ use api::{
     Button, Color, Frame, Screen, ScreenAction, ScreenContext,
     glam::{ivec2, uvec2},
 };
-use ui::{Alignment, Rect, Ui};
+use ui::{Alignment, Rect, Ui, VerticalAlignment};
 
 #[cfg(not(target_os = "linux"))]
 compile_error!("The ROCKNIX updater supports Linux only.");
 
-api::impl_app_state!(State);
-
 #[derive(Default)]
 struct State;
+
+api::impl_app_state!(State);
 
 struct UpdaterScreen {
     ui: Ui,
@@ -30,6 +30,7 @@ impl UpdaterScreen {
     fn new() -> Self {
         let mut ui = Ui::new();
         ui.set_alignment(Alignment::Center);
+        ui.set_vertical_alignment(VerticalAlignment::Center);
         ui.set_bounds(Rect::new(0, 8, api::WIDTH, api::HEIGHT - 16));
         Self {
             ui,

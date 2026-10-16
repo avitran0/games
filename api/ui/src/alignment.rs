@@ -5,3 +5,11 @@ pub enum Alignment {
     Center,
     Right,
 }
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum VerticalAlignment {
+    #[default]
+    Top,
+    Center,
+    Bottom,
+}
