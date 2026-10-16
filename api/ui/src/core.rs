@@ -342,6 +342,11 @@ impl Ui {
         self.focused_widget = None;
     }
 
+    pub fn focus_first(&mut self) {
+        self.focus = 0;
+        self.focused_widget = None;
+    }
+
     pub(crate) fn widget_response(&mut self) -> Response {
         let focused = self.widget_count == self.focus;
         if focused {
