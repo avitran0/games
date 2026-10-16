@@ -3,6 +3,12 @@ name = "minesweeper"
 version = "0.1.0"
 edition = "2024"
 
+[package.metadata.game]
+title = "Minesweeper"
+description = "Uncover tiles and avoid hidden mines"
+author = "avitrano"
+players = 1
+
 [dependencies]
 api.workspace = true
 ui.workspace = true
