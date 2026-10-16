@@ -18,6 +18,7 @@ struct UpdaterScreen {
     ui: Ui,
     updates: Option<Receiver<update::Progress>>,
     status: (String, Color),
+    current_step: Option<update::UpdateStep>,
     error: Option<String>,
     started: bool,
     finished: bool,
@@ -35,6 +36,7 @@ impl UpdaterScreen {
             ui,
             updates: None,
             status: ("Ready".into(), text_color),
+            current_step: None,
             error: None,
             started: false,
             finished: false,
@@ -47,7 +49,10 @@ impl UpdaterScreen {
         };
         loop {
             match updates.try_recv() {
-                Ok(update::Progress::Status(message)) => self.status.0 = message,
+                Ok(update::Progress::Step(step)) => {
+                    self.status.0 = step.title().to_owned();
+                    self.current_step = Some(step);
+                }
                 Ok(update::Progress::Finished) => {
                     self.status = ("Update complete".into(), self.ui.style.success);
                     self.finished = true;
@@ -76,8 +81,8 @@ impl UpdaterScreen {
         self.started = true;
         self.status.0 = "Starting update".into();
         std::thread::spawn(move || {
-            let result = update::run(|message| {
-                let _ = sender.send(update::Progress::Status(message.to_owned()));
+            let result = update::run(|step| {
+                let _ = sender.send(update::Progress::Step(step));
             });
             let _ = sender.send(match result {
                 Ok(()) => update::Progress::Finished,
@@ -92,7 +97,18 @@ impl Screen<State> for UpdaterScreen {
         self.poll_updates();
         self.ui.begin_frame(ctx);
 
-        self.ui.colored_label(&self.status.0, self.status.1);
+        if let Some(step) = &self.current_step {
+            if self.finished {
+                self.ui.colored_label(&self.status.0, self.status.1);
+            } else {
+                self.ui.colored_label(step.title(), self.status.1);
+            }
+            for line in wrap_text(&step.detail(), 34) {
+                self.ui.small(line);
+            }
+        } else {
+            self.ui.colored_label(&self.status.0, self.status.1);
+        }
         if let Some(error) = &self.error {
             for line in wrap_text(error, 34) {
                 self.ui.label(line);

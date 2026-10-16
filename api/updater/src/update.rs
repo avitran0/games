@@ -14,13 +14,54 @@ const API: &str = "https://api.github.com/repos/avitran0/games";
 const WORKFLOW: &str = "rocknix-arm64.yml";
 const ARTIFACT: &str = "games-rocknix-arm64";
 
+#[derive(Debug)]
+pub enum UpdateStep {
+    CheckingForBuild,
+    FindingUpdate { commit: String },
+    Downloading { commit: String },
+    CheckingFiles { entry_count: usize, commit: String },
+    Installing { entry_count: usize, commit: String },
+}
+
+impl UpdateStep {
+    pub fn title(&self) -> &'static str {
+        match self {
+            Self::CheckingForBuild => "Checking for the latest successful build",
+            Self::FindingUpdate { .. } => "Finding the game update",
+            Self::Downloading { .. } => "Downloading game files",
+            Self::CheckingFiles { .. } => "Checking the downloaded files",
+            Self::Installing { .. } => "Installing game files",
+        }
+    }
+
+    pub fn detail(&self) -> String {
+        match self {
+            Self::CheckingForBuild => format!("Workflow: {WORKFLOW}"),
+            Self::FindingUpdate { commit } => {
+                format!("Commit: {commit}")
+            }
+            Self::Downloading { commit } => {
+                format!("Commit: {commit}")
+            }
+            Self::CheckingFiles {
+                entry_count,
+                commit,
+            } => format!("{entry_count} Games | Commit: {commit}"),
+            Self::Installing {
+                entry_count,
+                commit,
+            } => format!("{entry_count} Games | Commit: {commit}"),
+        }
+    }
+}
+
 pub enum Progress {
-    Status(String),
+    Step(UpdateStep),
     Finished,
     Failed(String),
 }
 
-pub fn run(mut report: impl FnMut(&str)) -> Result<(), String> {
+pub fn run(mut report: impl FnMut(UpdateStep)) -> Result<(), String> {
     let ports_dir = ports_dir()?;
     let workspace = TempWorkspace::new(env::temp_dir()).map_err(display_error)?;
     let token = token(&ports_dir);
@@ -29,7 +70,7 @@ pub fn run(mut report: impl FnMut(&str)) -> Result<(), String> {
         .build();
     let agent: Agent = config.into();
 
-    report("Checking for the latest successful build…");
+    report(UpdateStep::CheckingForBuild);
     let runs_url =
         format!("{API}/actions/workflows/{WORKFLOW}/runs?branch=main&status=success&per_page=1");
     let runs: WorkflowRuns = request_json(&agent, token.as_deref(), &runs_url)?;
@@ -38,7 +79,10 @@ pub fn run(mut report: impl FnMut(&str)) -> Result<(), String> {
         .first()
         .ok_or_else(|| "No successful ROCKNIX build is available on main.".to_owned())?;
 
-    report("Finding the game update…");
+    let commit: String = run.head_sha.chars().take(7).collect();
+    report(UpdateStep::FindingUpdate {
+        commit: commit.clone(),
+    });
     let artifacts_url = format!("{API}/actions/runs/{}/artifacts", run.id);
     let artifacts: Artifacts = request_json(&agent, token.as_deref(), &artifacts_url)?;
     let artifact = artifacts
@@ -47,18 +91,26 @@ pub fn run(mut report: impl FnMut(&str)) -> Result<(), String> {
         .find(|artifact| artifact.name == ARTIFACT && !artifact.expired)
         .ok_or_else(|| format!("The game update is missing or has expired. ({ARTIFACT})"))?;
 
-    report("Downloading game files…");
+    report(UpdateStep::Downloading {
+        commit: commit.clone(),
+    });
     let archive = workspace.path().join("build.zip");
     let download_url = format!("{API}/actions/artifacts/{}/zip", artifact.id);
     download(&agent, token.as_deref(), &download_url, &archive)?;
 
-    report("Checking the downloaded files…");
     let build_dir = workspace.path().join("build");
     fs::create_dir(&build_dir).map_err(display_error)?;
     extract_archive(&archive, &build_dir)?;
 
     let sources = update_sources(&build_dir)?;
-    report("Installing game files…");
+    report(UpdateStep::CheckingFiles {
+        entry_count: sources.len(),
+        commit: commit.clone(),
+    });
+    report(UpdateStep::Installing {
+        entry_count: sources.len(),
+        commit,
+    });
     install(&ports_dir, &sources, &build_dir).map_err(display_error)?;
     Ok(())
 }
@@ -73,6 +125,7 @@ struct WorkflowRuns {
 #[serde(crate = "api::serde")]
 struct WorkflowRun {
     id: u64,
+    head_sha: String,
 }
 
 #[derive(Deserialize)]
