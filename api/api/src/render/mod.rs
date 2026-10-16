@@ -296,12 +296,7 @@ impl Renderer {
         let lines: Vec<_> = cmd.text.split('\n').collect();
         let line_widths: Vec<i32> = lines
             .iter()
-            .map(|line| {
-                line.chars().fold(0, |width, c| {
-                    let (glyph, _) = font.glyph(c);
-                    width + glyph.advance as i32
-                })
-            })
+            .map(|line| font.measure_text(line).x as i32)
             .collect();
         let size = ivec2(
             line_widths.iter().copied().max().unwrap_or(0),

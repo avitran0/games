@@ -1,11 +1,8 @@
-use glam::{IVec2, UVec2, Vec2, vec2};
+use glam::{IVec2, UVec2};
 
 use crate::{AnimatedSprite, Camera2D, Color, Font, Sprite, Tilemap};
 
-use super::{
-    Anchor, DrawCmd, Frame, ShapeCmd, ShapeOptions, SpriteOptions, TextOptions, TilemapCmd,
-    TilemapOptions,
-};
+use super::{Anchor, Frame, ShapeOptions, SpriteOptions, TextOptions, TilemapOptions};
 
 pub struct WorldFrame<'frame, 'camera> {
     pub(super) frame: &'frame mut Frame,
@@ -27,13 +24,11 @@ impl WorldFrame<'_, '_> {
         position: IVec2,
         options: TilemapOptions,
     ) {
-        let zoom = self.camera.zoom();
-        self.frame.add(DrawCmd::Tilemap(TilemapCmd {
-            tilemap: tilemap.id,
-            position: self.screen_position(position),
-            scale: options.scale * zoom,
-            opacity: options.opacity,
-        }));
+        self.frame.push_tilemap(
+            tilemap,
+            self.screen_position(position),
+            options.scaled(self.camera.zoom()),
+        );
     }
 
     pub fn rectangle(&mut self, position: IVec2, size: UVec2, color: Color) {
@@ -129,15 +124,13 @@ impl WorldFrame<'_, '_> {
         self.shape(position, size, color, options);
     }
 
-    fn shape(&mut self, position: IVec2, size: UVec2, color: Color, mut options: ShapeOptions) {
+    fn shape(&mut self, position: IVec2, size: UVec2, color: Color, options: ShapeOptions) {
         let zoom = self.camera.zoom();
-        options.radius *= zoom;
-        options.border_width *= zoom;
-        self.frame.shape(
+        self.frame.push_shape(
             self.screen_position(position),
             size.as_vec2() * zoom,
             color,
-            options,
+            options.scaled(zoom),
         );
     }
 
@@ -164,30 +157,14 @@ impl WorldFrame<'_, '_> {
     }
 
     pub fn line_with_opacity(&mut self, start: IVec2, end: IVec2, color: Color, opacity: f32) {
-        let start_world = start.as_vec2();
-        let end_world = end.as_vec2();
         let zoom = self.camera.zoom();
-        let start_screen = self.camera.world_to_screen(start_world);
-        let delta = (end_world - start_world) * zoom;
-        let length = delta.length();
-        self.frame.add(DrawCmd::Shape(ShapeCmd {
-            position: start_screen,
-            size: vec2(length.max(zoom), zoom),
-            rotation: if length == 0.0 {
-                0.0
-            } else {
-                delta.y.atan2(delta.x)
-            },
-            color,
-            radius: 0.0,
-            border_color: Color::Transparent,
-            border_width: 0.0,
-            opacity: opacity.clamp(0.0, 1.0),
-        }));
+        let delta = (end - start).as_vec2() * zoom;
+        self.frame
+            .push_line(self.screen_position(start), delta, zoom, color, opacity);
     }
 
-    pub fn sprite(&mut self, sprite: &Sprite, position: IVec2, mut options: SpriteOptions) {
-        options.scale *= Vec2::splat(self.camera.zoom());
+    pub fn sprite(&mut self, sprite: &Sprite, position: IVec2, options: SpriteOptions) {
+        let options = options.scaled(self.camera.zoom());
         self.frame
             .sprite(sprite, self.screen_position(position), options);
     }
@@ -196,9 +173,9 @@ impl WorldFrame<'_, '_> {
         &mut self,
         sprite: &AnimatedSprite,
         position: IVec2,
-        mut options: SpriteOptions,
+        options: SpriteOptions,
     ) {
-        options.scale *= Vec2::splat(self.camera.zoom());
+        let options = options.scaled(self.camera.zoom());
         self.frame
             .animated_sprite(sprite, self.screen_position(position), options);
     }
@@ -289,9 +266,9 @@ impl WorldFrame<'_, '_> {
         &mut self,
         text: impl Into<String>,
         position: IVec2,
-        mut options: TextOptions,
+        options: TextOptions,
     ) {
-        options.scale *= Vec2::splat(self.camera.zoom());
+        let options = options.scaled(self.camera.zoom());
         self.frame
             .push_text(text.into(), self.screen_position(position), options);
     }

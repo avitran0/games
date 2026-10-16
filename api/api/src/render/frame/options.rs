@@ -75,6 +75,12 @@ impl Default for SpriteOptions {
 
 impl SpriteOptions {
     #[must_use]
+    pub(super) fn scaled(mut self, scale: f32) -> Self {
+        self.scale *= Vec2::splat(scale);
+        self
+    }
+
+    #[must_use]
     pub fn anchor(mut self, anchor: Anchor) -> Self {
         self.anchor = anchor;
         self
@@ -124,6 +130,12 @@ pub struct TilemapOptions {
 
 impl TilemapOptions {
     #[must_use]
+    pub(super) fn scaled(mut self, scale: f32) -> Self {
+        self.scale *= Vec2::splat(scale);
+        self
+    }
+
+    #[must_use]
     pub fn scale(mut self, scale: Vec2) -> Self {
         self.scale = scale;
         self
@@ -159,6 +171,13 @@ pub struct ShapeOptions {
 }
 
 impl ShapeOptions {
+    #[must_use]
+    pub(super) fn scaled(mut self, scale: f32) -> Self {
+        self.radius *= scale;
+        self.border_width *= scale;
+        self
+    }
+
     #[must_use]
     pub fn radius(mut self, radius: u32) -> Self {
         self.radius = radius as f32;
@@ -200,6 +219,12 @@ pub struct TextOptions {
 }
 
 impl TextOptions {
+    #[must_use]
+    pub(super) fn scaled(mut self, scale: f32) -> Self {
+        self.scale *= Vec2::splat(scale);
+        self
+    }
+
     #[must_use]
     pub fn font(mut self, font: Font) -> Self {
         self.font = Some(font);

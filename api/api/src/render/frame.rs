@@ -49,6 +49,15 @@ impl Frame {
     }
 
     pub fn tilemap(&mut self, tilemap: &Tilemap, position: IVec2, options: TilemapOptions) {
+        self.push_tilemap(tilemap, position, options);
+    }
+
+    pub(super) fn push_tilemap(
+        &mut self,
+        tilemap: &Tilemap,
+        position: IVec2,
+        options: TilemapOptions,
+    ) {
         self.add(DrawCmd::Tilemap(TilemapCmd {
             tilemap: tilemap.id,
             position,
@@ -83,7 +92,7 @@ impl Frame {
         color: Color,
         options: ShapeOptions,
     ) {
-        self.shape(position, size.as_vec2(), color, options);
+        self.push_shape(position, size.as_vec2(), color, options);
     }
 
     pub fn rounded_rectangle(&mut self, position: IVec2, size: UVec2, radius: u32, color: Color) {
@@ -118,7 +127,7 @@ impl Frame {
         color: Color,
         options: ShapeOptions,
     ) {
-        self.shape(position, size.as_vec2(), color, options);
+        self.push_shape(position, size.as_vec2(), color, options);
     }
 
     pub fn bordered_rectangle(
@@ -147,7 +156,7 @@ impl Frame {
         color: Color,
         options: ShapeOptions,
     ) {
-        self.shape(position, size.as_vec2(), color, options);
+        self.push_shape(position, size.as_vec2(), color, options);
     }
 
     pub fn rounded_rectangle_outline(
@@ -168,7 +177,13 @@ impl Frame {
         );
     }
 
-    fn shape(&mut self, position: IVec2, size: Vec2, color: Color, options: ShapeOptions) {
+    pub(super) fn push_shape(
+        &mut self,
+        position: IVec2,
+        size: Vec2,
+        color: Color,
+        options: ShapeOptions,
+    ) {
         self.add(DrawCmd::Shape(ShapeCmd {
             position,
             size,
@@ -186,11 +201,21 @@ impl Frame {
     }
 
     pub fn line_with_opacity(&mut self, start: IVec2, end: IVec2, color: Color, opacity: f32) {
-        let delta = (end - start).as_vec2();
+        self.push_line(start, (end - start).as_vec2(), 1.0, color, opacity);
+    }
+
+    pub(super) fn push_line(
+        &mut self,
+        position: IVec2,
+        delta: Vec2,
+        thickness: f32,
+        color: Color,
+        opacity: f32,
+    ) {
         let length = delta.length();
         self.add(DrawCmd::Shape(ShapeCmd {
-            position: start,
-            size: vec2(length.max(1.0), 1.0),
+            position,
+            size: vec2(length.max(thickness), thickness),
             rotation: if length == 0.0 {
                 0.0
             } else {

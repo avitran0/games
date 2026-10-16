@@ -21,7 +21,7 @@ impl Rng {
         unsafe {
             let bytes = getrandom((&raw mut state).cast(), size_of_val(&state), 0);
             if bytes != size_of_val(&state) as isize {
-                panic!("Cannot get a random value.");
+                panic!("failed to get a random value.");
             }
         }
         #[cfg(target_os = "windows")]
@@ -32,6 +32,7 @@ impl Rng {
     }
 
     pub fn seeded(seed: u64) -> Self {
+        assert!(seed != 0, "zero-seeded RNG is stale");
         let state = [
             seed,
             seed.rotate_left(16),

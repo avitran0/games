@@ -58,7 +58,7 @@ github_curl() {
 }
 
 log "Fetching latest successful workflow run"
-github_curl -fsSL "$API/actions/workflows/rocknix-x64.yml/runs?branch=main&status=success&per_page=1" \
+github_curl -fsSL "$API/actions/workflows/rocknix-arm64.yml/runs?branch=main&status=success&per_page=1" \
     -o "$TMP_DIR/runs.json"
 RUN_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["workflow_runs"][0]["id"])' "$TMP_DIR/runs.json")
 
