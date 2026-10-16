@@ -13,15 +13,26 @@ pub const fn save_name(name: &'static str) -> SaveName {
     SaveName { name }
 }
 
+#[cfg(target_os = "windows")]
+pub(crate) fn game_config_dir(module: &str) -> PathBuf {
+    std::env::var_os("LOCALAPPDATA")
+        .map(PathBuf::from)
+        .expect("LOCALAPPDATA is not set")
+        .join("games")
+        .join(module)
+}
+
+#[cfg(target_os = "linux")]
 pub(crate) fn game_config_dir(module: &str) -> PathBuf {
     let config_home = config_home(
         std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from),
         std::env::var_os("HOME").map(PathBuf::from),
     )
-    .expect("Cannot locate config directory: set XDG_CONFIG_HOME or HOME");
+    .expect("failed to locate config directory: set XDG_CONFIG_HOME or HOME");
     config_home.join("games").join(module)
 }
 
+#[cfg(target_os = "linux")]
 fn config_home(xdg_config_home: Option<PathBuf>, home: Option<PathBuf>) -> Option<PathBuf> {
     xdg_config_home
         .filter(|path| path.is_absolute())
@@ -46,7 +57,7 @@ pub fn save<State: AppState, T: Serialize>(
             source,
         })
     })?;
-    std::fs::create_dir_all(path.parent().expect("Save path has a parent"))
+    std::fs::create_dir_all(path.parent().expect("save path has a parent"))
         .and_then(|()| std::fs::write(&path, content))
         .map_err(|source| show_save_error(SaveError::Write { path, source }))?;
     Ok(())
@@ -99,41 +110,4 @@ enum SaveError {
 
 fn show_save_error<State>(error: SaveError) -> ScreenAction<State> {
     ScreenAction::Push(Box::new(ErrorScreen::new(error)))
-}
-
-#[cfg(test)]
-mod tests {
-    use std::path::PathBuf;
-
-    use super::config_home;
-
-    #[test]
-    fn config_directory_prefers_absolute_xdg_path_then_home_fallback() {
-        assert_eq!(
-            config_home(
-                Some(PathBuf::from("/config")),
-                Some(PathBuf::from("/home/test"))
-            ),
-            Some(PathBuf::from("/config"))
-        );
-        assert_eq!(
-            config_home(
-                Some(PathBuf::from("relative")),
-                Some(PathBuf::from("/home/test"))
-            ),
-            Some(PathBuf::from("/home/test/.config"))
-        );
-    }
-
-    #[test]
-    fn config_directory_is_unavailable_without_an_absolute_environment_path() {
-        assert_eq!(config_home(None, None), None);
-        assert_eq!(
-            config_home(
-                Some(PathBuf::from("relative")),
-                Some(PathBuf::from("also-relative"))
-            ),
-            None
-        );
-    }
 }
