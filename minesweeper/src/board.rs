@@ -1,13 +1,16 @@
 use api::{
-    Rng,
-    glam::{UVec2, usizevec2, uvec2},
+    Anchor, Color, Rng, SpriteOptions,
+    glam::{UVec2, ivec2, usizevec2, uvec2},
 };
 
 use crate::{
     difficulty::Difficulty,
+    game::TILE_SIZE,
+    sprites::Sprites,
     tile::{Tile, TileKind},
 };
 
+#[derive(Clone)]
 pub struct Board {
     size: UVec2,
     difficulty: Difficulty,
@@ -165,7 +168,16 @@ impl Board {
         let mut candidates: Vec<usize> = (0..self.tiles.len())
             .filter(|&index| {
                 let pos = Self::index_to_coord(index, stride);
-                pos.x.abs_diff(first_tile.x) > 1 || pos.y.abs_diff(first_tile.y) > 1
+                if pos.x.abs_diff(first_tile.x) <= 1 || pos.y.abs_diff(first_tile.y) <= 1 {
+                    return false;
+                }
+                let edges = [
+                    uvec2(0, 0),
+                    uvec2(self.size.x - 1, 0),
+                    uvec2(0, self.size.y - 1),
+                    self.size - 1,
+                ];
+                !edges.contains(&pos)
             })
             .collect();
 
@@ -204,5 +216,84 @@ impl Board {
 
     fn index_to_coord(index: usize, stride: usize) -> UVec2 {
         usizevec2(index % stride, index / stride).as_uvec2()
+    }
+
+    pub fn draw(&self, camera: &api::Camera2D, world: &mut api::WorldFrame, sprites: &Sprites) {
+        let (x_range, y_range) = self.visible_tile_ranges(camera);
+        for y in y_range {
+            for x in x_range.clone() {
+                self.draw_tile(world, uvec2(x, y), sprites);
+            }
+        }
+    }
+
+    fn visible_tile_ranges(
+        &self,
+        camera: &api::Camera2D,
+    ) -> (std::ops::RangeInclusive<u32>, std::ops::RangeInclusive<u32>) {
+        let top_left = camera.screen_to_world(ivec2(0, 0));
+        let bottom_right = camera.screen_to_world(ivec2(api::WIDTH as i32, api::HEIGHT as i32));
+        let size = self.size();
+        let x_range = Self::visible_tile_range(top_left.x, bottom_right.x, size.x);
+        let y_range = Self::visible_tile_range(top_left.y, bottom_right.y, size.y);
+        (x_range, y_range)
+    }
+
+    fn visible_tile_range(start: f32, end: f32, count: u32) -> std::ops::RangeInclusive<u32> {
+        let max = count as i64 - 1;
+        let first = ((start / TILE_SIZE as f32).floor() as i64 - 1).clamp(0, max) as u32;
+        let last = ((end / TILE_SIZE as f32).floor() as i64 + 1).clamp(0, max) as u32;
+        first..=last
+    }
+
+    /*fn draw_cursor(&self, frame: &mut api::Frame) {
+        let cursor_screen_pos = ivec2(
+            (api::WIDTH as i32 - TILE_SIZE as i32) / 2,
+            (api::HEIGHT as i32 - TILE_SIZE as i32) / 2,
+        );
+        let opacity = (frame.tick() as f32 * 0.02).sin().abs() * 0.5 + 0.5;
+        frame.sprite(
+            &self.sprites.cursor,
+            cursor_screen_pos,
+            SpriteOptions::default().opacity(opacity),
+        );
+    }*/
+
+    fn draw_tile(&self, world: &mut api::WorldFrame<'_, '_>, pos: UVec2, sprites: &Sprites) {
+        let tile = self.tile(pos);
+        let draw_pos = (pos * TILE_SIZE).as_ivec2();
+
+        if !tile.uncovered {
+            world.sprite(&sprites.covered, draw_pos, SpriteOptions::default());
+            if tile.flagged {
+                world.sprite(&sprites.flag, draw_pos, SpriteOptions::default());
+            }
+            return;
+        }
+
+        world.sprite(&sprites.uncovered, draw_pos, SpriteOptions::default());
+        match tile.kind {
+            TileKind::Clear => {
+                let neighbors = self.neighbors(pos);
+                if neighbors != 0 {
+                    let text_pos = draw_pos + TILE_SIZE as i32 / 2;
+                    let color = Self::neighbor_count_color(neighbors);
+                    world.text_color(neighbors.to_string(), text_pos, Anchor::Center, color);
+                }
+            }
+            TileKind::Bomb => {
+                world.sprite(&sprites.bomb, draw_pos, SpriteOptions::default());
+            }
+        }
+    }
+
+    fn neighbor_count_color(neighbors: usize) -> Color {
+        match neighbors {
+            1 => Color::Indigo,
+            2 => Color::ForestGreen,
+            3 => Color::TallPoppy,
+            4 => Color::PurpleHeart,
+            _ => Color::Bunker,
+        }
     }
 }

@@ -1,6 +1,6 @@
 use api::{
-    Anchor, Button, Color, SpriteOptions,
-    glam::{UVec2, ivec2, uvec2},
+    Button, SpriteOptions,
+    glam::{UVec2, Vec2, ivec2},
 };
 
 use crate::{
@@ -8,12 +8,11 @@ use crate::{
     camera::CameraRig,
     cursor::Cursor,
     difficulty::Difficulty,
-    end_screen::{EndScreen, Outcome},
     leaderboard::{LEADERBOARD, Leaderboard, LeaderboardEntry},
     pause::PauseScreen,
+    review::{Outcome, ReviewScreen},
     sprites::Sprites,
     state::State,
-    tile::TileKind,
 };
 
 pub(crate) const TILE_SIZE: u32 = 16;
@@ -45,8 +44,8 @@ impl GameScreen {
         })
     }
 
-    fn cell_center(cell: UVec2) -> api::glam::Vec2 {
-        cell.as_vec2() * TILE_SIZE as f32 + api::glam::Vec2::splat(TILE_SIZE as f32 * 0.5)
+    fn cell_center(cell: UVec2) -> Vec2 {
+        cell.as_vec2() * TILE_SIZE as f32 + Vec2::splat(TILE_SIZE as f32 * 0.5)
     }
 }
 
@@ -62,11 +61,12 @@ impl api::Screen<State> for GameScreen {
                 return action;
             }
 
-            return api::ScreenAction::Push(Box::new(EndScreen::new(
+            return api::ScreenAction::Push(Box::new(ReviewScreen::new(
+                self.board.clone(),
+                self.cursor.clone(),
                 outcome,
                 self.elapsed_ticks,
-                self.board.size(),
-                self.board.difficulty(),
+                self.sprites,
             )));
         }
 
@@ -75,41 +75,13 @@ impl api::Screen<State> for GameScreen {
 
     fn draw(&mut self, state: &State, frame: &mut api::Frame) {
         let camera = state.camera.camera();
-        self.draw_board(frame, camera);
+        let mut world = frame.world(camera);
+        self.board.draw(camera, &mut world, &self.sprites);
         self.draw_cursor(frame);
     }
 }
 
 impl GameScreen {
-    fn draw_board(&self, frame: &mut api::Frame, camera: &api::Camera2D) {
-        let (x_range, y_range) = self.visible_tile_ranges(camera);
-        let mut world = frame.world(camera);
-        for y in y_range {
-            for x in x_range.clone() {
-                self.draw_tile(&mut world, uvec2(x, y));
-            }
-        }
-    }
-
-    fn visible_tile_ranges(
-        &self,
-        camera: &api::Camera2D,
-    ) -> (std::ops::RangeInclusive<u32>, std::ops::RangeInclusive<u32>) {
-        let top_left = camera.screen_to_world(ivec2(0, 0));
-        let bottom_right = camera.screen_to_world(ivec2(api::WIDTH as i32, api::HEIGHT as i32));
-        let size = self.board.size();
-        let x_range = Self::visible_tile_range(top_left.x, bottom_right.x, size.x);
-        let y_range = Self::visible_tile_range(top_left.y, bottom_right.y, size.y);
-        (x_range, y_range)
-    }
-
-    fn visible_tile_range(start: f32, end: f32, count: u32) -> std::ops::RangeInclusive<u32> {
-        let max = count as i64 - 1;
-        let first = ((start / TILE_SIZE as f32).floor() as i64 - 1).clamp(0, max) as u32;
-        let last = ((end / TILE_SIZE as f32).floor() as i64 + 1).clamp(0, max) as u32;
-        first..=last
-    }
-
     fn draw_cursor(&self, frame: &mut api::Frame) {
         let cursor_screen_pos = ivec2(
             (api::WIDTH as i32 - TILE_SIZE as i32) / 2,
@@ -121,40 +93,6 @@ impl GameScreen {
             cursor_screen_pos,
             SpriteOptions::default().opacity(opacity),
         );
-    }
-
-    fn draw_tile(&self, world: &mut api::WorldFrame<'_, '_>, pos: UVec2) {
-        let tile = self.board.tile(pos);
-        let draw_pos = (pos * TILE_SIZE).as_ivec2();
-
-        if !tile.uncovered {
-            world.sprite(&self.sprites.covered, draw_pos, SpriteOptions::default());
-            if tile.flagged {
-                world.sprite(&self.sprites.flag, draw_pos, SpriteOptions::default());
-            }
-            return;
-        }
-
-        world.sprite(&self.sprites.uncovered, draw_pos, SpriteOptions::default());
-        match tile.kind {
-            TileKind::Clear => {
-                let neighbors = self.board.neighbors(pos);
-                if neighbors != 0 {
-                    let text_pos = draw_pos + TILE_SIZE as i32 / 2;
-                    let color = match neighbors {
-                        1 => Color::Indigo,
-                        2 => Color::ForestGreen,
-                        3 => Color::TallPoppy,
-                        4 => Color::PurpleHeart,
-                        _ => Color::Bunker,
-                    };
-                    world.text_color(neighbors.to_string(), text_pos, Anchor::Center, color);
-                }
-            }
-            TileKind::Bomb => {
-                world.sprite(&self.sprites.bomb, draw_pos, SpriteOptions::default());
-            }
-        }
     }
 
     fn tick_cursor_and_camera(&mut self, ctx: &mut api::ScreenContext<'_, State>) {

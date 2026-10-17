@@ -2,6 +2,7 @@ use api::{Button, glam::UVec2};
 
 use crate::state::State;
 
+#[derive(Clone)]
 pub struct Cursor {
     position: UVec2,
     size: UVec2,

@@ -1,5 +1,6 @@
 use crate::state::State;
 
+#[derive(Clone, Copy)]
 pub struct Sprites {
     pub cursor: api::Sprite,
     pub bomb: api::Sprite,
