@@ -222,7 +222,7 @@ impl Board {
         let (x_range, y_range) = self.visible_tile_ranges(camera);
         for y in y_range {
             for x in x_range.clone() {
-                self.draw_tile(world, uvec2(x, y), sprites);
+                self.draw_tile(camera, world, uvec2(x, y), sprites);
             }
         }
     }
@@ -259,19 +259,31 @@ impl Board {
         );
     }*/
 
-    fn draw_tile(&self, world: &mut api::WorldFrame<'_, '_>, pos: UVec2, sprites: &Sprites) {
+    fn draw_tile(
+        &self,
+        camera: &api::Camera2D,
+        world: &mut api::WorldFrame<'_, '_>,
+        pos: UVec2,
+        sprites: &Sprites,
+    ) {
         let tile = self.tile(pos);
         let draw_pos = (pos * TILE_SIZE).as_ivec2();
+        // fixes black bars that otherwise appear between sprites when zoomed out
+        let screen_min = camera.world_to_screen(draw_pos.as_vec2());
+        let screen_max = camera.world_to_screen((draw_pos + TILE_SIZE as i32).as_vec2());
+        let screen_size = (screen_max - screen_min).as_vec2();
+        let scale = screen_size / (TILE_SIZE as f32 * camera.zoom());
+        let options = SpriteOptions::default().scale(scale);
 
         if !tile.uncovered {
-            world.sprite(&sprites.covered, draw_pos, SpriteOptions::default());
+            world.sprite(&sprites.covered, draw_pos, options);
             if tile.flagged {
-                world.sprite(&sprites.flag, draw_pos, SpriteOptions::default());
+                world.sprite(&sprites.flag, draw_pos, options);
             }
             return;
         }
 
-        world.sprite(&sprites.uncovered, draw_pos, SpriteOptions::default());
+        world.sprite(&sprites.uncovered, draw_pos, options);
         match tile.kind {
             TileKind::Clear => {
                 let neighbors = self.neighbors(pos);
@@ -282,7 +294,7 @@ impl Board {
                 }
             }
             TileKind::Bomb => {
-                world.sprite(&sprites.bomb, draw_pos, SpriteOptions::default());
+                world.sprite(&sprites.bomb, draw_pos, options);
             }
         }
     }

@@ -2,7 +2,7 @@ use api::{
     Button, Color, SpriteOptions,
     glam::{IVec2, UVec2, Vec2, uvec2},
 };
-use ui::{Alignment, Ui, VerticalAlignment};
+use ui::{Alignment, Style, Ui, VerticalAlignment};
 
 use crate::{
     board::Board,
@@ -54,6 +54,8 @@ impl ReviewScreen {
         sprites: Sprites,
     ) -> Self {
         let mut ui = Ui::new();
+        // sets dark text color
+        ui.style = Style::light();
         ui.set_alignment(Alignment::Center);
         ui.set_vertical_alignment(VerticalAlignment::Center);
 
