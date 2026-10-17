@@ -1,3 +1,5 @@
+use ui::VerticalAlignment;
+
 use crate::{leaderboard::LeaderboardScreen, setup::SetupScreen, state::State};
 
 pub struct MainMenu {
@@ -8,7 +10,7 @@ impl MainMenu {
     pub fn new() -> Self {
         let mut ui = ui::Ui::new();
         ui.set_alignment(ui::Alignment::Center);
-        ui.set_bounds(ui::Rect::new(0, 48, api::WIDTH, api::HEIGHT - 48));
+        ui.set_vertical_alignment(VerticalAlignment::Center);
 
         Self { ui }
     }

@@ -2,7 +2,7 @@ use api::{
     Button,
     glam::{UVec2, uvec2},
 };
-use ui::{Alignment, Ui};
+use ui::{Alignment, Ui, VerticalAlignment};
 
 use crate::{difficulty::Difficulty, game::GameScreen, state::State};
 
@@ -16,6 +16,7 @@ impl SetupScreen {
     pub fn new() -> Self {
         let mut ui = Ui::new();
         ui.set_alignment(Alignment::Center);
+        ui.set_vertical_alignment(VerticalAlignment::Center);
 
         Self {
             ui,
