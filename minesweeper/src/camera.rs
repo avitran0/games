@@ -68,6 +68,21 @@ impl CameraRig {
         );
     }
 
+    pub fn focus_cursor(&mut self, position: Vec2) {
+        self.position_tween = Tween::new(
+            self.position_tween.current(),
+            position,
+            Self::END_SCREEN_TWEEN_TICKS,
+            Interpolation::EaseInOutCubic,
+        );
+        self.zoom_tween = Tween::new(
+            self.zoom_tween.current(),
+            1.0,
+            Self::END_SCREEN_TWEEN_TICKS,
+            Interpolation::EaseInOutCubic,
+        );
+    }
+
     pub fn tick(&mut self) {
         self.position_tween.tick();
         self.zoom_tween.tick();

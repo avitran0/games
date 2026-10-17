@@ -1,6 +1,6 @@
 use api::{
     Button, Color, SpriteOptions,
-    glam::{IVec2, UVec2, ivec2, uvec2},
+    glam::{IVec2, UVec2, Vec2, uvec2},
 };
 use ui::{Alignment, Ui, VerticalAlignment};
 
@@ -39,6 +39,7 @@ pub struct ReviewScreen {
     cursor: Cursor,
     sprites: Sprites,
     mode: Mode,
+    camera_mode: Option<Mode>,
     ui: Ui,
     outcome: Outcome,
     elapsed_ticks: usize,
@@ -61,6 +62,7 @@ impl ReviewScreen {
             cursor,
             sprites,
             mode: Mode::Menu,
+            camera_mode: None,
             ui,
             outcome,
             elapsed_ticks,
@@ -72,8 +74,8 @@ impl ReviewScreen {
         format!("{:02}:{:02}", total_seconds / 60, total_seconds % 60)
     }
 
-    fn cell_center(cell: UVec2) -> api::glam::Vec2 {
-        cell.as_vec2() * TILE_SIZE as f32 + api::glam::Vec2::splat(TILE_SIZE as f32 * 0.5)
+    fn cell_center(cell: UVec2) -> Vec2 {
+        cell.as_vec2() * TILE_SIZE as f32 + Vec2::splat(TILE_SIZE as f32 * 0.5)
     }
 }
 
@@ -82,6 +84,8 @@ impl api::Screen<State> for ReviewScreen {
         if ctx.input.just_pressed(Button::Start) {
             self.mode = self.mode.toggle();
         }
+
+        self.sync_camera_mode(&mut ctx.state.camera);
 
         match self.mode {
             Mode::Menu => self.menu_update(ctx),
@@ -108,7 +112,7 @@ impl ReviewScreen {
 
     fn review_draw(&mut self, state: &State, frame: &mut api::Frame) {
         self.draw_board(state, frame);
-        self.draw_cursor(frame);
+        self.draw_cursor(state.camera.camera(), frame);
     }
 
     fn menu_update(&mut self, ctx: &mut api::ScreenContext<'_, State>) -> api::ScreenAction<State> {
@@ -150,6 +154,21 @@ impl ReviewScreen {
         self.ui.paint(frame);
     }
 
+    fn sync_camera_mode(&mut self, camera: &mut crate::camera::CameraRig) {
+        if self.camera_mode == Some(self.mode) {
+            return;
+        }
+
+        match self.mode {
+            Mode::Menu => {
+                let board_pixels = self.board.size().as_vec2() * TILE_SIZE as f32;
+                camera.frame_board(board_pixels);
+            }
+            Mode::Review => camera.focus_cursor(Self::cell_center(self.cursor.pos())),
+        }
+        self.camera_mode = Some(self.mode);
+    }
+
     fn draw_board(&mut self, state: &State, frame: &mut api::Frame) {
         let camera = state.camera.camera();
         let mut world = frame.world(camera);
@@ -167,16 +186,17 @@ impl ReviewScreen {
         camera.tick();
     }
 
-    fn draw_cursor(&self, frame: &mut api::Frame) {
-        let cursor_screen_pos = ivec2(
-            (api::WIDTH as i32 - TILE_SIZE as i32) / 2,
-            (api::HEIGHT as i32 - TILE_SIZE as i32) / 2,
-        );
+    fn draw_cursor(&self, camera: &api::Camera2D, frame: &mut api::Frame) {
+        let cursor_world_pos =
+            Self::cell_center(self.cursor.pos()) - Vec2::splat(TILE_SIZE as f32 * 0.5);
+        let cursor_screen_pos = camera.world_to_screen(cursor_world_pos);
         let opacity = (frame.tick() as f32 * 0.02).sin().abs() * 0.5 + 0.5;
         frame.sprite(
             &self.sprites.cursor,
             cursor_screen_pos,
-            SpriteOptions::default().opacity(opacity),
+            SpriteOptions::default()
+                .uniform_scale(camera.zoom())
+                .opacity(opacity),
         );
     }
 }
