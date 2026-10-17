@@ -50,9 +50,8 @@ impl CameraRig {
 
     pub fn frame_board(&mut self, board_size: Vec2) {
         let center = board_size * 0.5;
-        let fit_zoom =
-            (api::WIDTH as f32 / board_size.x).min(api::HEIGHT as f32 / board_size.y) * 0.9;
-        let target_zoom = fit_zoom.clamp(Self::MIN_ZOOM, 1.0);
+        let fit_zoom = (api::WIDTH as f32 / board_size.x).min(api::HEIGHT as f32 / board_size.y);
+        let target_zoom = fit_zoom.max(Self::MIN_ZOOM);
 
         self.position_tween = Tween::new(
             self.position_tween.current(),
