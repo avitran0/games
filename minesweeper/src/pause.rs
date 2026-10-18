@@ -23,6 +23,7 @@ impl PauseScreen {
 
 impl api::Screen<State> for PauseScreen {
     fn update(&mut self, ctx: &mut api::ScreenContext<'_, State>) -> api::ScreenAction<State> {
+        ctx.state.camera.set_resolution(ctx.resolution);
         self.ui.begin_frame(ctx);
 
         if self.confirming_quit {

@@ -87,7 +87,6 @@ impl api::Screen<State> for ReviewScreen {
             self.mode = self.mode.toggle();
         }
 
-        ctx.state.camera.set_resolution(ctx.resolution);
         self.sync_camera_mode(&mut ctx.state.camera, ctx.resolution);
 
         match self.mode {
@@ -157,7 +156,9 @@ impl ReviewScreen {
         camera: &mut crate::camera::CameraRig,
         resolution: api::Resolution,
     ) {
-        if self.camera_mode == Some(self.mode) {
+        let resolution_changed = camera.camera().resolution() != resolution;
+        camera.set_resolution(resolution);
+        if self.camera_mode == Some(self.mode) && !resolution_changed {
             return;
         }
 
