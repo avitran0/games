@@ -1,9 +1,17 @@
 use api::{Camera2D, Interpolation, Resolution, Tween, glam::Vec2};
 
+const SHAKE_TICKS: usize = 20;
+const SHAKE_FREQUENCY: f32 = 2.2;
+const SHAKE_VERTICAL_FREQUENCY: f32 = 1.7;
+const SHAKE_HORIZONTAL_AMPLITUDE: f32 = 3.0;
+const SHAKE_VERTICAL_AMPLITUDE: f32 = 2.0;
+
 pub struct CameraRig {
     camera: Camera2D,
     position_tween: Tween<Vec2>,
     zoom_tween: Tween<f32>,
+    shake: Option<Tween<f32>>,
+    shake_phase: usize,
 }
 
 impl Default for CameraRig {
@@ -32,6 +40,8 @@ impl CameraRig {
                 Self::END_SCREEN_TWEEN_TICKS,
                 Interpolation::EaseInOutCubic,
             ),
+            shake: None,
+            shake_phase: 0,
         }
     }
 
@@ -41,6 +51,16 @@ impl CameraRig {
 
     pub fn set_resolution(&mut self, resolution: Resolution) {
         self.camera.set_resolution(resolution);
+    }
+
+    pub fn shake(&mut self) {
+        self.shake = Some(Tween::new(
+            1.0,
+            0.0,
+            SHAKE_TICKS,
+            Interpolation::EaseOutCubic,
+        ));
+        self.shake_phase = 0;
     }
 
     pub fn move_to(&mut self, position: Vec2) {
@@ -90,7 +110,25 @@ impl CameraRig {
     pub fn tick(&mut self) {
         self.position_tween.tick();
         self.zoom_tween.tick();
-        self.camera.set_position(self.position_tween.current());
+
+        let mut position = self.position_tween.current();
+        let shake_strength = self.shake.as_mut().map(|shake| {
+            shake.tick();
+            shake.current()
+        });
+        if let Some(strength) = shake_strength {
+            let phase = self.shake_phase as f32 * SHAKE_FREQUENCY;
+            position += Vec2::new(
+                phase.sin() * SHAKE_HORIZONTAL_AMPLITUDE,
+                (phase * SHAKE_VERTICAL_FREQUENCY).cos() * SHAKE_VERTICAL_AMPLITUDE,
+            ) * strength;
+            self.shake_phase += 1;
+            if self.shake.as_ref().is_some_and(Tween::is_finished) {
+                self.shake = None;
+            }
+        }
+
+        self.camera.set_position(position);
         self.camera.set_zoom(self.zoom_tween.current());
     }
 }

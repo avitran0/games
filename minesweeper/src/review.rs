@@ -1,5 +1,5 @@
 use api::{
-    Button, Color, SpriteOptions,
+    Button, Color, Interpolation, SpriteOptions, Tween,
     glam::{IVec2, UVec2, Vec2},
 };
 use ui::{Alignment, Style, Ui, VerticalAlignment};
@@ -12,6 +12,9 @@ use crate::{
     sprites::Sprites,
     state::State,
 };
+
+const GAME_OVER_FLASH_TICKS: usize = 20;
+const GAME_OVER_FLASH_OPACITY: f32 = 0.42;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Outcome {
@@ -43,6 +46,7 @@ pub struct ReviewScreen {
     ui: Ui,
     outcome: Outcome,
     elapsed_ticks: usize,
+    flash: Option<Tween<f32>>,
 }
 
 impl ReviewScreen {
@@ -68,6 +72,14 @@ impl ReviewScreen {
             ui,
             outcome,
             elapsed_ticks,
+            flash: (outcome == Outcome::GameOver).then(|| {
+                Tween::new(
+                    GAME_OVER_FLASH_OPACITY,
+                    0.0,
+                    GAME_OVER_FLASH_TICKS,
+                    Interpolation::EaseOutCubic,
+                )
+            }),
         }
     }
 
@@ -87,6 +99,13 @@ impl api::Screen<State> for ReviewScreen {
             self.mode = self.mode.toggle();
         }
 
+        self.board.tick();
+        if let Some(flash) = &mut self.flash {
+            flash.tick();
+            if flash.is_finished() {
+                self.flash = None;
+            }
+        }
         self.sync_camera_mode(&mut ctx.state.camera, ctx.resolution);
 
         match self.mode {
@@ -115,6 +134,7 @@ impl ReviewScreen {
     fn review_draw(&mut self, state: &State, frame: &mut api::Frame) {
         self.draw_board(state, frame);
         self.draw_cursor(state.camera.camera(), frame);
+        self.draw_flash(frame);
     }
 
     fn menu_update(&mut self, ctx: &mut api::ScreenContext<'_, State>) -> api::ScreenAction<State> {
@@ -148,7 +168,19 @@ impl ReviewScreen {
     fn menu_draw(&mut self, state: &State, frame: &mut api::Frame) {
         self.draw_board(state, frame);
         frame.rectangle_with_opacity(IVec2::ZERO, frame.resolution().into(), Color::Black, 0.1);
+        self.draw_flash(frame);
         self.ui.paint(frame);
+    }
+
+    fn draw_flash(&self, frame: &mut api::Frame) {
+        if let Some(flash) = &self.flash {
+            frame.rectangle_with_opacity(
+                IVec2::ZERO,
+                frame.resolution().into(),
+                Color::TallPoppy,
+                flash.current(),
+            );
+        }
     }
 
     fn sync_camera_mode(

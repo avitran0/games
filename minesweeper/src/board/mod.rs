@@ -1,12 +1,20 @@
-use api::{
-    Anchor, Color, Rng, SpriteOptions,
-    glam::{UVec2, ivec2, usizevec2, uvec2},
+mod animation;
+mod delayed_tween;
+mod render;
+
+use std::collections::VecDeque;
+
+use animation::{
+    BOMB_REVEAL_STAGGER_GROUP_SIZE, BOMB_REVEAL_STAGGER_TICKS, CHORD_STAGGER_TICKS, FlagAnimation,
+    REVEAL_ANIMATION_TICKS, REVEAL_STAGGER_GROUP_SIZE, REVEAL_STAGGER_TICKS, TileAnimation,
+    WIN_FLAG_ANIMATION_TICKS, WIN_FLAG_STAGGER_GROUP_SIZE, WIN_FLAG_STAGGER_TICKS,
 };
+use api::Rng;
+use api::glam::{UVec2, usizevec2, uvec2};
+use delayed_tween::DelayedTween;
 
 use crate::{
     difficulty::Difficulty,
-    game::TILE_SIZE,
-    sprites::Sprites,
     tile::{Tile, TileKind},
 };
 
@@ -15,6 +23,7 @@ pub struct Board {
     size: UVec2,
     difficulty: Difficulty,
     tiles: Vec<Tile>,
+    animations: Vec<TileAnimation>,
     generated: bool,
 }
 
@@ -31,6 +40,7 @@ impl Board {
             size,
             difficulty,
             tiles: vec![Tile::default(); size.x as usize * size.y as usize],
+            animations: vec![TileAnimation::default(); size.x as usize * size.y as usize],
             generated: false,
         }
     }
@@ -52,10 +62,14 @@ impl Board {
     }
 
     pub fn uncover(&mut self, start: UVec2) -> UncoverResult {
+        self.uncover_after(start, 0)
+    }
+
+    fn uncover_after(&mut self, start: UVec2, delay_ticks: usize) -> UncoverResult {
         let start_index = Self::coord_to_index(start, self.size.x as usize);
         let start_tile = self.tiles[start_index];
         if start_tile.uncovered {
-            return self.chord(start);
+            return self.chord(start, delay_ticks);
         }
         if start_tile.flagged {
             return UncoverResult::Safe;
@@ -68,12 +82,17 @@ impl Board {
 
         if self.tiles[start_index].kind == TileKind::Bomb {
             self.tiles[start_index].uncovered = true;
+            self.animations[start_index].reveal =
+                Some(DelayedTween::new(delay_ticks, REVEAL_ANIMATION_TICKS));
             return UncoverResult::HitBomb;
         }
 
         self.tiles[start_index].uncovered = true;
-        let mut pending = vec![start];
-        while let Some(pos) = pending.pop() {
+        self.animations[start_index].reveal =
+            Some(DelayedTween::new(delay_ticks, REVEAL_ANIMATION_TICKS));
+        let mut pending = VecDeque::from([start]);
+        let mut reveal_order = 0usize;
+        while let Some(pos) = pending.pop_front() {
             if self.neighbors(pos) != 0 {
                 continue;
             }
@@ -83,7 +102,14 @@ impl Board {
                 let tile = &mut self.tiles[index];
                 if !tile.uncovered && !tile.flagged && tile.kind != TileKind::Bomb {
                     tile.uncovered = true;
-                    pending.push(neighbor);
+                    let stagger =
+                        REVEAL_STAGGER_TICKS * (1 + reveal_order / REVEAL_STAGGER_GROUP_SIZE);
+                    self.animations[index].reveal = Some(DelayedTween::new(
+                        delay_ticks + stagger,
+                        REVEAL_ANIMATION_TICKS,
+                    ));
+                    reveal_order += 1;
+                    pending.push_back(neighbor);
                 }
             });
         }
@@ -91,7 +117,7 @@ impl Board {
         UncoverResult::Safe
     }
 
-    fn chord(&mut self, pos: UVec2) -> UncoverResult {
+    fn chord(&mut self, pos: UVec2, delay_ticks: usize) -> UncoverResult {
         let tile = self.tile(pos);
         if !tile.uncovered || tile.kind != TileKind::Clear {
             return UncoverResult::Safe;
@@ -111,11 +137,15 @@ impl Board {
         }
 
         let mut result = UncoverResult::Safe;
+        let mut chord_delay = 0;
         for neighbor in adjacent_tiles {
             let tile = self.tile(neighbor);
-            if !tile.uncovered && !tile.flagged && self.uncover(neighbor) == UncoverResult::HitBomb
-            {
-                result = UncoverResult::HitBomb;
+            if !tile.uncovered && !tile.flagged {
+                if self.uncover_after(neighbor, delay_ticks + chord_delay) == UncoverResult::HitBomb
+                {
+                    result = UncoverResult::HitBomb;
+                }
+                chord_delay += CHORD_STAGGER_TICKS;
             }
         }
         result
@@ -126,6 +156,7 @@ impl Board {
         let tile = &mut self.tiles[index];
         if !tile.uncovered {
             tile.flagged = !tile.flagged;
+            self.animations[index].flag = None;
         }
     }
 
@@ -138,17 +169,42 @@ impl Board {
     }
 
     pub fn flag_bombs(&mut self) {
-        for tile in &mut self.tiles {
-            if tile.kind == TileKind::Bomb {
+        let mut order = 0usize;
+        for (index, tile) in self.tiles.iter_mut().enumerate() {
+            if tile.kind == TileKind::Bomb && !tile.flagged {
                 tile.flagged = true;
+                self.animations[index].flag = Some(FlagAnimation {
+                    tween: DelayedTween::new(
+                        WIN_FLAG_STAGGER_TICKS * (order / WIN_FLAG_STAGGER_GROUP_SIZE),
+                        WIN_FLAG_ANIMATION_TICKS,
+                    ),
+                });
+                order += 1;
             }
         }
     }
 
     pub fn reveal_bombs(&mut self) {
-        for tile in &mut self.tiles {
-            if tile.kind == TileKind::Bomb {
+        let mut order = 0usize;
+        for (index, tile) in self.tiles.iter_mut().enumerate() {
+            if tile.kind == TileKind::Bomb && !tile.uncovered {
                 tile.uncovered = true;
+                self.animations[index].reveal = Some(DelayedTween::new(
+                    BOMB_REVEAL_STAGGER_TICKS * (order / BOMB_REVEAL_STAGGER_GROUP_SIZE),
+                    REVEAL_ANIMATION_TICKS,
+                ));
+                order += 1;
+            }
+        }
+    }
+
+    pub fn tick(&mut self) {
+        for animation in &mut self.animations {
+            if let Some(reveal) = &mut animation.reveal {
+                reveal.tick();
+            }
+            if let Some(flag) = &mut animation.flag {
+                flag.tween.tick();
             }
         }
     }
@@ -216,86 +272,5 @@ impl Board {
 
     fn index_to_coord(index: usize, stride: usize) -> UVec2 {
         usizevec2(index % stride, index / stride).as_uvec2()
-    }
-
-    pub fn draw(&self, camera: &api::Camera2D, world: &mut api::WorldFrame, sprites: &Sprites) {
-        let (x_range, y_range) = self.visible_tile_ranges(camera);
-        for y in y_range {
-            for x in x_range.clone() {
-                self.draw_tile(camera, world, uvec2(x, y), sprites);
-            }
-        }
-    }
-
-    fn visible_tile_ranges(
-        &self,
-        camera: &api::Camera2D,
-    ) -> (std::ops::RangeInclusive<u32>, std::ops::RangeInclusive<u32>) {
-        let top_left = camera.screen_to_world(ivec2(0, 0));
-        let bottom_right = camera.screen_to_world(ivec2(
-            camera.resolution().width as i32,
-            camera.resolution().height as i32,
-        ));
-        let size = self.size();
-        let x_range = Self::visible_tile_range(top_left.x, bottom_right.x, size.x);
-        let y_range = Self::visible_tile_range(top_left.y, bottom_right.y, size.y);
-        (x_range, y_range)
-    }
-
-    fn visible_tile_range(start: f32, end: f32, count: u32) -> std::ops::RangeInclusive<u32> {
-        let max = count as i64 - 1;
-        let first = ((start / TILE_SIZE as f32).floor() as i64 - 1).clamp(0, max) as u32;
-        let last = ((end / TILE_SIZE as f32).floor() as i64 + 2).clamp(0, max) as u32;
-        first..=last
-    }
-
-    fn draw_tile(
-        &self,
-        camera: &api::Camera2D,
-        world: &mut api::WorldFrame<'_, '_>,
-        pos: UVec2,
-        sprites: &Sprites,
-    ) {
-        let tile = self.tile(pos);
-        let draw_pos = (pos * TILE_SIZE).as_ivec2();
-        // fixes black bars that otherwise appear between sprites when zoomed out
-        let screen_min = camera.world_to_screen(draw_pos.as_vec2());
-        let screen_max = camera.world_to_screen((draw_pos + TILE_SIZE as i32).as_vec2());
-        let screen_size = (screen_max - screen_min).as_vec2();
-        let scale = screen_size / (TILE_SIZE as f32 * camera.zoom());
-        let options = SpriteOptions::default().scale(scale);
-
-        if !tile.uncovered {
-            world.sprite(&sprites.covered, draw_pos, options);
-            if tile.flagged {
-                world.sprite(&sprites.flag, draw_pos, options);
-            }
-            return;
-        }
-
-        world.sprite(&sprites.uncovered, draw_pos, options);
-        match tile.kind {
-            TileKind::Clear => {
-                let neighbors = self.neighbors(pos);
-                if neighbors != 0 {
-                    let text_pos = draw_pos + TILE_SIZE as i32 / 2;
-                    let color = Self::neighbor_count_color(neighbors);
-                    world.text_color(neighbors.to_string(), text_pos, Anchor::Center, color);
-                }
-            }
-            TileKind::Bomb => {
-                world.sprite(&sprites.bomb, draw_pos, options);
-            }
-        }
-    }
-
-    fn neighbor_count_color(neighbors: usize) -> Color {
-        match neighbors {
-            1 => Color::Indigo,
-            2 => Color::ForestGreen,
-            3 => Color::TallPoppy,
-            4 => Color::PurpleHeart,
-            _ => Color::Bunker,
-        }
     }
 }

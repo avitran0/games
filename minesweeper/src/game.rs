@@ -56,6 +56,7 @@ impl api::Screen<State> for GameScreen {
         }
 
         ctx.state.camera.set_resolution(ctx.resolution);
+        self.board.tick();
         self.tick_cursor_and_camera(ctx);
         if let Some(outcome) = self.update_gameplay(ctx) {
             if let Err(action) = self.finish(outcome, ctx.state, ctx.resolution) {
@@ -136,7 +137,10 @@ impl GameScreen {
     ) -> Result<(), api::ScreenAction<State>> {
         match outcome {
             Outcome::Win => self.board.flag_bombs(),
-            Outcome::GameOver => self.board.reveal_bombs(),
+            Outcome::GameOver => {
+                self.board.reveal_bombs();
+                state.camera.shake();
+            }
         }
 
         if outcome == Outcome::Win {

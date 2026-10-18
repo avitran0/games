@@ -6,6 +6,7 @@ use std::{
 pub trait Tweenable: Copy + Add<Output = Self> + Mul<f32, Output = Self> {}
 impl<T: Copy + Add<Output = T> + Mul<f32, Output = T>> Tweenable for T {}
 
+#[derive(Clone)]
 pub struct Tween<T: Tweenable> {
     start: T,
     end: T,
@@ -71,6 +72,7 @@ impl<T: Tweenable> Tween<T> {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum Interpolation {
     // todo: add easing functions from https://easings.net.
     Linear,
