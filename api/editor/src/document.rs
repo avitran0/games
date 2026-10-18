@@ -1,11 +1,13 @@
 use formats::{
-    AnimatedSpriteDocument, FontDocument, SpriteDocument, TilemapDocument, TilesetDocument,
+    AnimatedSpriteDocument, FontDocument, SpriteDocument, SpriteSheetDocument, TilemapDocument,
+    TilesetDocument,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AssetKind {
     Sprite,
     AnimatedSprite,
+    SpriteSheet,
     Font,
     Tileset,
     Tilemap,
@@ -19,9 +21,10 @@ struct AssetInfo {
 }
 
 impl AssetKind {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::Sprite,
         Self::AnimatedSprite,
+        Self::SpriteSheet,
         Self::Font,
         Self::Tileset,
         Self::Tilemap,
@@ -40,6 +43,12 @@ impl AssetKind {
                 extension: "pxa",
                 filename: "animation.pxa",
                 magic: *b"ANIM",
+            },
+            Self::SpriteSheet => AssetInfo {
+                title: "Sprite sheet",
+                extension: "pxh",
+                filename: "sprites.pxh",
+                magic: *b"SPRS",
             },
             Self::Font => AssetInfo {
                 title: "Bitmap font",
@@ -85,6 +94,7 @@ impl AssetKind {
 pub enum AssetDocument {
     Sprite(SpriteDocument),
     AnimatedSprite(AnimatedSpriteDocument),
+    SpriteSheet(SpriteSheetDocument),
     Font(FontDocument),
     Tileset(TilesetDocument),
     Tilemap {
@@ -98,6 +108,7 @@ impl AssetDocument {
         match self {
             Self::Sprite(_) => AssetKind::Sprite,
             Self::AnimatedSprite(_) => AssetKind::AnimatedSprite,
+            Self::SpriteSheet(_) => AssetKind::SpriteSheet,
             Self::Font(_) => AssetKind::Font,
             Self::Tileset(_) => AssetKind::Tileset,
             Self::Tilemap { .. } => AssetKind::Tilemap,
@@ -108,6 +119,7 @@ impl AssetDocument {
         match self {
             Self::Sprite(document) => document.encode().map_err(|error| error.to_string()),
             Self::AnimatedSprite(document) => document.encode().map_err(|error| error.to_string()),
+            Self::SpriteSheet(document) => document.encode().map_err(|error| error.to_string()),
             Self::Font(document) => document.encode().map_err(|error| error.to_string()),
             Self::Tileset(document) => document.encode().map_err(|error| error.to_string()),
             Self::Tilemap { map, .. } => map.encode().map_err(|error| error.to_string()),

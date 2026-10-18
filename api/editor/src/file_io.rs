@@ -1,6 +1,7 @@
 use crate::document::{AssetDocument, AssetKind};
 use formats::{
-    AnimatedSpriteDocument, FontDocument, SpriteDocument, TilemapDocument, TilesetDocument,
+    AnimatedSpriteDocument, FontDocument, SpriteDocument, SpriteSheetDocument, TilemapDocument,
+    TilesetDocument,
 };
 use rfd::FileDialog;
 use std::path::{Path, PathBuf};
@@ -59,6 +60,12 @@ pub fn load(path: &Path) -> Result<Option<LoadedAsset>, String> {
                 AnimatedSpriteDocument::decode(&bytes).map_err(|error| error.to_string())?;
             (AssetDocument::AnimatedSprite(document), None)
         }
+        AssetKind::SpriteSheet => (
+            AssetDocument::SpriteSheet(
+                SpriteSheetDocument::decode(&bytes).map_err(|error| error.to_string())?,
+            ),
+            None,
+        ),
         AssetKind::Font => (
             AssetDocument::Font(FontDocument::decode(&bytes).map_err(|error| error.to_string())?),
             None,

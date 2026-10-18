@@ -298,9 +298,10 @@ impl SpriteFrame {
 }
 
 pub(super) fn validate_sprite_size(size: UVec2) -> Result<(), InvalidSizeError> {
-    if [size.x, size.y]
-        .into_iter()
-        .all(|side| (8..=96).contains(&side) && side.is_multiple_of(8))
+    if (8..=crate::MAX_SPRITE_WIDTH).contains(&size.x)
+        && (8..=crate::MAX_SPRITE_HEIGHT).contains(&size.y)
+        && size.x.is_multiple_of(8)
+        && size.y.is_multiple_of(8)
     {
         Ok(())
     } else {

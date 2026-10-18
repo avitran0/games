@@ -51,6 +51,59 @@ pub enum SpriteEncodeError {
 }
 
 #[derive(Debug, Error)]
+pub enum SpriteSheetDecodeError {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error("Invalid magic for sprite sheet: {0:X?}")]
+    InvalidMagic([u8; 4]),
+    #[error("Invalid version: expected 1, got {0}")]
+    InvalidVersion(u16),
+    #[error("Invalid sprite count: {0}; expected 1..=65535")]
+    InvalidSpriteCount(usize),
+    #[error("Sprite {sprite} has an empty name")]
+    EmptyName { sprite: usize },
+    #[error("Duplicate sprite name: '{0}'")]
+    DuplicateName(String),
+    #[error("Sprite {sprite} has an invalid size: {error}")]
+    InvalidSpriteSize {
+        sprite: usize,
+        error: InvalidSizeError,
+    },
+    #[error("Sprite {sprite} has an invalid frame: {error}")]
+    InvalidSpriteFrame {
+        sprite: usize,
+        error: InvalidFrameError,
+    },
+    #[error("Invalid sprite name: {0}")]
+    InvalidName(#[from] FromUtf8Error),
+}
+
+#[cfg(feature = "edit")]
+#[derive(Debug, Error)]
+pub enum SpriteSheetEncodeError {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error("Invalid sprite count: {0}; expected 1..=65535")]
+    InvalidSpriteCount(usize),
+    #[error("Sprite {sprite} has an empty name")]
+    EmptyName { sprite: usize },
+    #[error("Sprite {sprite} name is too long: {length} bytes")]
+    NameTooLong { sprite: usize, length: usize },
+    #[error("Duplicate sprite name: '{0}'")]
+    DuplicateName(String),
+    #[error("Sprite {sprite} has an invalid size: {error}")]
+    InvalidSpriteSize {
+        sprite: usize,
+        error: InvalidSizeError,
+    },
+    #[error("Sprite {sprite} has an invalid frame: {error}")]
+    InvalidSpriteFrame {
+        sprite: usize,
+        error: InvalidFrameError,
+    },
+}
+
+#[derive(Debug, Error)]
 pub enum AnimatedSpriteDecodeError {
     #[error(transparent)]
     Io(#[from] std::io::Error),

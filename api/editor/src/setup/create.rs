@@ -1,7 +1,8 @@
 use super::AssetSpec;
 use crate::{document::AssetDocument, file_io};
 use formats::{
-    AnimatedSpriteDocument, FontDocument, SpriteDocument, TilemapDocument, TilesetDocument,
+    AnimatedSpriteDocument, FontDocument, SpriteDocument, SpriteSheetDocument, TilemapDocument,
+    TilesetDocument,
 };
 pub fn create(spec: AssetSpec) -> Result<Option<file_io::LoadedAsset>, String> {
     let (document, linked_tileset_path) = match spec {
@@ -12,6 +13,12 @@ pub fn create(spec: AssetSpec) -> Result<Option<file_io::LoadedAsset>, String> {
         AssetSpec::AnimatedSprite(size) => (
             AssetDocument::AnimatedSprite(
                 AnimatedSpriteDocument::new(size).map_err(|error| error.to_string())?,
+            ),
+            None,
+        ),
+        AssetSpec::SpriteSheet(size) => (
+            AssetDocument::SpriteSheet(
+                SpriteSheetDocument::new(size).map_err(|error| error.to_string())?,
             ),
             None,
         ),

@@ -60,7 +60,7 @@ impl FontDocument {
             if !codepoints.insert(glyph.codepoint) {
                 return Err(FontEncodeError::DuplicateCodepoint(glyph.codepoint));
             }
-            if glyph.width == 0 {
+            if !(1..=crate::MAX_FONT_GLYPH_WIDTH).contains(&glyph.width) {
                 return Err(FontEncodeError::InvalidGlyphWidth {
                     codepoint: glyph.codepoint,
                     width: glyph.width,
@@ -118,7 +118,7 @@ impl FontDocument {
             let codepoint = decode_codepoint(reader.read_u32()?)?;
             let advance = reader.read_u16()?;
             let width = reader.read_u16()?;
-            if width == 0 {
+            if !(1..=crate::MAX_FONT_GLYPH_WIDTH).contains(&width) {
                 return Err(FontDecodeError::InvalidGlyphWidth { codepoint, width });
             }
             let bitmap_len = usize::from(width) * usize::from(height);
@@ -138,7 +138,7 @@ impl FontDocument {
 }
 
 fn validate_font_height(height: u16) -> Result<(), u16> {
-    if (1..=64).contains(&height) {
+    if (1..=crate::MAX_FONT_HEIGHT).contains(&height) {
         Ok(())
     } else {
         Err(height)

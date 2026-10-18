@@ -4,6 +4,7 @@ mod dimensions;
 mod font;
 mod home;
 mod sprite;
+mod sprite_sheet;
 mod tilemap;
 mod tileset;
 
@@ -17,6 +18,7 @@ use std::path::PathBuf;
 pub enum AssetSpec {
     Sprite(UVec2),
     AnimatedSprite(UVec2),
+    SpriteSheet(UVec2),
     Font(u16),
     Tileset(UVec2),
     Tilemap {
@@ -48,6 +50,7 @@ macro_rules! impl_create_page {
 }
 
 impl_create_page!(sprite::Screen);
+impl_create_page!(sprite_sheet::Screen);
 impl_create_page!(animated_sprite::Screen);
 impl_create_page!(font::Screen);
 impl_create_page!(tileset::Screen);
@@ -122,6 +125,7 @@ impl SetupScreen {
         let page: Box<dyn CreatePage> = match kind {
             AssetKind::Sprite => Box::new(sprite::Screen::default()),
             AssetKind::AnimatedSprite => Box::new(animated_sprite::Screen::default()),
+            AssetKind::SpriteSheet => Box::new(sprite_sheet::Screen::default()),
             AssetKind::Font => Box::new(font::Screen::default()),
             AssetKind::Tileset => Box::new(tileset::Screen::default()),
             AssetKind::Tilemap => Box::new(tilemap::Screen::default()),

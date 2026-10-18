@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 /// a static sprite handle has no animation controls.
 #[derive(Clone, Copy)]
 pub struct Sprite {
@@ -7,6 +9,36 @@ pub struct Sprite {
 impl Sprite {
     pub(crate) fn new(id: SpriteId) -> Self {
         Self { id }
+    }
+}
+
+/// Named static sprites loaded together from a `.pxh` sprite sheet.
+#[derive(Clone)]
+pub struct SpriteSheet {
+    sprites: HashMap<String, Sprite>,
+}
+
+impl SpriteSheet {
+    pub(crate) fn new(sprites: HashMap<String, Sprite>) -> Self {
+        Self { sprites }
+    }
+
+    /// Look up a static sprite by its exact name.
+    pub fn get(&self, name: &str) -> Option<Sprite> {
+        self.sprites.get(name).copied()
+    }
+
+    /// Iterate over the names in this sheet.
+    pub fn names(&self) -> impl Iterator<Item = &str> {
+        self.sprites.keys().map(String::as_str)
+    }
+
+    pub fn len(&self) -> usize {
+        self.sprites.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.sprites.is_empty()
     }
 }
 

@@ -13,10 +13,10 @@ pub fn pixel_size(ui: &mut Ui, width: &mut u32, height: &mut u32) {
 pub fn cell_size(ui: &mut Ui, width: &mut u32, height: &mut u32) {
     ui.horizontal(|ui| {
         ui.label("Width in cells");
-        ui.add(egui::DragValue::new(width).range(1..=256));
+        ui.add(egui::DragValue::new(width).range(1..=formats::MAX_TILEMAP_WIDTH));
         ui.label("x");
         ui.label("Height in cells");
-        ui.add(egui::DragValue::new(height).range(1..=256));
+        ui.add(egui::DragValue::new(height).range(1..=formats::MAX_TILEMAP_HEIGHT));
     });
 }
 

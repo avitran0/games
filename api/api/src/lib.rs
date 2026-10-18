@@ -21,7 +21,7 @@ pub use formats::Tileset;
 pub use formats::color::Color;
 pub use glam;
 pub use glyphs::*;
-pub use handle::{AnimatedSprite, Font, Sprite, Tilemap};
+pub use handle::{AnimatedSprite, Font, Sprite, SpriteSheet, Tilemap};
 pub use input::{Button, Input};
 pub use random::Rng;
 pub use render::{

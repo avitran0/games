@@ -4,9 +4,9 @@ use utils::io::{Endian, EndianReader, ReadBytes};
 use utils::io::{EndianWriter, WriteBytes};
 use uuid::Uuid;
 
-use super::error::TilemapDecodeError;
 #[cfg(feature = "edit")]
 use super::error::TilemapEncodeError;
+use super::{MAX_TILEMAP_HEIGHT, MAX_TILEMAP_WIDTH, error::TilemapDecodeError};
 
 /// the map stores a uuid to refer to its separate tileset.
 #[derive(Clone, PartialEq, Eq)]
@@ -138,5 +138,5 @@ fn validate_map_size_for_decode(size: UVec2) -> Result<(), TilemapDecodeError> {
 }
 
 fn map_size_is_valid(size: UVec2) -> bool {
-    (1..=256).contains(&size.x) && (1..=256).contains(&size.y)
+    (1..=MAX_TILEMAP_WIDTH).contains(&size.x) && (1..=MAX_TILEMAP_HEIGHT).contains(&size.y)
 }

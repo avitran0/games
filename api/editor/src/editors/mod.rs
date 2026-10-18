@@ -2,6 +2,7 @@ mod animated_sprite;
 mod font;
 mod session;
 mod sprite;
+mod sprite_sheet;
 mod tilemap;
 mod tileset;
 
@@ -155,6 +156,19 @@ impl_editor!(
 );
 
 impl_editor!(
+    sprite_sheet::Screen,
+    fn status_detail(&self) -> Option<String> {
+        Some(self.info())
+    },
+    fn has_toolbar(&self) -> bool {
+        true
+    },
+    fn toolbar(&mut self, ui: &mut Ui) -> bool {
+        sprite_sheet::Screen::toolbar(self, ui)
+    }
+);
+
+impl_editor!(
     animated_sprite::Screen,
     fn has_toolbar(&self) -> bool {
         true
@@ -233,6 +247,9 @@ impl EditorScreen {
             AssetDocument::Sprite(document) => Box::new(sprite::Screen::new(document, file)),
             AssetDocument::AnimatedSprite(document) => {
                 Box::new(animated_sprite::Screen::new(document, file))
+            }
+            AssetDocument::SpriteSheet(document) => {
+                Box::new(sprite_sheet::Screen::new(document, file))
             }
             AssetDocument::Font(document) => Box::new(font::Screen::new(document, file)),
             AssetDocument::Tileset(document) => Box::new(tileset::Screen::new(document, file)),

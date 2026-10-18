@@ -1,6 +1,8 @@
 use std::{collections::HashMap, hash::Hash, rc::Rc};
 
-use formats::{AnimatedSpriteDocument, SpriteDocument, TilemapDocument, TilesetDocument};
+use formats::{
+    AnimatedSpriteDocument, SpriteDocument, SpriteSheetDocument, TilemapDocument, TilesetDocument,
+};
 use glam::{U16Vec2, UVec2};
 use thiserror::Error;
 use utils::debug;
@@ -9,7 +11,7 @@ use uuid::Uuid;
 use crate::{
     AnimatedSprite, Font, ScreenAction, Sprite, Tileset,
     formats::tilemap::TilemapData,
-    handle::{SpriteId, Tilemap as TilemapHandle, TilemapId},
+    handle::{SpriteId, SpriteSheet, Tilemap as TilemapHandle, TilemapId},
     render::{
         font::{GlFont, TextMetrics},
         sprite::GlSprite,
@@ -17,7 +19,7 @@ use crate::{
     screen::error::ErrorScreen,
 };
 
-pub const MAX_TILEMAP_SIDE: u32 = 256;
+pub const MAX_TILEMAP_SIDE: u32 = formats::MAX_TILEMAP_WIDTH;
 
 struct AssetRegistry<Id: Hash + Eq + Copy, Asset> {
     registry: HashMap<Id, Asset>,
@@ -63,6 +65,7 @@ pub struct Assets {
     sprites: AssetRegistry<SpriteId, GlSprite>,
     fonts: AssetRegistry<Font, GlFont>,
     tilemaps: AssetRegistry<TilemapId, TilemapData>,
+    sprite_sheets: HashMap<blake3::Hash, SpriteSheet>,
     tileset_sprites: HashMap<Uuid, SpriteId>,
     default_font: Font,
 }
@@ -80,6 +83,7 @@ impl Assets {
             sprites: AssetRegistry::new(),
             fonts,
             tilemaps: AssetRegistry::new(),
+            sprite_sheets: HashMap::new(),
             tileset_sprites: HashMap::new(),
             default_font,
         })
@@ -92,6 +96,38 @@ impl Assets {
         self.register_sprite(data, |gl| GlSprite::new_static(gl, document))
             .map(Sprite::new)
             .map_err(show_asset_error)
+    }
+
+    /// Load a collection of named static sprites from a `.pxh` file.
+    pub fn load_sprite_sheet<State>(
+        &mut self,
+        data: &[u8],
+    ) -> Result<SpriteSheet, ScreenAction<State>> {
+        let hash = blake3::hash(data);
+        if let Some(sheet) = self.sprite_sheets.get(&hash) {
+            return Ok(sheet.clone());
+        }
+        let document = SpriteSheetDocument::decode(data)
+            .map_err(|error| show_asset_error(AssetLoadError::Decode(error.to_string())))?;
+        let first_id = self.sprites.len();
+        if first_id + document.sprites.len() > u16::MAX as usize + 1 {
+            return Err(show_asset_error(AssetLoadError::TooMany("sprites")));
+        }
+        let mut built = Vec::with_capacity(document.sprites.len());
+        for named in document.sprites {
+            let sprite = GlSprite::new_static(self.gl.clone(), named.sprite)
+                .map_err(|error| show_asset_error(AssetLoadError::Build(error)))?;
+            built.push((named.name, sprite));
+        }
+        let mut sprites = HashMap::with_capacity(built.len());
+        for (offset, (name, sprite)) in built.into_iter().enumerate() {
+            let id = SpriteId((first_id + offset) as u16);
+            self.sprites.insert_uncached(id, sprite);
+            sprites.insert(name, Sprite::new(id));
+        }
+        let sheet = SpriteSheet::new(sprites);
+        self.sprite_sheets.insert(hash, sheet.clone());
+        Ok(sheet)
     }
 
     /// each returned handle has separate playback state.
@@ -278,7 +314,9 @@ fn show_asset_error<State>(error: AssetLoadError) -> ScreenAction<State> {
 }
 
 fn validate_tilemap_size(size: UVec2) -> Result<(), TilemapCreateError> {
-    if (1..=MAX_TILEMAP_SIDE).contains(&size.x) && (1..=MAX_TILEMAP_SIDE).contains(&size.y) {
+    if (1..=formats::MAX_TILEMAP_WIDTH).contains(&size.x)
+        && (1..=formats::MAX_TILEMAP_HEIGHT).contains(&size.y)
+    {
         Ok(())
     } else {
         Err(TilemapCreateError::InvalidSize {
