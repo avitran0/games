@@ -1,7 +1,7 @@
 use glam::{IVec2, UVec2, Vec2, vec2};
 
 use crate::{
-    AnimatedSprite, Camera2D, Color, Font, Sprite, Tilemap,
+    AnimatedSprite, Camera2D, Color, Font, Resolution, Sprite, Tilemap,
     render::draw_cmd::{AnimatedSpriteCmd, DrawCmd, ShapeCmd, SpriteCmd, TextCmd, TilemapCmd},
 };
 
@@ -14,6 +14,7 @@ pub use world::WorldFrame;
 #[derive(Default)]
 pub struct Frame {
     tick: usize,
+    resolution: Resolution,
     draw_cmds: Vec<DrawCmd>,
 }
 
@@ -30,12 +31,28 @@ impl Frame {
         self.tick = tick;
     }
 
+    pub(crate) fn set_resolution(&mut self, resolution: crate::Resolution) {
+        self.resolution = resolution;
+    }
+
     pub(crate) fn clear(&mut self) {
         self.draw_cmds.clear();
     }
 
     pub fn tick(&self) -> usize {
         self.tick
+    }
+
+    pub fn resolution(&self) -> Resolution {
+        self.resolution
+    }
+
+    pub fn width(&self) -> u32 {
+        self.resolution.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.resolution.height
     }
 
     pub fn world<'frame, 'camera>(

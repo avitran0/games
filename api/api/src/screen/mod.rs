@@ -1,4 +1,4 @@
-use crate::{Assets, Frame, Input};
+use crate::{Assets, Frame, Input, Resolution};
 
 pub(crate) mod error;
 
@@ -7,6 +7,17 @@ pub struct ScreenContext<'a, State> {
     pub assets: &'a mut Assets,
     pub state: &'a mut State,
     pub tick: usize,
+    pub resolution: Resolution,
+}
+
+impl<'a, State> ScreenContext<'a, State> {
+    pub fn width(&self) -> u32 {
+        self.resolution.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.resolution.height
+    }
 }
 
 pub trait Screen<State>: 'static {

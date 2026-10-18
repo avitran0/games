@@ -1,8 +1,8 @@
 use api::{
-    Color, HEIGHT, Screen, WIDTH,
+    Color, Screen,
     glam::{ivec2, uvec2},
 };
-use ui::{Alignment, Rect, Ui};
+use ui::{Alignment, Ui, VerticalAlignment};
 
 use crate::{main_menu::MainMenu, state::State};
 
@@ -15,12 +15,7 @@ impl PauseScreen {
     pub fn new() -> Self {
         let mut ui = Ui::new();
         ui.set_alignment(Alignment::Center);
-        ui.set_bounds(Rect::new(
-            WIDTH as i32 / 4,
-            HEIGHT as i32 / 4,
-            WIDTH / 2,
-            HEIGHT / 2,
-        ));
+        ui.set_vertical_alignment(VerticalAlignment::Center);
 
         Self {
             ui,
@@ -41,7 +36,12 @@ impl Screen<State> for PauseScreen {
     }
 
     fn draw(&mut self, _state: &State, frame: &mut api::Frame) {
-        frame.rectangle_with_opacity(ivec2(0, 0), uvec2(WIDTH, HEIGHT), Color::Black, 0.1);
+        frame.rectangle_with_opacity(
+            ivec2(0, 0),
+            uvec2(frame.width(), frame.height()),
+            Color::Black,
+            0.1,
+        );
         self.ui.paint(frame);
     }
 

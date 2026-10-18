@@ -1,7 +1,7 @@
 use sdl3::{event::Event, gamepad::Button as GamepadButton, keyboard::Scancode};
 
 use crate::{
-    Assets, Frame, Input,
+    Assets, Frame, Input, Resolution,
     input::Button,
     platform::{Platform, PlatformError},
     render::Renderer,
@@ -24,7 +24,10 @@ impl<State: 'static> Context<State> {
     pub(crate) fn load(title: &str, state: State) -> Result<Self, PlatformError> {
         let platform = Platform::load(title)?;
         let assets = Assets::new(platform.gl_rc()).map_err(PlatformError::Assets)?;
-        let renderer = Renderer::new(platform.gl_rc()).map_err(PlatformError::OpenGL)?;
+        let window_size = platform.window_size();
+        let resolution = Resolution::for_window_size(window_size.0, window_size.1);
+        let renderer =
+            Renderer::new(platform.gl_rc(), resolution).map_err(PlatformError::OpenGL)?;
 
         Ok(Self {
             frame: Frame::default(),
@@ -99,6 +102,7 @@ impl<State: 'static> Context<State> {
             assets: &mut self.assets,
             state: &mut self.state,
             tick: self.tick,
+            resolution: self.renderer.resolution(),
         };
         match setup(&mut screen_ctx) {
             Ok(screen) => self.push_screen(screen),
@@ -108,6 +112,12 @@ impl<State: 'static> Context<State> {
 
     pub(crate) fn begin_frame(&mut self) {
         self.poll_events();
+        let (window_width, window_height) = self.platform.window_size();
+        let resolution = Resolution::for_window_size(window_width, window_height);
+        if let Err(err) = self.renderer.set_resolution(resolution) {
+            crate::error!("failed to resize framebuffer: {err}");
+        }
+        self.frame.set_resolution(self.renderer.resolution());
         self.frame.clear();
         self.tick += 1;
     }
@@ -134,6 +144,7 @@ impl<State: 'static> Context<State> {
             assets: &mut self.assets,
             state: &mut self.state,
             tick: self.tick,
+            resolution: self.renderer.resolution(),
         };
         let action = screen.update(&mut screen_ctx);
         self.handle_action(action);
@@ -168,6 +179,7 @@ impl<State: 'static> Context<State> {
         };
 
         self.frame.set_tick(self.tick);
+        self.frame.set_resolution(self.renderer.resolution());
         for screen in &mut self.screens[start..] {
             screen.draw(&self.state, &mut self.frame);
         }

@@ -1,4 +1,4 @@
-use api::{Anchor, Button, HEIGHT, WIDTH, glam::uvec2};
+use api::{Anchor, Button, glam::uvec2};
 
 use crate::{game::GameScreen, state::State};
 
@@ -22,7 +22,7 @@ impl api::Screen<State> for MainMenu {
     fn draw(&mut self, _state: &State, frame: &mut api::Frame) {
         frame.text(
             "Pong",
-            uvec2(WIDTH / 2, HEIGHT / 2).as_ivec2(),
+            uvec2(frame.width() / 2, frame.height() / 2).as_ivec2(),
             Anchor::Center,
         );
     }

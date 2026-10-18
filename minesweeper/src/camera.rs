@@ -1,4 +1,4 @@
-use api::{Camera2D, Interpolation, Tween, glam::Vec2};
+use api::{Camera2D, Interpolation, Resolution, Tween, glam::Vec2};
 
 pub struct CameraRig {
     camera: Camera2D,
@@ -39,6 +39,10 @@ impl CameraRig {
         &self.camera
     }
 
+    pub fn set_resolution(&mut self, resolution: Resolution) {
+        self.camera.set_resolution(resolution);
+    }
+
     pub fn move_to(&mut self, position: Vec2) {
         self.position_tween = Tween::new(
             self.position_tween.current(),
@@ -48,9 +52,10 @@ impl CameraRig {
         );
     }
 
-    pub fn frame_board(&mut self, board_size: Vec2) {
+    pub fn frame_board(&mut self, resolution: Resolution, board_size: Vec2) {
         let center = board_size * 0.5;
-        let fit_zoom = (api::WIDTH as f32 / board_size.x).min(api::HEIGHT as f32 / board_size.y);
+        let fit_zoom =
+            (resolution.width as f32 / board_size.x).min(resolution.height as f32 / board_size.y);
         let target_zoom = fit_zoom.max(Self::MIN_ZOOM);
 
         self.position_tween = Tween::new(

@@ -3,16 +3,17 @@ use std::rc::Rc;
 use glam::ivec2;
 use glow::HasContext;
 
-use crate::{HEIGHT, WIDTH};
+use crate::Resolution;
 
 pub(crate) struct Framebuffer {
     gl: Rc<glow::Context>,
     fbo: glow::Framebuffer,
     texture: glow::Texture,
+    resolution: Resolution,
 }
 
 impl Framebuffer {
-    pub(crate) fn new(gl: Rc<glow::Context>) -> Result<Self, String> {
+    pub(crate) fn new(gl: Rc<glow::Context>, resolution: Resolution) -> Result<Self, String> {
         let texture = super::texture(&gl)?;
         let fbo = unsafe { gl.create_framebuffer()? };
 
@@ -21,8 +22,8 @@ impl Framebuffer {
                 glow::TEXTURE_2D,
                 0,
                 glow::RGBA8 as i32,
-                WIDTH as i32,
-                HEIGHT as i32,
+                resolution.width as i32,
+                resolution.height as i32,
                 0,
                 glow::RGBA,
                 glow::UNSIGNED_BYTE,
@@ -48,13 +49,23 @@ impl Framebuffer {
             gl.bind_framebuffer(glow::FRAMEBUFFER, None);
             gl.bind_texture(glow::TEXTURE_2D, None);
         }
-        Ok(Self { gl, fbo, texture })
+        Ok(Self {
+            gl,
+            fbo,
+            texture,
+            resolution,
+        })
     }
 
     pub(crate) fn bind(&self) {
         unsafe {
             self.gl.bind_framebuffer(glow::FRAMEBUFFER, Some(self.fbo));
-            self.gl.viewport(0, 0, WIDTH as i32, HEIGHT as i32);
+            self.gl.viewport(
+                0,
+                0,
+                self.resolution.width as i32,
+                self.resolution.height as i32,
+            );
         }
     }
 
@@ -74,11 +85,13 @@ impl Framebuffer {
     pub(crate) fn blit(&self, window_size: (u32, u32)) {
         let (width, height) = window_size;
 
-        let scale = (width as f32 / WIDTH as f32).min(height as f32 / HEIGHT as f32);
+        let logical_width = self.resolution.width as f32;
+        let logical_height = self.resolution.height as f32;
+        let scale = (width as f32 / logical_width).min(height as f32 / logical_height);
 
         let size = ivec2(
-            (WIDTH as f32 * scale).round() as i32,
-            (HEIGHT as f32 * scale).round() as i32,
+            (logical_width * scale).round() as i32,
+            (logical_height * scale).round() as i32,
         );
         let pos = ivec2((width as i32 - size.x) / 2, (height as i32 - size.y) / 2);
 
@@ -90,8 +103,8 @@ impl Framebuffer {
             self.gl.blit_framebuffer(
                 0,
                 0,
-                WIDTH as i32,
-                HEIGHT as i32,
+                self.resolution.width as i32,
+                self.resolution.height as i32,
                 pos.x,
                 pos.y,
                 pos.x + size.x,

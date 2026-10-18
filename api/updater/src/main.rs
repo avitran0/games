@@ -7,7 +7,7 @@ use api::{
     Button, Color, Frame, Screen, ScreenAction, ScreenContext,
     glam::{ivec2, uvec2},
 };
-use ui::{Alignment, Rect, Ui, VerticalAlignment};
+use ui::{Alignment, Ui, VerticalAlignment};
 
 #[derive(Default)]
 struct State;
@@ -29,7 +29,6 @@ impl UpdaterScreen {
         let mut ui = Ui::new();
         ui.set_alignment(Alignment::Center);
         ui.set_vertical_alignment(VerticalAlignment::Center);
-        ui.set_bounds(Rect::new(0, 8, api::WIDTH, api::HEIGHT - 16));
         let text_color = ui.style.text;
 
         Self {
@@ -131,7 +130,11 @@ impl Screen<State> for UpdaterScreen {
     }
 
     fn draw(&mut self, _state: &State, frame: &mut Frame) {
-        frame.rectangle(ivec2(0, 0), uvec2(api::WIDTH, api::HEIGHT), Color::Black);
+        frame.rectangle(
+            ivec2(0, 0),
+            uvec2(frame.width(), frame.height()),
+            Color::Black,
+        );
         self.ui.paint(frame);
     }
 }

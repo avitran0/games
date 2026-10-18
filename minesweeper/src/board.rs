@@ -232,7 +232,10 @@ impl Board {
         camera: &api::Camera2D,
     ) -> (std::ops::RangeInclusive<u32>, std::ops::RangeInclusive<u32>) {
         let top_left = camera.screen_to_world(ivec2(0, 0));
-        let bottom_right = camera.screen_to_world(ivec2(api::WIDTH as i32, api::HEIGHT as i32));
+        let bottom_right = camera.screen_to_world(ivec2(
+            camera.resolution().width as i32,
+            camera.resolution().height as i32,
+        ));
         let size = self.size();
         let x_range = Self::visible_tile_range(top_left.x, bottom_right.x, size.x);
         let y_range = Self::visible_tile_range(top_left.y, bottom_right.y, size.y);
@@ -242,22 +245,9 @@ impl Board {
     fn visible_tile_range(start: f32, end: f32, count: u32) -> std::ops::RangeInclusive<u32> {
         let max = count as i64 - 1;
         let first = ((start / TILE_SIZE as f32).floor() as i64 - 1).clamp(0, max) as u32;
-        let last = ((end / TILE_SIZE as f32).floor() as i64 + 1).clamp(0, max) as u32;
+        let last = ((end / TILE_SIZE as f32).floor() as i64 + 2).clamp(0, max) as u32;
         first..=last
     }
-
-    /*fn draw_cursor(&self, frame: &mut api::Frame) {
-        let cursor_screen_pos = ivec2(
-            (api::WIDTH as i32 - TILE_SIZE as i32) / 2,
-            (api::HEIGHT as i32 - TILE_SIZE as i32) / 2,
-        );
-        let opacity = (frame.tick() as f32 * 0.02).sin().abs() * 0.5 + 0.5;
-        frame.sprite(
-            &self.sprites.cursor,
-            cursor_screen_pos,
-            SpriteOptions::default().opacity(opacity),
-        );
-    }*/
 
     fn draw_tile(
         &self,

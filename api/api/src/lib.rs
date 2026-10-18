@@ -8,6 +8,7 @@ mod input;
 mod platform;
 mod random;
 mod render;
+mod resolution;
 mod save;
 mod screen;
 mod tween;
@@ -30,6 +31,7 @@ pub use render::{
         Anchor, Flip, Frame, ShapeOptions, SpriteOptions, TextOptions, TilemapOptions, WorldFrame,
     },
 };
+pub use resolution::Resolution;
 pub use save::{SaveName, load, save, save_name};
 pub use screen::{Screen, ScreenAction, ScreenContext, error::ErrorScreen};
 pub use tween::{Interpolation, Tween};
@@ -112,5 +114,3 @@ macro_rules! impl_app_state {
 }
 
 pub const FPS: u32 = 120;
-pub const WIDTH: u32 = 240;
-pub const HEIGHT: u32 = 160;

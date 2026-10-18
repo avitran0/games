@@ -1,5 +1,5 @@
 use api::{
-    Anchor, Button, Color, HEIGHT, Screen, WIDTH,
+    Anchor, Button, Color, Screen,
     glam::{ivec2, uvec2},
 };
 
@@ -35,7 +35,7 @@ impl Screen<State> for EndScreen {
     }
 
     fn draw(&mut self, state: &State, frame: &mut api::Frame) {
-        frame.rectangle_with_opacity(ivec2(0, 0), uvec2(WIDTH, HEIGHT), Color::Black, 0.1);
+        frame.rectangle_with_opacity(ivec2(0, 0), frame.resolution().into(), Color::Black, 0.1);
         let heading = match self.outcome {
             Outcome::Win => "You win!",
             Outcome::GameOver => "Game over.",
@@ -45,7 +45,7 @@ impl Screen<State> for EndScreen {
                 "{heading}\nScore: {}\nPress \u{E000} to return to menu.",
                 state.score
             ),
-            uvec2(WIDTH / 2, HEIGHT / 2).as_ivec2(),
+            uvec2(frame.width() / 2, frame.height() / 2).as_ivec2(),
             Anchor::Center,
         );
     }

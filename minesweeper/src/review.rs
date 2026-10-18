@@ -1,6 +1,6 @@
 use api::{
     Button, Color, SpriteOptions,
-    glam::{IVec2, UVec2, Vec2, uvec2},
+    glam::{IVec2, UVec2, Vec2},
 };
 use ui::{Alignment, Style, Ui, VerticalAlignment};
 
@@ -87,7 +87,8 @@ impl api::Screen<State> for ReviewScreen {
             self.mode = self.mode.toggle();
         }
 
-        self.sync_camera_mode(&mut ctx.state.camera);
+        ctx.state.camera.set_resolution(ctx.resolution);
+        self.sync_camera_mode(&mut ctx.state.camera, ctx.resolution);
 
         match self.mode {
             Mode::Menu => self.menu_update(ctx),
@@ -147,16 +148,15 @@ impl ReviewScreen {
 
     fn menu_draw(&mut self, state: &State, frame: &mut api::Frame) {
         self.draw_board(state, frame);
-        frame.rectangle_with_opacity(
-            IVec2::ZERO,
-            uvec2(api::WIDTH, api::HEIGHT),
-            Color::Black,
-            0.1,
-        );
+        frame.rectangle_with_opacity(IVec2::ZERO, frame.resolution().into(), Color::Black, 0.1);
         self.ui.paint(frame);
     }
 
-    fn sync_camera_mode(&mut self, camera: &mut crate::camera::CameraRig) {
+    fn sync_camera_mode(
+        &mut self,
+        camera: &mut crate::camera::CameraRig,
+        resolution: api::Resolution,
+    ) {
         if self.camera_mode == Some(self.mode) {
             return;
         }
@@ -164,7 +164,7 @@ impl ReviewScreen {
         match self.mode {
             Mode::Menu => {
                 let board_pixels = self.board.size().as_vec2() * TILE_SIZE as f32;
-                camera.frame_board(board_pixels);
+                camera.frame_board(resolution, board_pixels);
             }
             Mode::Review => camera.focus_cursor(Self::cell_center(self.cursor.pos())),
         }

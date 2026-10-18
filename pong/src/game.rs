@@ -22,7 +22,7 @@ impl api::Screen<State> for GameScreen {
     }
 
     fn draw(&mut self, _state: &State, frame: &mut api::Frame) {
-        let center_y = api::HEIGHT as i32 / 2;
+        let center_y = frame.height() as i32 / 2;
         frame.sprite(
             &self.paddle,
             api::glam::ivec2(16, center_y),
@@ -30,7 +30,7 @@ impl api::Screen<State> for GameScreen {
         );
         frame.sprite(
             &self.ball,
-            api::glam::ivec2(api::WIDTH as i32 / 2, center_y),
+            api::glam::ivec2(frame.width() as i32 / 2, center_y),
             api::SpriteOptions::default().anchor(api::Anchor::Center),
         );
     }

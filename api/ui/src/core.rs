@@ -1,5 +1,5 @@
 use api::{
-    Button as EngineButton, Color, Frame, HEIGHT, Input, WIDTH,
+    Button as EngineButton, Color, Frame, Input, Resolution,
     glam::{IVec2, ivec2, uvec2},
 };
 
@@ -38,12 +38,7 @@ impl Ui {
     pub fn new() -> Self {
         let style = Style::default();
         let padding = style.outer_padding;
-        let bounds = Rect::new(
-            padding as i32,
-            padding as i32,
-            WIDTH.saturating_sub(padding.saturating_mul(2)),
-            HEIGHT.saturating_sub(padding.saturating_mul(2)),
-        );
+        let bounds = root_bounds(Resolution::default(), padding);
         Self {
             style,
             alignment: Alignment::Left,
@@ -68,11 +63,8 @@ impl Ui {
     }
 
     pub fn begin_frame<State>(&mut self, ctx: &api::ScreenContext<'_, State>) {
+        self.set_bounds(root_bounds(ctx.resolution, self.style.outer_padding));
         self.begin_frame_inner(ctx.input, Some(ctx.assets.text_metrics()));
-    }
-
-    pub fn begin_frame_with_input(&mut self, input: &Input) {
-        self.begin_frame_inner(input, None);
     }
 
     fn begin_frame_inner(&mut self, input: &Input, text_metrics: Option<api::TextMetrics>) {
@@ -508,9 +500,28 @@ impl Ui {
     }
 }
 
+fn root_bounds(resolution: Resolution, padding: u32) -> Rect {
+    let padding = padding.min(i32::MAX as u32) as i32;
+    let total_padding = (padding as u32).saturating_mul(2);
+    Rect::new(
+        padding,
+        padding,
+        resolution.width.saturating_sub(total_padding),
+        resolution.height.saturating_sub(total_padding),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn root_bounds_follow_the_active_resolution_and_padding() {
+        assert_eq!(
+            root_bounds(Resolution::SIXTEEN_NINE, 8),
+            Rect::new(8, 8, 240, 128)
+        );
+    }
 
     #[test]
     fn vertical_centering_shifts_the_paint_bounds_into_the_middle() {

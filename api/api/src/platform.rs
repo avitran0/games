@@ -10,7 +10,7 @@ use sdl3::{
 use thiserror::Error;
 use utils::log::Level;
 
-use crate::{HEIGHT, WIDTH, debug, info, warn};
+use crate::{Resolution, debug, info, warn};
 
 pub struct Platform {
     gl: Rc<glow::Context>,
@@ -49,7 +49,11 @@ impl Platform {
         gl_attr.set_context_minor_version(0);
 
         let window = video
-            .window(title, WIDTH * 2, HEIGHT * 2)
+            .window(
+                title,
+                Resolution::THREE_TWO.width * 3,
+                Resolution::THREE_TWO.height * 3,
+            )
             .high_pixel_density()
             .opengl()
             .resizable()

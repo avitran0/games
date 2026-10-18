@@ -4,7 +4,7 @@ use glam::{Vec2, ivec2, vec2};
 use glow::HasContext;
 
 use crate::{
-    Anchor, Flip, HEIGHT, Tilemap, WIDTH,
+    Anchor, Flip, Resolution, Tilemap,
     assets::Assets,
     render::{
         draw_cmd::{AnimatedSpriteCmd, DrawCmd, ShapeCmd, SpriteCmd, TextCmd, TilemapCmd},
@@ -33,6 +33,7 @@ pub(crate) struct Renderer {
     shaders: Shaders,
     quad: Quad,
     palette: GlPalette,
+    resolution: Resolution,
 }
 
 struct SpriteFrameDraw<'a> {
@@ -49,8 +50,8 @@ struct SpriteFrameDraw<'a> {
 }
 
 impl Renderer {
-    pub(crate) fn new(gl: Rc<glow::Context>) -> Result<Self, String> {
-        let framebuffer = Framebuffer::new(gl.clone())?;
+    pub(crate) fn new(gl: Rc<glow::Context>, resolution: Resolution) -> Result<Self, String> {
+        let framebuffer = Framebuffer::new(gl.clone(), resolution)?;
         let shaders = Shaders::load(gl.clone())?;
         let quad = Quad::new(gl.clone())?;
         let palette = GlPalette::new(gl.clone())?;
@@ -61,7 +62,21 @@ impl Renderer {
             shaders,
             quad,
             palette,
+            resolution,
         })
+    }
+
+    pub(crate) fn resolution(&self) -> Resolution {
+        self.resolution
+    }
+
+    pub(crate) fn set_resolution(&mut self, resolution: Resolution) -> Result<(), String> {
+        if self.resolution == resolution {
+            return Ok(());
+        }
+        self.framebuffer = Framebuffer::new(self.gl.clone(), resolution)?;
+        self.resolution = resolution;
+        Ok(())
     }
 
     pub(crate) fn begin_frame(&self) {
@@ -153,7 +168,10 @@ impl Renderer {
         let shader = &self.shaders.sprite;
         let size = (sprite.size().as_vec2() * scale).round();
         shader.bind();
-        shader.set_vec2("resolution", vec2(WIDTH as f32, HEIGHT as f32));
+        shader.set_vec2(
+            "resolution",
+            vec2(self.resolution.width as f32, self.resolution.height as f32),
+        );
         shader.set_vec2(
             "position",
             (position.as_vec2() - anchor.offset(size)).round(),
@@ -199,12 +217,12 @@ impl Renderer {
         let origin_y = cmd.position.y as f32;
         let tile_width = tile_size.x * cmd.scale.x;
         let tile_height = tile_size.y * cmd.scale.y;
-        let x_range = visible_tiles(origin_x, tile_width, columns, WIDTH as f32);
+        let x_range = visible_tiles(origin_x, tile_width, columns, self.resolution.width as f32);
         let y_range = visible_tiles(
             origin_y,
             tile_height,
             usize::from(tilemap.size().y),
-            HEIGHT as f32,
+            self.resolution.height as f32,
         );
         for y in y_range {
             for x in x_range.clone() {
@@ -251,7 +269,10 @@ impl Renderer {
 
         let shader = &self.shaders.shape;
         shader.bind();
-        shader.set_vec2("resolution", vec2(WIDTH as f32, HEIGHT as f32));
+        shader.set_vec2(
+            "resolution",
+            vec2(self.resolution.width as f32, self.resolution.height as f32),
+        );
         shader.set_vec2("position", cmd.position.as_vec2());
         shader.set_vec2("size", size);
         shader.set_vec2("rotation_anchor", vec2(0.0, 0.0));
@@ -277,7 +298,10 @@ impl Renderer {
 
         let shader = &self.shaders.font;
         shader.bind();
-        shader.set_vec2("resolution", vec2(WIDTH as f32, HEIGHT as f32));
+        shader.set_vec2(
+            "resolution",
+            vec2(self.resolution.width as f32, self.resolution.height as f32),
+        );
         shader.set_i32("color_index", i32::from(cmd.color.index()));
         shader.set_f32("opacity", cmd.opacity);
 

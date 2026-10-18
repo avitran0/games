@@ -1,8 +1,8 @@
 use api::{
-    Anchor, HEIGHT, Screen, SpriteOptions, WIDTH,
+    Anchor, Screen, SpriteOptions,
     glam::{ivec2, uvec2},
 };
-use ui::{Alignment, Rect, Ui};
+use ui::{Alignment, Ui};
 
 use crate::{
     config::{CONFIG_NAME, Config},
@@ -24,7 +24,6 @@ impl MainMenu {
         ctx.state.config = api::load(CONFIG_NAME)?;
         let mut ui = Ui::new();
         ui.set_alignment(Alignment::Center);
-        ui.set_bounds(Rect::new(0, 64, WIDTH, HEIGHT - 64));
 
         Ok(Self { title, snakes, ui })
     }
@@ -33,6 +32,7 @@ impl MainMenu {
 impl Screen<State> for MainMenu {
     fn update(&mut self, ctx: &mut api::ScreenContext<'_, State>) -> api::ScreenAction<State> {
         self.ui.begin_frame(ctx);
+        self.ui.add_space(64);
 
         if self.ui.button("Start").clicked {
             return match GameScreen::new(ctx) {
@@ -67,7 +67,7 @@ impl Screen<State> for MainMenu {
 
         frame.sprite(
             &self.title,
-            uvec2(WIDTH / 2, HEIGHT / 4).as_ivec2(),
+            uvec2(frame.width() / 2, frame.height() / 4).as_ivec2(),
             SpriteOptions::default().anchor(Anchor::Center),
         );
 

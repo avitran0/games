@@ -55,9 +55,10 @@ impl api::Screen<State> for GameScreen {
             return api::ScreenAction::Push(Box::new(PauseScreen::new()));
         }
 
+        ctx.state.camera.set_resolution(ctx.resolution);
         self.tick_cursor_and_camera(ctx);
         if let Some(outcome) = self.update_gameplay(ctx) {
-            if let Err(action) = self.finish(outcome, ctx.state) {
+            if let Err(action) = self.finish(outcome, ctx.state, ctx.resolution) {
                 return action;
             }
 
@@ -84,8 +85,8 @@ impl api::Screen<State> for GameScreen {
 impl GameScreen {
     fn draw_cursor(&self, frame: &mut api::Frame) {
         let cursor_screen_pos = ivec2(
-            (api::WIDTH as i32 - TILE_SIZE as i32) / 2,
-            (api::HEIGHT as i32 - TILE_SIZE as i32) / 2,
+            (frame.width() as i32 - TILE_SIZE as i32) / 2,
+            (frame.height() as i32 - TILE_SIZE as i32) / 2,
         );
         let opacity = (frame.tick() as f32 * 0.02).sin().abs() * 0.5 + 0.5;
         frame.sprite(
@@ -131,6 +132,7 @@ impl GameScreen {
         &mut self,
         outcome: Outcome,
         state: &mut State,
+        resolution: api::Resolution,
     ) -> Result<(), api::ScreenAction<State>> {
         match outcome {
             Outcome::Win => self.board.flag_bombs(),
@@ -139,7 +141,7 @@ impl GameScreen {
 
         if outcome == Outcome::Win {
             let board_pixels = self.board.size().as_vec2() * TILE_SIZE as f32;
-            state.camera.frame_board(board_pixels);
+            state.camera.frame_board(resolution, board_pixels);
 
             state.leaderboard.insert(
                 self.board.difficulty(),

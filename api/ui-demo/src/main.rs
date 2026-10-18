@@ -1,5 +1,5 @@
 use api::{
-    Frame, HEIGHT, Screen, ScreenAction, ScreenContext, WIDTH,
+    Frame, Screen, ScreenAction, ScreenContext,
     glam::{ivec2, uvec2},
     strum::EnumIter,
 };
@@ -113,7 +113,11 @@ impl Screen<State> for Demo {
     }
 
     fn draw(&mut self, _state: &State, frame: &mut Frame) {
-        frame.rectangle(ivec2(0, 0), uvec2(WIDTH, HEIGHT), self.ui.style.background);
+        frame.rectangle(
+            ivec2(0, 0),
+            uvec2(frame.width(), frame.height()),
+            self.ui.style.background,
+        );
         self.ui.paint(frame);
     }
 }
