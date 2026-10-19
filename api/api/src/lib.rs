@@ -1,6 +1,7 @@
 mod assets;
 mod camera;
 mod context;
+mod egui;
 pub mod formats;
 mod glyphs;
 mod handle;

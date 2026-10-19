@@ -8,7 +8,7 @@ members = [
     "api/ui-demo",
     "api/updater",
     "minesweeper",
-    "pong",
+    "pong", "shooter",
     "snake",
     "tower-defense",
 ]

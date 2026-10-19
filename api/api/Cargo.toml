@@ -7,6 +7,8 @@ edition = "2024"
 utils.git = "https://codeberg.org/avitrano/utils"
 # for asset hashing
 blake3 = "1.8"
+egui = "0.37"
+egui_glow = "0.37"
 glam.workspace = true
 formats.workspace = true
 glow = "0.18"
