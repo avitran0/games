@@ -61,7 +61,7 @@ impl<Id: Hash + Eq + Copy, Asset> AssetRegistry<Id, Asset> {
 }
 
 pub struct Assets {
-    gl: Rc<glow::Context>,
+    gl: Arc<glow::Context>,
     sprites: AssetRegistry<SpriteId, GlSprite>,
     fonts: AssetRegistry<Font, GlFont>,
     tilemaps: AssetRegistry<TilemapId, TilemapData>,
@@ -71,7 +71,7 @@ pub struct Assets {
 }
 
 impl Assets {
-    pub(crate) fn new(gl: Rc<glow::Context>) -> Result<Self, String> {
+    pub(crate) fn new(gl: Arc<glow::Context>) -> Result<Self, String> {
         let mut fonts = AssetRegistry::new();
         let default_font =
             Self::load_font_into(&gl, &mut fonts, include_bytes!("../assets/font.pxf"))
@@ -145,7 +145,7 @@ impl Assets {
     fn register_sprite(
         &mut self,
         data: &[u8],
-        build: impl FnOnce(Rc<glow::Context>) -> Result<GlSprite, String>,
+        build: impl FnOnce(Arc<glow::Context>) -> Result<GlSprite, String>,
     ) -> Result<SpriteId, AssetLoadError> {
         let hash = blake3::hash(data);
         if let Some(id) = self.sprites.get_cached(hash) {
@@ -257,7 +257,7 @@ impl Assets {
     }
 
     fn load_font_into(
-        gl: &Rc<glow::Context>,
+        gl: &Arc<glow::Context>,
         fonts: &mut AssetRegistry<Font, GlFont>,
         data: &[u8],
     ) -> Result<Font, AssetLoadError> {

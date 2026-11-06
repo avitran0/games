@@ -4,14 +4,14 @@ use glam::Vec2;
 use glow::HasContext;
 
 pub(crate) struct Shader {
-    gl: Rc<glow::Context>,
+    gl: Arc<glow::Context>,
     program: glow::Program,
     uniforms: HashMap<String, glow::UniformLocation>,
 }
 
 impl Shader {
     pub(crate) fn load(
-        gl: Rc<glow::Context>,
+        gl: Arc<glow::Context>,
         vertex: &str,
         fragment: &str,
     ) -> Result<Self, String> {

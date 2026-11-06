@@ -4,7 +4,7 @@ use glam::{UVec2, uvec2};
 use glow::HasContext;
 
 pub(crate) struct GpuImage {
-    gl: Rc<glow::Context>,
+    gl: Arc<glow::Context>,
     texture: glow::Texture,
     target: u32,
     size: UVec2,
@@ -12,7 +12,7 @@ pub(crate) struct GpuImage {
 
 impl GpuImage {
     pub(crate) fn new_array(
-        gl: Rc<glow::Context>,
+        gl: Arc<glow::Context>,
         data: &[u8],
         size: UVec2,
         layers: usize,
@@ -44,7 +44,7 @@ impl GpuImage {
     }
 
     pub(crate) fn new_single(
-        gl: Rc<glow::Context>,
+        gl: Arc<glow::Context>,
         data: &[u8],
         size: u32,
     ) -> Result<Self, String> {

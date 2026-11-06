@@ -7,7 +7,7 @@ pub(crate) struct GlPalette {
 }
 
 impl GlPalette {
-    pub(crate) fn new(gl: Rc<glow::Context>) -> Result<Self, String> {
+    pub(crate) fn new(gl: Arc<glow::Context>) -> Result<Self, String> {
         let image = GpuImage::new_single(gl, &palette::data(), crate::Color::COUNT as u32)?;
 
         Ok(Self { image })

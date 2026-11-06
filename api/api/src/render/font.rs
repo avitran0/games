@@ -54,7 +54,7 @@ pub(crate) struct GlFont {
 }
 
 impl GlFont {
-    pub(crate) fn new(gl: Rc<glow::Context>, data: &[u8]) -> Result<Self, String> {
+    pub(crate) fn new(gl: Arc<glow::Context>, data: &[u8]) -> Result<Self, String> {
         let font = Font::read(data).map_err(|err| err.to_string())?;
         let width = font
             .glyphs

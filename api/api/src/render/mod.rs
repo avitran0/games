@@ -28,7 +28,7 @@ mod shader;
 pub(crate) mod sprite;
 
 pub(crate) struct Renderer {
-    gl: Rc<glow::Context>,
+    gl: Arc<glow::Context>,
     framebuffer: Framebuffer,
     shaders: Shaders,
     quad: Quad,
@@ -50,7 +50,7 @@ struct SpriteFrameDraw<'a> {
 }
 
 impl Renderer {
-    pub(crate) fn new(gl: Rc<glow::Context>, resolution: Resolution) -> Result<Self, String> {
+    pub(crate) fn new(gl: Arc<glow::Context>, resolution: Resolution) -> Result<Self, String> {
         let framebuffer = Framebuffer::new(gl.clone(), resolution)?;
         let shaders = Shaders::load(gl.clone())?;
         let quad = Quad::new(gl.clone())?;
@@ -387,7 +387,7 @@ struct Shaders {
 }
 
 impl Shaders {
-    fn load(gl: Rc<glow::Context>) -> Result<Self, String> {
+    fn load(gl: Arc<glow::Context>) -> Result<Self, String> {
         let sprite = Shader::load(
             gl.clone(),
             include_str!("shaders/sprite.vert"),

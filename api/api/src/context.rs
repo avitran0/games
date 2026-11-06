@@ -2,6 +2,7 @@ use sdl3::{event::Event, gamepad::Button as GamepadButton, keyboard::Scancode};
 
 use crate::{
     Assets, Frame, Input, Resolution,
+    egui::Egui,
     input::Button,
     platform::{Platform, PlatformError},
     render::Renderer,
@@ -13,6 +14,7 @@ pub(crate) struct Context<State> {
     input: Input,
     assets: Assets,
     state: State,
+    egui: Egui,
     renderer: Renderer,
     should_quit: bool,
     platform: Platform,
@@ -23,17 +25,20 @@ pub(crate) struct Context<State> {
 impl<State: 'static> Context<State> {
     pub(crate) fn load(title: &str, state: State) -> Result<Self, PlatformError> {
         let platform = Platform::load(title)?;
-        let assets = Assets::new(platform.gl_rc()).map_err(PlatformError::Assets)?;
+        let assets = Assets::new(platform.gl_arc()).map_err(PlatformError::Assets)?;
         let window_size = platform.window_size();
         let resolution = Resolution::for_window_size(window_size.0, window_size.1);
         let renderer =
-            Renderer::new(platform.gl_rc(), resolution).map_err(PlatformError::OpenGL)?;
+            Renderer::new(platform.gl_arc(), resolution).map_err(PlatformError::OpenGL)?;
+        let egui =
+            Egui::new(platform.gl_arc()).map_err(|err| PlatformError::OpenGL(err.to_string()))?;
 
         Ok(Self {
             frame: Frame::default(),
             input: Input::default(),
             assets,
             state,
+            egui,
             renderer,
             should_quit: false,
             platform,

@@ -6,14 +6,14 @@ use glow::HasContext;
 use crate::Resolution;
 
 pub(crate) struct Framebuffer {
-    gl: Rc<glow::Context>,
+    gl: Arc<glow::Context>,
     fbo: glow::Framebuffer,
     texture: glow::Texture,
     resolution: Resolution,
 }
 
 impl Framebuffer {
-    pub(crate) fn new(gl: Rc<glow::Context>, resolution: Resolution) -> Result<Self, String> {
+    pub(crate) fn new(gl: Arc<glow::Context>, resolution: Resolution) -> Result<Self, String> {
         let texture = super::texture(&gl)?;
         let fbo = unsafe { gl.create_framebuffer()? };
 

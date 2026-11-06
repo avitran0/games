@@ -13,7 +13,7 @@ use utils::log::Level;
 use crate::{Resolution, debug, info, warn};
 
 pub struct Platform {
-    gl: Rc<glow::Context>,
+    gl: Arc<glow::Context>,
     _sdl_gl: GLContext,
     window: Window,
     _video: VideoSubsystem,
@@ -126,7 +126,7 @@ impl Platform {
         self.window.size_in_pixels()
     }
 
-    pub(crate) fn gl_rc(&self) -> Rc<glow::Context> {
+    pub(crate) fn gl_arc(&self) -> Arc<glow::Context> {
         self.gl.clone()
     }
 }

@@ -19,7 +19,7 @@ struct Animation {
 
 impl GlSprite {
     pub(crate) fn new_static(
-        gl: Rc<glow::Context>,
+        gl: Arc<glow::Context>,
         sprite: SpriteDocument,
     ) -> Result<Self, String> {
         let image = GpuImage::new_array(gl, sprite.pixels.pixels(), sprite.size, 1)?;
@@ -31,7 +31,7 @@ impl GlSprite {
     }
 
     pub(crate) fn new_animated(
-        gl: Rc<glow::Context>,
+        gl: Arc<glow::Context>,
         sprite: AnimatedSpriteDocument,
     ) -> Result<Self, String> {
         let data: Vec<u8> = sprite
@@ -64,7 +64,7 @@ impl GlSprite {
     }
 
     pub(crate) fn new_tileset(
-        gl: Rc<glow::Context>,
+        gl: Arc<glow::Context>,
         tileset: TilesetDocument,
     ) -> Result<Self, String> {
         let size = tileset.tile_size;

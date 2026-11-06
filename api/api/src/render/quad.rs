@@ -4,13 +4,13 @@ use glam::{Vec2, vec2};
 use glow::HasContext;
 
 pub(crate) struct Quad {
-    gl: Rc<glow::Context>,
+    gl: Arc<glow::Context>,
     vertex_array: glow::VertexArray,
     vertices: glow::Buffer,
 }
 
 impl Quad {
-    pub(crate) fn new(gl: Rc<glow::Context>) -> Result<Self, String> {
+    pub(crate) fn new(gl: Arc<glow::Context>) -> Result<Self, String> {
         let vertex_array = unsafe { gl.create_vertex_array()? };
         let vertices = unsafe { gl.create_buffer()? };
 
