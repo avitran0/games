@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use glam::{Vec2, ivec2, vec2};
 use glow::HasContext;

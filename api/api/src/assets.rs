@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash, rc::Rc};
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use formats::{
     AnimatedSpriteDocument, SpriteDocument, SpriteSheetDocument, TilemapDocument, TilesetDocument,

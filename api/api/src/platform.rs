@@ -1,4 +1,4 @@
-use std::{ffi::c_void, rc::Rc};
+use std::{ffi::c_void, sync::Arc};
 
 use glow::HasContext;
 use sdl3::{
@@ -85,7 +85,7 @@ impl Platform {
             }
             debug!("initialized OpenGL debug callback");
         }
-        let gl = Rc::new(gl);
+        let gl = Arc::new(gl);
 
         let renderer = unsafe { gl.get_parameter_string(glow::RENDERER) };
         info!("graphics device: '{renderer}'");
