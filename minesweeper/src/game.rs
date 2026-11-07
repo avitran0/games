@@ -81,6 +81,11 @@ impl api::Screen<State> for GameScreen {
         self.board.draw(camera, &mut world, &self.sprites);
         self.draw_cursor(frame);
     }
+
+    fn debug(&mut self, _state: &mut State, ui: &mut api::egui::Ui) {
+        ui.label(format!("Bombs: {}", self.board.remaining_flags()));
+        ui.label(format!("Wrong Flags: {}", self.board.wrong_flags()));
+    }
 }
 
 impl GameScreen {

@@ -51,6 +51,7 @@ impl<State: 'static> Context<State> {
         self.input.new_frame();
         let events: Vec<_> = self.platform.events().collect();
         for event in events {
+            let egui_consumed = self.egui.handle_event(&event);
             match event {
                 Event::KeyDown {
                     scancode: Some(Scancode::F12),
@@ -63,7 +64,7 @@ impl<State: 'static> Context<State> {
                     let Some(key) = scancode else {
                         continue;
                     };
-                    if repeat {
+                    if repeat || egui_consumed {
                         continue;
                     }
                     if let Some(button) = scancode_to_button(key) {
@@ -138,15 +139,18 @@ impl<State: 'static> Context<State> {
             self.renderer.draw(&self.assets, cmd);
         }
         let window_size = self.platform.window_size();
+        let window_size_points = self.platform.window_size_points();
         self.renderer.end_frame(window_size);
         let (egui, state, screens) = (&mut self.egui, &mut self.state, &mut self.screens);
-        egui.end_frame(window_size, |ui| {
+        egui.end_frame(window_size, window_size_points, |ui| {
             if let Some(screen) = screens.last_mut() {
                 crate::egui::Window::new("Debug").show(ui.ctx(), |ui| {
                     screen.debug(state, ui);
                 });
             }
         });
+        let wants_keyboard_input = egui.wants_keyboard_input();
+        self.platform.set_text_input_active(wants_keyboard_input);
         self.platform.swap_window();
     }
 

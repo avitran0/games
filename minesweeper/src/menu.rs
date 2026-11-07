@@ -1,4 +1,3 @@
-use api::egui;
 use ui::VerticalAlignment;
 
 use crate::{leaderboard::LeaderboardScreen, setup::SetupScreen, state::State};
@@ -38,9 +37,5 @@ impl api::Screen<State> for MainMenu {
 
     fn draw(&mut self, _state: &State, frame: &mut api::Frame) {
         self.ui.paint(frame);
-    }
-
-    fn debug(&mut self, _state: &mut State, _ui: &mut api::egui::Ui) {
-        _ui.label("debugging");
     }
 }

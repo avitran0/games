@@ -1,11 +1,14 @@
 use std::{path::PathBuf, sync::Arc};
 
-use egui::{Event as EguiEvent, Key, Modifiers, PointerButton, pos2};
+use egui::{
+    Event as EguiEvent, Key, Modifiers, MouseWheelSource, MouseWheelUnit, PointerButton, TouchPhase,
+    pos2, vec2,
+};
 use egui_glow::PainterError;
 use sdl3::{
     event::{Event, WindowEvent},
     keyboard::{Keycode, Mod},
-    mouse::MouseButton,
+    mouse::{MouseButton, MouseWheelDirection},
 };
 
 pub struct Egui {
@@ -35,8 +38,26 @@ impl Egui {
     pub(crate) fn end_frame(
         &mut self,
         screen_size_px: (u32, u32),
+        screen_size_points: (u32, u32),
         mut run_ui: impl FnMut(&mut egui::Ui),
     ) {
+        let (width_px, height_px) = screen_size_px;
+        let (width_points, height_points) = screen_size_points;
+        let pixels_per_point = if width_points > 0 && height_points > 0 {
+            ((width_px as f32 / width_points as f32)
+                + (height_px as f32 / height_points as f32))
+                * 0.5
+        } else {
+            1.0
+        };
+        self.input.screen_rect = Some(egui::Rect::from_min_size(
+            egui::Pos2::ZERO,
+            vec2(width_points as f32, height_points as f32),
+        ));
+        let viewport_id = self.input.viewport_id;
+        if let Some(viewport) = self.input.viewports.get_mut(&viewport_id) {
+            viewport.native_pixels_per_point = Some(pixels_per_point);
+        }
         let show = self.show;
         let output = self.ctx.run_ui(std::mem::take(&mut self.input), |ui| {
             if show {
@@ -59,11 +80,15 @@ impl Egui {
         self.show = !self.show;
     }
 
-    pub(crate) fn handle_event(&mut self, event: &Event) {
+    pub(crate) fn wants_keyboard_input(&self) -> bool {
+        self.show && self.ctx.egui_wants_keyboard_input()
+    }
+
+    pub(crate) fn handle_event(&mut self, event: &Event) -> bool {
         if !self.show {
-            return;
+            return false;
         }
-        let response = self.convert_event(event);
+        self.convert_event(event).consumed
     }
 
     fn convert_event(&mut self, event: &Event) -> Response {
@@ -75,17 +100,13 @@ impl Egui {
                     path: PathBuf::from(filename),
                 });
                 self.input.dropped_files.push(file);
-                Response {
-                    repaint: true,
-                    consumed: false,
-                }
+                Response { consumed: false }
             }
             Event::KeyDown {
                 keycode: Some(keycode),
                 keymod,
                 repeat,
                 ..
-                // deliberately does not handle copy/cut/paste
             } => self.handle_key_event(*keycode, *keymod, true, *repeat),
             Event::KeyUp {
                 keycode: Some(keycode),
@@ -93,8 +114,41 @@ impl Egui {
                 repeat,
                 ..
             } => self.handle_key_event(*keycode, *keymod, false, *repeat),
-            Event::MouseButtonDown { mouse_btn, x, y,.. } => self.handle_mouse_button_event(*mouse_btn, *x, *y, true),
-            Event::MouseButtonUp { mouse_btn,  x, y ,..} => self.handle_mouse_button_event(*mouse_btn, *x, *y, false),
+            Event::TextInput { text, .. } => {
+                self.add_event(EguiEvent::Text(text.clone()));
+                Response {
+                    consumed: self.ctx.egui_wants_keyboard_input(),
+                }
+            }
+            Event::MouseMotion { x, y, .. } => {
+                self.add_event(EguiEvent::PointerMoved(pos2(*x, *y)));
+                Response {
+                    consumed: self.ctx.egui_wants_pointer_input(),
+                }
+            }
+            Event::MouseWheel { x, y, direction, .. } => {
+                let sign = if *direction == MouseWheelDirection::Flipped {
+                    -1.0
+                } else {
+                    1.0
+                };
+                self.add_event(EguiEvent::MouseWheel {
+                    unit: MouseWheelUnit::Line,
+                    delta: vec2(*x * sign, *y * sign),
+                    phase: TouchPhase::Move,
+                    source: MouseWheelSource::Wheel,
+                    modifiers: self.modifiers,
+                });
+                Response {
+                    consumed: self.ctx.egui_wants_pointer_input(),
+                }
+            }
+            Event::MouseButtonDown { mouse_btn, x, y, .. } => {
+                self.handle_mouse_button_event(*mouse_btn, *x, *y, true)
+            }
+            Event::MouseButtonUp { mouse_btn, x, y, .. } => {
+                self.handle_mouse_button_event(*mouse_btn, *x, *y, false)
+            }
             Event::Window {  win_event,.. } => self.handle_window_event(win_event),
             _ =>
 
@@ -102,7 +156,9 @@ impl Egui {
         }
     }
 
-    fn add_event(&mut self, event: EguiEvent) {}
+    fn add_event(&mut self, event: EguiEvent) {
+        self.input.events.push(event);
+    }
 
     fn handle_mouse_button_event(
         &mut self,
@@ -111,7 +167,9 @@ impl Egui {
         y: f32,
         pressed: bool,
     ) -> Response {
-        let button = mouse_btn_to_egui(button);
+        let Some(button) = mouse_btn_to_egui(button) else {
+            return Response::default();
+        };
         let pos = pos2(x, y);
         self.add_event(EguiEvent::PointerButton {
             pos,
@@ -121,10 +179,7 @@ impl Egui {
         });
 
         let consumed = self.ctx.egui_wants_pointer_input();
-        Response {
-            repaint: true,
-            consumed,
-        }
+        Response { consumed }
     }
 
     fn handle_key_event(
@@ -134,15 +189,15 @@ impl Egui {
         pressed: bool,
         repeat: bool,
     ) -> Response {
-        let Some(key) = key_to_egui(keycode) else {
-            return Response::default();
-        };
-
         let modifiers = modifiers_to_egui(keymod);
         if modifiers != self.modifiers {
             self.modifiers = modifiers;
             self.add_event(EguiEvent::ModifiersChanged(modifiers));
         }
+
+        let Some(key) = key_to_egui(keycode) else {
+            return Response::default();
+        };
 
         self.add_event(EguiEvent::Key {
             key,
@@ -154,10 +209,7 @@ impl Egui {
 
         // when pressing tab, egui focuses the first focusable element
         let consumed = self.ctx.egui_wants_keyboard_input() || key == Key::Tab;
-        Response {
-            repaint: true,
-            consumed,
-        }
+        Response { consumed }
     }
 
     fn handle_window_event(&mut self, win_event: &WindowEvent) -> Response {
@@ -165,37 +217,20 @@ impl Egui {
             WindowEvent::FocusGained => {
                 self.input.focused = true;
                 self.add_event(EguiEvent::WindowFocused(true));
-                Response {
-                    repaint: true,
-                    consumed: false,
-                }
             }
             WindowEvent::FocusLost => {
                 self.input.focused = false;
                 self.add_event(EguiEvent::WindowFocused(false));
-                Response {
-                    repaint: true,
-                    consumed: false,
-                }
             }
-            WindowEvent::MouseLeave => {
-                self.add_event(EguiEvent::PointerGone);
-                Response {
-                    repaint: true,
-                    consumed: false,
-                }
-            }
-            _ => Response {
-                repaint: true,
-                consumed: false,
-            },
+            WindowEvent::MouseLeave => self.add_event(EguiEvent::PointerGone),
+            _ => {}
         }
+        Response { consumed: false }
     }
 }
 
 #[derive(Default)]
 struct Response {
-    repaint: bool,
     consumed: bool,
 }
 
@@ -214,15 +249,15 @@ impl egui::DroppedFile for PathDroppedFile {
     }
 }
 
-fn mouse_btn_to_egui(btn: MouseButton) -> PointerButton {
-    match btn {
+fn mouse_btn_to_egui(btn: MouseButton) -> Option<PointerButton> {
+    Some(match btn {
         MouseButton::Left => PointerButton::Primary,
         MouseButton::Right => PointerButton::Secondary,
         MouseButton::Middle => PointerButton::Middle,
         MouseButton::X1 => PointerButton::Extra1,
         MouseButton::X2 => PointerButton::Extra2,
-        MouseButton::Unknown => PointerButton::Primary,
-    }
+        MouseButton::Unknown => return None,
+    })
 }
 
 fn key_to_egui(key: Keycode) -> Option<Key> {

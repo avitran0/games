@@ -20,6 +20,7 @@ pub struct Platform {
     event_pump: sdl3::EventPump,
     _gamepad: GamepadSubsystem,
     _gamepads: Vec<Gamepad>,
+    text_input_active: bool,
     _sdl: sdl3::Sdl,
 }
 
@@ -95,6 +96,7 @@ impl Platform {
             event_pump,
             _gamepad,
             _gamepads,
+            text_input_active: false,
             _video: video,
             window,
             _sdl_gl: sdl_gl,
@@ -124,6 +126,23 @@ impl Platform {
 
     pub(crate) fn window_size(&self) -> (u32, u32) {
         self.window.size_in_pixels()
+    }
+
+    pub(crate) fn window_size_points(&self) -> (u32, u32) {
+        self.window.size()
+    }
+
+    pub(crate) fn set_text_input_active(&mut self, active: bool) {
+        if self.text_input_active == active {
+            return;
+        }
+        let text_input = self._video.text_input();
+        if active {
+            text_input.start(&self.window);
+        } else {
+            text_input.stop(&self.window);
+        }
+        self.text_input_active = active;
     }
 
     pub(crate) fn gl_arc(&self) -> Arc<glow::Context> {

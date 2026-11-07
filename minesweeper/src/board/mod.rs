@@ -65,6 +65,25 @@ impl Board {
         self.uncover_after(start, 0)
     }
 
+    pub fn remaining_flags(&self) -> usize {
+        let bombs = self.tiles.iter().fold(0, |acc, tile| {
+            acc + if tile.kind == TileKind::Bomb { 1 } else { 0 }
+        });
+        self.tiles
+            .iter()
+            .fold(bombs, |acc, tile| acc - if tile.flagged { 1 } else { 0 })
+    }
+
+    pub fn wrong_flags(&self) -> usize {
+        self.tiles.iter().fold(0, |acc, tile| {
+            acc + if tile.flagged && tile.kind == TileKind::Clear {
+                1
+            } else {
+                0
+            }
+        })
+    }
+
     fn uncover_after(&mut self, start: UVec2, delay_ticks: usize) -> UncoverResult {
         let start_index = Self::coord_to_index(start, self.size.x as usize);
         let start_tile = self.tiles[start_index];
