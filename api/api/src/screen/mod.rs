@@ -23,6 +23,7 @@ impl<'a, State> ScreenContext<'a, State> {
 pub trait Screen<State>: 'static {
     fn update(&mut self, ctx: &mut ScreenContext<'_, State>) -> ScreenAction<State>;
     fn draw(&mut self, state: &State, frame: &mut Frame);
+    fn debug(&mut self, _state: &mut State, _ui: &mut egui::Ui) {}
     fn is_modal(&self) -> bool {
         false
     }
@@ -35,6 +36,10 @@ impl<State: 'static> Screen<State> for Box<dyn Screen<State>> {
 
     fn draw(&mut self, state: &State, frame: &mut Frame) {
         (**self).draw(state, frame);
+    }
+
+    fn debug(&mut self, state: &mut State, ui: &mut egui::Ui) {
+        (**self).debug(state, ui);
     }
 
     fn is_modal(&self) -> bool {

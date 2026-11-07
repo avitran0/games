@@ -1,7 +1,8 @@
 mod assets;
 mod camera;
 mod context;
-mod egui;
+#[path = "egui.rs"]
+mod egui_backend;
 pub mod formats;
 mod glyphs;
 mod handle;
@@ -19,6 +20,7 @@ use std::time::{Duration, Instant};
 pub use assets::{Assets, MAX_TILEMAP_SIDE, TilemapCreateError, TilemapSetError};
 pub use camera::Camera2D;
 use context::Context;
+pub use ::egui;
 pub use formats::Tileset;
 pub use formats::color::Color;
 pub use glam;

@@ -8,8 +8,6 @@ use sdl3::{
     mouse::MouseButton,
 };
 
-use crate::render::Renderer;
-
 pub struct Egui {
     ctx: egui::Context,
     painter: egui_glow::Painter,
@@ -34,15 +32,31 @@ impl Egui {
         })
     }
 
-    pub (crate) fn begin_frame(&mut self) {
-        let mut input =egui::RawInput::default();
-        std::mem::swap(&mut input, &mut self.input);
-        self.ctx.begin_pass(input);
+    pub(crate) fn end_frame(
+        &mut self,
+        screen_size_px: (u32, u32),
+        mut run_ui: impl FnMut(&mut egui::Ui),
+    ) {
+        let show = self.show;
+        let output = self.ctx.run_ui(std::mem::take(&mut self.input), |ui| {
+            if show {
+                run_ui(ui);
+            }
+        });
+        let clipped_primitives = self
+            .ctx
+            .tessellate(output.shapes, output.pixels_per_point);
+        let mut textures_delta = output.textures_delta;
+        self.painter.paint_and_update_textures(
+            [screen_size_px.0, screen_size_px.1],
+            output.pixels_per_point,
+            &clipped_primitives,
+            &mut textures_delta,
+        );
     }
 
-    pub(crate) fn end_frame(&self) {
-        let output = self.ctx.end_pass();
-        // self.painter.paint_and_update_textures(screen_size_px, pixels_per_point, clipped_primitives, textures_delta);
+    pub(crate) fn toggle(&mut self) {
+        self.show = !self.show;
     }
 
     pub(crate) fn handle_event(&mut self, event: &Event) {

@@ -7,7 +7,7 @@ edition = "2024"
 utils.git = "https://codeberg.org/avitrano/utils"
 # for asset hashing
 blake3 = "1.8"
-egui = "0.37"
+egui = { version = "0.37", features = ["default_fonts"] }
 egui_glow = "0.37"
 glam.workspace = true
 formats.workspace = true

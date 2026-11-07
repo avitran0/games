@@ -2,7 +2,7 @@ use sdl3::{event::Event, gamepad::Button as GamepadButton, keyboard::Scancode};
 
 use crate::{
     Assets, Frame, Input, Resolution,
-    egui::Egui,
+    egui_backend::Egui,
     input::Button,
     platform::{Platform, PlatformError},
     render::Renderer,
@@ -52,6 +52,11 @@ impl<State: 'static> Context<State> {
         let events: Vec<_> = self.platform.events().collect();
         for event in events {
             match event {
+                Event::KeyDown {
+                    scancode: Some(Scancode::F12),
+                    repeat: false,
+                    ..
+                } => self.egui.toggle(),
                 Event::KeyDown {
                     scancode, repeat, ..
                 } => {
@@ -117,7 +122,6 @@ impl<State: 'static> Context<State> {
 
     pub(crate) fn begin_frame(&mut self) {
         self.poll_events();
-        self.egui.begin_frame();
         let (window_width, window_height) = self.platform.window_size();
         let resolution = Resolution::for_window_size(window_width, window_height);
         if let Err(err) = self.renderer.set_resolution(resolution) {
@@ -128,13 +132,21 @@ impl<State: 'static> Context<State> {
         self.tick += 1;
     }
 
-    pub(crate) fn end_frame(&self) {
+    pub(crate) fn end_frame(&mut self) {
         self.renderer.begin_frame();
         for cmd in self.frame.cmds() {
             self.renderer.draw(&self.assets, cmd);
         }
-        self.egui.end_frame();
-        self.renderer.end_frame(self.platform.window_size());
+        let window_size = self.platform.window_size();
+        self.renderer.end_frame(window_size);
+        let (egui, state, screens) = (&mut self.egui, &mut self.state, &mut self.screens);
+        egui.end_frame(window_size, |ui| {
+            if let Some(screen) = screens.last_mut() {
+                crate::egui::Window::new("Debug").show(ui.ctx(), |ui| {
+                    screen.debug(state, ui);
+                });
+            }
+        });
         self.platform.swap_window();
     }
 
