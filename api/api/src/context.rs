@@ -117,6 +117,7 @@ impl<State: 'static> Context<State> {
 
     pub(crate) fn begin_frame(&mut self) {
         self.poll_events();
+        self.egui.begin_frame();
         let (window_width, window_height) = self.platform.window_size();
         let resolution = Resolution::for_window_size(window_width, window_height);
         if let Err(err) = self.renderer.set_resolution(resolution) {
@@ -132,6 +133,7 @@ impl<State: 'static> Context<State> {
         for cmd in self.frame.cmds() {
             self.renderer.draw(&self.assets, cmd);
         }
+        self.egui.end_frame();
         self.renderer.end_frame(self.platform.window_size());
         self.platform.swap_window();
     }

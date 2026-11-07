@@ -8,11 +8,14 @@ use sdl3::{
     mouse::MouseButton,
 };
 
+use crate::render::Renderer;
+
 pub struct Egui {
     ctx: egui::Context,
     painter: egui_glow::Painter,
     input: egui::RawInput,
     modifiers: egui::Modifiers,
+    show: bool,
 }
 
 impl Egui {
@@ -27,19 +30,32 @@ impl Egui {
             painter,
             input,
             modifiers,
+            show: false,
         })
     }
 
+    pub (crate) fn begin_frame(&mut self) {
+        let mut input =egui::RawInput::default();
+        std::mem::swap(&mut input, &mut self.input);
+        self.ctx.begin_pass(input);
+    }
+
+    pub(crate) fn end_frame(&self) {
+        let output = self.ctx.end_pass();
+        // self.painter.paint_and_update_textures(screen_size_px, pixels_per_point, clipped_primitives, textures_delta);
+    }
+
     pub(crate) fn handle_event(&mut self, event: &Event) {
+        if !self.show {
+            return;
+        }
         let response = self.convert_event(event);
     }
 
     fn convert_event(&mut self, event: &Event) -> Response {
         match event {
             Event::DropFile {
-                timestamp,
-                window_id,
-                filename,
+                filename,..
             } => {
                 let file = Arc::new(PathDroppedFile {
                     path: PathBuf::from(filename),
